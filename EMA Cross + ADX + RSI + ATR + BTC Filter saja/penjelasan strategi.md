@@ -1,0 +1,1 @@
+EMA Cross + ADX + RSI + ATR + BTC Filter saja

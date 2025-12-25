@@ -1,0 +1,1 @@
+EMA Cross + ADX + ATR + BTC Filter + Vol Filter + BB Filter + StochRSI
