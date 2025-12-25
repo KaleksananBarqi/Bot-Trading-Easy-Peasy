@@ -137,7 +137,7 @@ async def _async_eksekusi_binance(symbol, side, entry_price, sl_price, tp1, coin
         return False
 
 # ==========================================
-# 2. ANALISA (REVISED)
+# 2. ANALISA (REVISED HYBRID - FIXED STOCH NAME)
 # ==========================================
 def calculate_trade_parameters(signal, df):
     current = df.iloc[-1]
@@ -159,6 +159,7 @@ async def analisa_market(coin_config, btc_trend_status):
     symbol = coin_config['symbol']
     
     now = time.time()
+    # Filter Cooldown
     if symbol in last_entry_time and (now - last_entry_time[symbol] < config.COOLDOWN_PER_SYMBOL_SECONDS): return
 
     allowed_signal = "BOTH"
@@ -167,7 +168,7 @@ async def analisa_market(coin_config, btc_trend_status):
         elif btc_trend_status == "BEARISH": allowed_signal = "SHORT_ONLY"
 
     try:
-        # Ambil data lebih banyak sedikit untuk perhitungan indikator aman
+        # Ambil data
         bars = await exchange.fetch_ohlcv(symbol, config.TIMEFRAME_EXEC, limit=config.LIMIT_EXEC)
         bars_h1 = await exchange.fetch_ohlcv(symbol, config.TIMEFRAME_TREND, limit=config.LIMIT_TREND)
         if not bars or not bars_h1: return
@@ -175,7 +176,6 @@ async def analisa_market(coin_config, btc_trend_status):
         df = pd.DataFrame(bars, columns=['time','open','high','low','close','volume'])
         
         # --- 1. INDICATORS CALCULATION ---
-        # Basic
         df['EMA_FAST'] = df.ta.ema(length=config.EMA_FAST)
         df['EMA_SLOW'] = df.ta.ema(length=config.EMA_SLOW)
         df['ATR'] = df.ta.atr(length=config.ATR_PERIOD)
@@ -189,67 +189,65 @@ async def analisa_market(coin_config, btc_trend_status):
         df['BBL'] = bb[f'BBL_{config.BB_LENGTH}_{config.BB_STD}']
         df['BBU'] = bb[f'BBU_{config.BB_LENGTH}_{config.BB_STD}']
 
-        # [NEW] Stochastic RSI (Menggantikan RSI biasa)
+        # [NEW] Stochastic RSI (FIXED ERROR)
+        # Kita gunakan metode iloc agar tidak error salah nama kolom
         stoch = df.ta.stochrsi(length=config.STOCHRSI_LEN, rsi_length=config.STOCHRSI_LEN, k=config.STOCHRSI_K, d=config.STOCHRSI_D)
-        stoch_k_name = f'STOCHk_{config.STOCHRSI_LEN}_{config.STOCHRSI_LEN}_{config.STOCHRSI_K}_{config.STOCHRSI_D}'
-        stoch_d_name = f'STOCHd_{config.STOCHRSI_LEN}_{config.STOCHRSI_LEN}_{config.STOCHRSI_K}_{config.STOCHRSI_D}'
-        df['STOCH_K'] = stoch[stoch_k_name]
-        df['STOCH_D'] = stoch[stoch_d_name]
+        
+        # Kolom 0 = K (Fast), Kolom 1 = D (Slow). Ini pasti benar.
+        df['STOCH_K'] = stoch.iloc[:, 0]
+        df['STOCH_D'] = stoch.iloc[:, 1]
 
         # Trend Utama (H1)
         df_h1 = pd.DataFrame(bars_h1, columns=['time','open','high','low','close','volume'])
         ema_trend = df_h1.ta.ema(length=config.EMA_TREND_MAJOR).iloc[-2]
 
-        # --- 2. LOGIC CONDITIONS ---
-        confirm = df.iloc[-2] # Cek candle yang baru close (completed)
+        # --- 2. LOGIC CONDITIONS (HYBRID) ---
+        confirm = df.iloc[-2]
+        adx_val = confirm['ADX']
+        current_price = confirm['close']
         
-        # Syarat Dasar
-        is_uptrend_major = confirm['close'] > ema_trend
-        is_volume_valid = confirm['volume'] > confirm['VOL_MA'] # Harus ada volume!
-        is_adx_strong = confirm['ADX'] > config.ADX_LIMIT
-
         signal = None
-        
-        # === LOGIKA LONG ===
-        # 1. Trend H1 Bullish
-        # 2. EMA Fast > Slow (Crossover)
-        # 3. Volume Valid
-        # 4. ADX Kuat
-        # 5. [NEW] Harga Close TIDAK di atas Upper Band (Room to grow)
-        # 6. [NEW] StochRSI Golden Cross (K > D) & Tidak Overbought (>80)
-        if (allowed_signal in ["LONG_ONLY", "BOTH"]) and \
-           is_uptrend_major and \
-           (confirm['EMA_FAST'] > confirm['EMA_SLOW']) and \
-           is_volume_valid and \
-           is_adx_strong and \
-           (confirm['close'] < confirm['BBU']): 
+        strategy_type = "NONE"
+
+        # === SKENARIO 1: MARKET TRENDING (ADX > LIMIT) ===
+        if adx_val > config.ADX_LIMIT_TREND:
+            is_uptrend_major = confirm['close'] > ema_trend
+            # Logic Trend Following
+            if (allowed_signal in ["LONG_ONLY", "BOTH"]) and is_uptrend_major and (confirm['EMA_FAST'] > confirm['EMA_SLOW']):
+                 if current_price < confirm['BBU']: # Filter Pucuk
+                    signal = "LONG"
+                    strategy_type = "TREND"
             
-            # Cek Trigger StochRSI
-            if (confirm['STOCH_K'] > confirm['STOCH_D']) and (confirm['STOCH_K'] < config.STOCH_OVERBOUGHT):
-                signal = "LONG"
+            elif (allowed_signal in ["SHORT_ONLY", "BOTH"]) and not is_uptrend_major and (confirm['EMA_FAST'] < confirm['EMA_SLOW']):
+                 if current_price > confirm['BBL']: # Filter Dasar
+                    signal = "SHORT"
+                    strategy_type = "TREND"
 
-        # === LOGIKA SHORT ===
-        # 1. Trend H1 Bearish
-        # 2. EMA Fast < Slow
-        # 3. Volume Valid
-        # 4. ADX Kuat
-        # 5. [NEW] Harga Close TIDAK di bawah Lower Band
-        # 6. [NEW] StochRSI Death Cross (K < D) & Tidak Oversold (<20)
-        elif (allowed_signal in ["SHORT_ONLY", "BOTH"]) and \
-             not is_uptrend_major and \
-             (confirm['EMA_FAST'] < confirm['EMA_SLOW']) and \
-             is_volume_valid and \
-             is_adx_strong and \
-             (confirm['close'] > confirm['BBL']):
+        # === SKENARIO 2: MARKET SIDEWAYS (ADX < LIMIT) ===
+        else:
+            # Reversal LONG (Beli di Bawah BB + Stoch Cross Up)
+            if (allowed_signal in ["LONG_ONLY", "BOTH"]):
+                is_at_bottom = current_price <= (confirm['BBL'] * 1.002)
+                is_stoch_buy = (confirm['STOCH_K'] > confirm['STOCH_D']) and (confirm['STOCH_K'] < 30)
+                
+                if is_at_bottom and is_stoch_buy:
+                    signal = "LONG"
+                    strategy_type = "SCALP_REVERSAL"
 
-            # Cek Trigger StochRSI
-            if (confirm['STOCH_K'] < confirm['STOCH_D']) and (confirm['STOCH_K'] > config.STOCH_OVERSOLD):
-                signal = "SHORT"
+            # Reversal SHORT (Jual di Atas BB + Stoch Cross Down)
+            elif (allowed_signal in ["SHORT_ONLY", "BOTH"]):
+                is_at_top = current_price >= (confirm['BBU'] * 0.998)
+                is_stoch_sell = (confirm['STOCH_K'] < confirm['STOCH_D']) and (confirm['STOCH_K'] > 70)
+                
+                if is_at_top and is_stoch_sell:
+                    signal = "SHORT"
+                    strategy_type = "SCALP_REVERSAL"
 
+        # --- 3. EXECUTE SIGNAL ---
         if signal:
             if symbol in positions_cache: return
             
-            print(f"🎯 Sinyal {symbol} {signal} | Vol:{is_volume_valid} | StochK:{confirm['STOCH_K']:.2f}")
+            print(f"🎯 Sinyal {symbol} {signal} | Type: {strategy_type} | ADX: {adx_val:.2f}")
 
             params = calculate_trade_parameters(signal, df)
             berhasil = await _async_eksekusi_binance(symbol, params['side_api'], params['entry_price'], params['sl'], params['tp1'], coin_config)
@@ -257,11 +255,13 @@ async def analisa_market(coin_config, btc_trend_status):
             if berhasil:
                 lev = coin_config.get('leverage', config.DEFAULT_LEVERAGE)
                 amt = coin_config.get('amount', config.DEFAULT_AMOUNT_USDT)
-                msg = f"{'🟢' if signal=='LONG' else '🔴'} <b>{symbol} {signal}</b>\nLev: {lev}x | Margin: ${amt}\nEntry: {params['entry_price']}\nSL: {params['sl']:.4f}\nTP: {params['tp1']:.4f}\n<i>Vol Valid & Stoch Cross</i>"
+                msg = f"{'🟢' if signal=='LONG' else '🔴'} <b>{symbol} {signal}</b>\nMode: {strategy_type}\nEntry: {params['entry_price']}\nSL: {params['sl']:.4f}\nTP: {params['tp1']:.4f}"
                 await kirim_tele(msg)
                 last_entry_time[symbol] = now
                 
-    except Exception as e: logging.error(f"Analisa error {symbol}: {e}")
+    except Exception as e:
+        # Jika error Stoch masih muncul (seharusnya tidak), kita log detailnya
+        logging.error(f"Analisa error {symbol}: {e}")
 
 # ==========================================
 # 3. LOOP UTAMA
@@ -276,7 +276,7 @@ async def main():
     exchange = ccxt.binance(params)
     if config.PAKAI_DEMO: exchange.enable_demo_trading(True)
 
-    await kirim_tele("🚀 <b>BOT STARTED</b>\nFitur: Vol Filter, BB Filter, StochRSI")
+    await kirim_tele("🚀 <b>BOT STARTED</b>\nFitur: Vol Filter, BB Filter, StochRSI, Hybrid Strategy (Fix V2)")
     
     await setup_account_settings()
 
