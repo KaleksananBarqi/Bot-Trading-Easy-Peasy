@@ -106,7 +106,7 @@ Ini rawan:
 
 ---
 
-## 6) Inefisiensi: fetch timeframe trend (1h) tapi tidak dipakai
+## 6) Inefisiensi: fetch timeframe trend (1h) tapi tidak dipakai✅
 
 Kamu fetch:
 
