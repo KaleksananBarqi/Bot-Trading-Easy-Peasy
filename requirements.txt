@@ -55,7 +55,7 @@ oauthlib==3.2.0
 packaging==21.3
 pandas==2.3.3
 pandas-datareader==0.10.0
-pandas-ta @ file:///home/aji_admin/Bot-Trading-Tes/pandas-ta-development
+pandas-ta
 pexpect==4.8.0
 pillow==12.0.0
 propcache==0.4.1
