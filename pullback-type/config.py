@@ -104,7 +104,7 @@ DAFTAR_KOIN = [
     {"symbol": "LTC/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
     {"symbol": "AVAX/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
     {"symbol": "LINK/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
-    {"symbol": "MATIC/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "ZEC/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
     
     # HAPUS KOIN GORENGAN (Top Pump/New Futures) AGAR TIDAK HANCURKAN WINRATE
 ]

@@ -1,0 +1,21 @@
+{
+  "total_symbols": 3,
+  "symbols": [
+    "BTC/USDT",
+    "ETH/USDT",
+    "SOL/USDT"
+  ],
+  "timeframes": [
+    "5m",
+    "1h"
+  ],
+  "saved_files": [
+    "historical_data/BTC_USDT/5m.csv",
+    "historical_data/BTC_USDT/1h.csv",
+    "historical_data/ETH_USDT/5m.csv",
+    "historical_data/ETH_USDT/1h.csv",
+    "historical_data/SOL_USDT/5m.csv",
+    "historical_data/SOL_USDT/1h.csv"
+  ],
+  "timestamp": "2025-12-27T14:25:10.168481"
+}
