@@ -185,10 +185,9 @@ async def _async_eksekusi_binance(symbol, side, entry_price, sl_price, tp1, coin
 # ==========================================
 async def monitor_positions_safety():
     """
-    Fungsi Satpam V10 (Tracker Priority):
+    Fungsi Satpam V11 (Dynamic Config Support):
     - Mengutamakan catatan lokal (JSON) daripada API untuk mencegah spam.
-    - Jika di JSON tercatat 'aman', bot TIDAK AKAN mengecek order ke Binance.
-    - Hanya menghapus catatan jika posisi benar-benar tertutup.
+    - Mengambil nilai SL/TP secara dinamis berdasarkan strategi yang aktif di config.py.
     """
     global safety_orders_tracker 
 
@@ -207,11 +206,9 @@ async def monitor_positions_safety():
             market_symbol = symbol.split(':')[0] if ':' in symbol else symbol
             active_symbols_now.append(market_symbol)
 
-            # --- [LOGIKA BARU] CEK TRACKER DULU (USULAN ANDA) ---
+            # --- CEK TRACKER DULU ---
             # Jika simbol ini sudah tercatat di tracker, ANGGAP AMAN. 
-            # Jangan buang waktu fetch_open_orders (ini biang kerok spam).
             if market_symbol in safety_orders_tracker:
-                # Optional: Print heartbeat sesekali kalau mau, tapi di-skip biar log bersih
                 continue 
 
             # ==========================================================
@@ -232,14 +229,29 @@ async def monitor_positions_safety():
             
             # Fetch ATR untuk jarak dinamis
             try:
-                bars = await exchange.fetch_ohlcv(market_symbol, config.TIMEFRAME_EXEC, limit=20)
+                # [UPDATE] Limit diperbesar sedikit agar perhitungan ATR lebih akurat
+                bars = await exchange.fetch_ohlcv(market_symbol, config.TIMEFRAME_EXEC, limit=50)
                 df = pd.DataFrame(bars, columns=['time','open','high','low','close','volume'])
                 atr = df.ta.atr(length=config.ATR_PERIOD).iloc[-1]
             except:
                 print(f"⚠️ Gagal fetch ATR {market_symbol}, pakai default 1% price.")
                 atr = entry_price * 0.01
 
-            sl_dist = atr * config.ATR_MULTIPLIER_SL
+            # --- [MODIFIKASI LOGIKA DINAMIS / NO HARDCODE] ---
+            # 1. Mulai dengan asumsi SL Normal
+            multiplier_sl_now = config.ATR_MULTIPLIER_SL
+
+            # 2. Cek apakah Mode Liquidity Hunt (Jebakan) aktif di Config?
+            if getattr(config, 'USE_LIQUIDITY_HUNT', False):
+                # Ambil nilai TRAP_SAFETY_SL dari config (biasanya 0.5)
+                # Parameter ketiga adalah fallback: jika config tsb hilang, kembali ke SL Normal
+                multiplier_sl_now = getattr(config, 'TRAP_SAFETY_SL', config.ATR_MULTIPLIER_SL)
+                print(f"ℹ️ {market_symbol}: Menggunakan Mode Liquidity Hunt SL (x{multiplier_sl_now})")
+            else:
+                print(f"ℹ️ {market_symbol}: Menggunakan Mode Normal SL (x{multiplier_sl_now})")
+
+            # 3. Hitung Jarak Final
+            sl_dist = atr * multiplier_sl_now
             tp_dist = atr * config.ATR_MULTIPLIER_TP1
             
             if is_long_pos:
@@ -251,11 +263,10 @@ async def monitor_positions_safety():
 
             # --- EKSEKUSI PEMASANGAN SL/TP ---
             try:
-                # 1. Pastikan tidak ada order nyangkut dulu (Cancel All spesifik simbol ini)
-                #    Kita lakukan ini SEKALI saja di awal pendeteksian.
+                # 1. Pastikan tidak ada order nyangkut dulu
                 try:
                     await exchange.cancel_all_orders(market_symbol)
-                    await asyncio.sleep(1) # Jeda agar binance proses cancel
+                    await asyncio.sleep(1) 
                 except: pass
 
                 # 2. Pasang Order Baru
@@ -278,17 +289,15 @@ async def monitor_positions_safety():
                     "sl": sl_price,
                     "tp": tp_price
                 }
-                save_tracker() # Simpan ke JSON fisik
+                save_tracker() 
                 
                 print(f"✅ {market_symbol} Safety Replaced & Locked in Tracker.")
                 await kirim_tele(f"🛡️ <b>SAFETY SECURED</b>\n{market_symbol}\nSL: {sl_price:.4f} | TP: {tp_price:.4f}\n<i>Status: Locked (Anti-Spam)</i>")
 
             except Exception as e:
                 print(f"❌ Gagal pasang safety {market_symbol}: {e}")
-                # Jangan catat ke tracker kalau gagal, biar dicoba lagi next loop
 
         # 3. CLEANUP (HAPUS CATATAN KALO POSISI DAH CLOSE)
-        # Logic: Jika ada di tracker TAPI tidak ada di active_symbols_now -> Hapus
         keys_to_delete = []
         for recorded_symbol in list(safety_orders_tracker.keys()):
             if recorded_symbol not in active_symbols_now:
@@ -302,7 +311,7 @@ async def monitor_positions_safety():
 
     except Exception as e:
         print(f"Error Safety Monitor: {e}")
-
+    
 # ==========================================
 # 3. ANALISA MARKET (STRATEGI)
 # ==========================================
