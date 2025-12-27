@@ -181,21 +181,24 @@ async def _async_eksekusi_binance(symbol, side, entry_price, sl_price, tp1, coin
         return False
 
 # ==========================================
-# 2. MONITOR & SAFETY (AUTO SL/TP - FIXED DETECTION V2)
+# 2. MONITOR & SAFETY (AUTO SL/TP - TRACKER PRIORITY)
 # ==========================================
 async def monitor_positions_safety():
     """
-    Fungsi Satpam V9 (Fixed):
-    - Memperbaiki deteksi reduceOnly yang sering gagal terbaca.
-    - Menghapus order lama by ID jika cancel_all gagal.
+    Fungsi Satpam V10 (Tracker Priority):
+    - Mengutamakan catatan lokal (JSON) daripada API untuk mencegah spam.
+    - Jika di JSON tercatat 'aman', bot TIDAK AKAN mengecek order ke Binance.
+    - Hanya menghapus catatan jika posisi benar-benar tertutup.
     """
     global safety_orders_tracker 
 
     try:
-        # 1. Ambil Posisi Aktif
+        # 1. Ambil Posisi Aktif dari Binance
         pos_raw = await exchange.fetch_positions()
+        # Filter hanya posisi yang size-nya > 0
         active_positions = [p for p in pos_raw if float(p.get('contracts', 0)) > 0]
         
+        # List simbol yang sedang aktif sekarang (untuk keperluan cleanup nanti)
         active_symbols_now = [] 
 
         for pos in active_positions:
@@ -204,74 +207,38 @@ async def monitor_positions_safety():
             market_symbol = symbol.split(':')[0] if ':' in symbol else symbol
             active_symbols_now.append(market_symbol)
 
+            # --- [LOGIKA BARU] CEK TRACKER DULU (USULAN ANDA) ---
+            # Jika simbol ini sudah tercatat di tracker, ANGGAP AMAN. 
+            # Jangan buang waktu fetch_open_orders (ini biang kerok spam).
+            if market_symbol in safety_orders_tracker:
+                # Optional: Print heartbeat sesekali kalau mau, tapi di-skip biar log bersih
+                continue 
+
+            # ==========================================================
+            # JIKA SAMPAI SINI, BERARTI POSISI BARU ATAU BELUM DIAMANKAN
+            # ==========================================================
+            
             # --- DETEKSI ARAH POSISI ---
             raw_amt = float(pos['info'].get('positionAmt', 0))
             if raw_amt > 0: is_long_pos = True
             elif raw_amt < 0: is_long_pos = False
             else: continue 
 
-            side_text = "LONG" if is_long_pos else "SHORT"
+            print(f"🔍 Mendeteksi posisi baru/unsecured: {market_symbol}...")
 
-            # --- [STEP PENTING] VALIDASI REAL-TIME KE EXCHANGE ---
-            try:
-                # Fetch orders (termasuk conditional orders)
-                open_orders = await exchange.fetch_open_orders(market_symbol)
-                
-                has_stop_loss = False
-                has_take_profit = False
-                
-                # List order yang perlu dihapus jika settingan salah
-                orders_to_cancel = []
-
-                for o in open_orders:
-                    o_type = o.get('type', '').lower()
-                    o_info = o.get('info', {})
-                    
-                    # --- DETEKSI LEBIH ROBUST UNTUK REDUCE ONLY ---
-                    # Binance kadang mengembalikan 'reduceOnly': true, kadang 'closePosition': true
-                    # Kadang string "true", kadang boolean True. Kita cek semua.
-                    is_reduce = (o.get('reduceOnly') is True) or \
-                                (str(o.get('reduceOnly')).lower() == 'true') or \
-                                (o_info.get('reduceOnly') is True) or \
-                                (str(o_info.get('reduceOnly')).lower() == 'true') or \
-                                (o_info.get('closePosition') is True) or \
-                                (str(o_info.get('closePosition')).lower() == 'true')
-
-                    # Jika order tipe STOP/TP tapi BUKAN reduceOnly, anggap sampah -> Hapus
-                    if ('stop' in o_type or 'take_profit' in o_type) and not is_reduce:
-                        orders_to_cancel.append(o['id'])
-                        continue
-
-                    # DETEKSI SL
-                    if ('stop' in o_type) and is_reduce:
-                        has_stop_loss = True
-                    
-                    # DETEKSI TP
-                    if ('take_profit' in o_type) and is_reduce:
-                        has_take_profit = True
-                
-                # JIKA KEDUANYA ADA -> AMAN, SKIP
-                if has_stop_loss and has_take_profit:
-                    if not safety_orders_tracker.get(market_symbol):
-                        safety_orders_tracker[market_symbol] = True
-                    continue 
-                
-                # Jika salah satu hilang, kita anggap TIDAK AMAN
-                print(f"⚠️ {market_symbol} ({side_text}) Tidak lengkap! (SL:{has_stop_loss}, TP:{has_take_profit}). Resetting...")
-
-            except Exception as e:
-                print(f"⚠️ Error fetch orders {market_symbol}: {e}")
-                continue # Jangan lanjut kalau fetch error, bahaya double order
-
-            # --- KALKULASI & PASANG ULANG ---
+            # --- KALKULASI SL/TP ---
             amount = float(pos['contracts'])
             entry_price = float(pos['entryPrice'])
             
-            # Fetch ATR
-            bars = await exchange.fetch_ohlcv(market_symbol, config.TIMEFRAME_EXEC, limit=20)
-            df = pd.DataFrame(bars, columns=['time','open','high','low','close','volume'])
-            atr = df.ta.atr(length=config.ATR_PERIOD).iloc[-1]
-            
+            # Fetch ATR untuk jarak dinamis
+            try:
+                bars = await exchange.fetch_ohlcv(market_symbol, config.TIMEFRAME_EXEC, limit=20)
+                df = pd.DataFrame(bars, columns=['time','open','high','low','close','volume'])
+                atr = df.ta.atr(length=config.ATR_PERIOD).iloc[-1]
+            except:
+                print(f"⚠️ Gagal fetch ATR {market_symbol}, pakai default 1% price.")
+                atr = entry_price * 0.01
+
             sl_dist = atr * config.ATR_MULTIPLIER_SL
             tp_dist = atr * config.ATR_MULTIPLIER_TP1
             
@@ -282,17 +249,14 @@ async def monitor_positions_safety():
             
             amount_final = exchange.amount_to_precision(market_symbol, amount)
 
+            # --- EKSEKUSI PEMASANGAN SL/TP ---
             try:
-                # 1. CANCEL ORDER LAMA (LEBIH AGRESIF)
-                # Kita cancel manual by ID agar lebih bersih daripada cancel_all_orders yang kadang miss
-                if len(open_orders) > 0:
-                    print(f"🧹 Membersihkan {len(open_orders)} order lama di {market_symbol}...")
-                    for old_order in open_orders:
-                        try:
-                            await exchange.cancel_order(old_order['id'], market_symbol)
-                        except:
-                            pass # Skip error kalau order sudah close
-                    await asyncio.sleep(1) # Wajib jeda agar Binance proses cancel
+                # 1. Pastikan tidak ada order nyangkut dulu (Cancel All spesifik simbol ini)
+                #    Kita lakukan ini SEKALI saja di awal pendeteksian.
+                try:
+                    await exchange.cancel_all_orders(market_symbol)
+                    await asyncio.sleep(1) # Jeda agar binance proses cancel
+                except: pass
 
                 # 2. Pasang Order Baru
                 tasks = []
@@ -304,24 +268,37 @@ async def monitor_positions_safety():
                 params_tp = {'stopPrice': exchange.price_to_precision(market_symbol, tp_price), 'workingType': 'CONTRACT_PRICE', 'reduceOnly': True}
                 tasks.append(exchange.create_order(market_symbol, 'TAKE_PROFIT_MARKET', sl_side, amount_final, params=params_tp))
                 
+                # Jalankan order
                 await asyncio.gather(*tasks)
 
-                safety_orders_tracker[market_symbol] = True
-                save_tracker()
+                # --- [PENTING] CATAT KE TRACKER AGAR TIDAK DIULANG ---
+                safety_orders_tracker[market_symbol] = {
+                    "status": "SECURED",
+                    "time": time.time(),
+                    "sl": sl_price,
+                    "tp": tp_price
+                }
+                save_tracker() # Simpan ke JSON fisik
                 
-                print(f"✅ {market_symbol} Safety Replaced.")
-                await kirim_tele(f"🛡️ <b>SAFETY RESTORED</b>\n{market_symbol}\nSL: {sl_price:.4f} | TP: {tp_price:.4f}")
+                print(f"✅ {market_symbol} Safety Replaced & Locked in Tracker.")
+                await kirim_tele(f"🛡️ <b>SAFETY SECURED</b>\n{market_symbol}\nSL: {sl_price:.4f} | TP: {tp_price:.4f}\n<i>Status: Locked (Anti-Spam)</i>")
 
             except Exception as e:
                 print(f"❌ Gagal pasang safety {market_symbol}: {e}")
+                # Jangan catat ke tracker kalau gagal, biar dicoba lagi next loop
 
-        # CLEANUP Tracker
-        clean_needed = False
+        # 3. CLEANUP (HAPUS CATATAN KALO POSISI DAH CLOSE)
+        # Logic: Jika ada di tracker TAPI tidak ada di active_symbols_now -> Hapus
+        keys_to_delete = []
         for recorded_symbol in list(safety_orders_tracker.keys()):
             if recorded_symbol not in active_symbols_now:
-                del safety_orders_tracker[recorded_symbol]
-                clean_needed = True
-        if clean_needed: save_tracker()
+                keys_to_delete.append(recorded_symbol)
+        
+        if keys_to_delete:
+            for k in keys_to_delete:
+                del safety_orders_tracker[k]
+                print(f"🗑️ Posisi {k} closed. Tracker dibersihkan.")
+            save_tracker()
 
     except Exception as e:
         print(f"Error Safety Monitor: {e}")

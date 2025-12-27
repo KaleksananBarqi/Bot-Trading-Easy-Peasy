@@ -154,14 +154,14 @@ Saran: kalau entry digeser, maka TP/SL sebaiknya dihitung relatif ke **entry** (
 
 ---
 
-## 9) Catatan kompatibilitas CCXT/Binance (perlu kamu cek)
+## 9) Catatan kompatibilitas CCXT/Binance (perlu kamu cek)✅
 
 Di main kamu pakai `exchange.enable_demo_trading(True)` saat demo. 
 [Belum Diverifikasi] Di beberapa versi CCXT, pola yang umum untuk testnet/sandbox adalah `set_sandbox_mode(True)`. Kalau method kamu tidak ada, bot akan crash di startup. (Ini perlu kamu cek sesuai versi CCXT yang kamu install.)
 
 ---
 
-## 10) Prioritas perbaikan (urut paling “ngaruh”)
+## 10) Prioritas perbaikan (urut paling “ngaruh”)✅
 
 1. **Perbaiki bug `BOTH` vs `elif`** supaya SHORT bisa jalan saat allowed_signal BOTH. 
 2. Rapikan `config.py` yang duplikat supaya parameter tidak ketimpa diam-diam (terutama `BTC_EMA_PERIOD`).  
