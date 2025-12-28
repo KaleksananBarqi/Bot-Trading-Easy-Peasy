@@ -259,3 +259,4 @@ signal_tracker.json
 # Python Cache
 __pycache__/
 *.py[cod]
+.json
