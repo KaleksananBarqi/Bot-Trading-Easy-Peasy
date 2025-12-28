@@ -27,16 +27,33 @@ safety_orders_tracker = {}
 global_btc_trend = "NEUTRAL"
 last_btc_check = 0
 
+# CRITICAL FIX: Global Lock untuk mencegah concurrent execution
+safety_monitor_lock = None  # Will be initialized in main()
+
 # ==========================================
 # FUNGSI HELPER (JSON & TELEGRAM)
 # ==========================================
+# Di bagian LOAD TRACKER (Update sedikit agar lebih robust membaca ID)
 def load_tracker():
-    """Membaca status SL/TP dari file saat bot dinyalakan."""
     global safety_orders_tracker
     if os.path.exists(TRACKER_FILE):
         try:
             with open(TRACKER_FILE, 'r') as f:
-                safety_orders_tracker = json.load(f)
+                data = json.load(f)
+            
+            safety_orders_tracker = {}
+            for symbol, item in data.items():
+                safety_orders_tracker[symbol] = {
+                    "status": item.get("status", "UNKNOWN"),
+                    "time": item.get("time", time.time()),
+                    "last_check": item.get("last_check", time.time()), # Added field
+                    "entry_price": float(item.get("entry_price", 0)),
+                    "quantity": float(item.get("quantity", 0)), # Pastikan load quantity
+                    "sl": float(item.get("sl", 0)),
+                    "tp": float(item.get("tp", 0)),
+                    "side": item.get("side", "UNKNOWN"),
+                    "order_ids": item.get("order_ids", []) # Ini harus list of strings/ints
+                }
             print(f"📂 Tracker loaded: {len(safety_orders_tracker)} data.")
         except Exception as e:
             print(f"⚠️ Gagal load tracker: {e}, membuat baru.")
@@ -47,10 +64,68 @@ def load_tracker():
 def save_tracker():
     """Menyimpan status SL/TP ke file agar tahan restart."""
     try:
+        # Format output yang lebih readable (vertikal)
+        formatted_data = {}
+        for symbol, data in safety_orders_tracker.items():
+            # Konversi timestamp ke string waktu jika ada
+            time_str = data.get("time", "")
+            if isinstance(time_str, (int, float)):
+                time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_str))
+            
+            formatted_data[symbol] = {
+                "status": data.get("status", "UNKNOWN"),
+                "time": time_str,
+                "entry_price": round(float(data.get("entry_price", 0)), 8),
+                "sl": round(float(data.get("sl", 0)), 8),
+                "tp": round(float(data.get("tp", 0)), 8),
+                "side": data.get("side", "UNKNOWN"),
+                "order_ids": data.get("order_ids", []),
+                "order_count": len(data.get("order_ids", []))
+            }
+        
         with open(TRACKER_FILE, 'w') as f:
-            json.dump(safety_orders_tracker, f)
+            json.dump(formatted_data, f, indent=2, sort_keys=True)
+        print(f"💾 Tracker disimpan: {len(safety_orders_tracker)} posisi")
     except Exception as e:
         print(f"⚠️ Gagal save tracker: {e}")
+
+async def fetch_open_orders_safe(symbol, retries=config.ORDER_SLTP_RETRIES, delay=config.ORDER_SLTP_RETRY_DELAY):
+    """Mengambil open orders dengan mekanisme retry yang robust."""
+    for i in range(retries):
+        try:
+            return await exchange.fetch_open_orders(symbol)
+        except Exception as e:
+            if i == retries - 1: # Percobaan terakhir
+                print(f"⚠️ Gagal fetch orders {symbol} setelah {retries}x: {e}")
+                return []
+            await asyncio.sleep(delay)
+    return []
+async def check_close_reason(symbol, tracker_data):
+    """Mengecek apakah posisi close karena SL/TP atau manual."""
+    try:
+        # Cek 50 order terakhir yang sudah selesai (FILLED/CANCELED)
+        # Kita cari order ID yang sama dengan yang ada di tracker
+        closed_orders = await exchange.fetch_closed_orders(symbol, limit=50)
+        tracked_ids = tracker_data.get("order_ids", [])
+        
+        sl_hit = False
+        tp_hit = False
+        
+        for order in closed_orders:
+            if order['id'] in tracked_ids and order['status'] == 'closed':
+                # Cek tipe order
+                if 'STOP' in order['type']:
+                    sl_hit = True
+                elif 'TAKE_PROFIT' in order['type']:
+                    tp_hit = True
+        
+        if sl_hit: return "SL_HIT"
+        if tp_hit: return "TP_HIT"
+        return "MANUAL/LIQUIDATION"
+        
+    except Exception as e:
+        print(f"⚠️ Gagal cek close reason {symbol}: {e}")
+        return "UNKNOWN"
 
 async def kirim_tele(pesan, alert=False):
     try:
@@ -58,7 +133,8 @@ async def kirim_tele(pesan, alert=False):
         await asyncio.to_thread(requests.post,
                                 f"https://api.telegram.org/bot{config.TELEGRAM_TOKEN}/sendMessage",
                                 data={'chat_id': config.TELEGRAM_CHAT_ID, 'text': f"{prefix}{pesan}", 'parse_mode': 'HTML'})
-    except Exception as e: print(f"Tele error: {e}")
+    except Exception as e: 
+        print(f"Tele error: {e}")
 
 # ==========================================
 # 0. SETUP AWAL
@@ -87,7 +163,8 @@ async def setup_account_settings():
             
             print(f"   🔹 {symbol}: Lev {lev}x | {marg_type}")
             count += 1
-            if count % 5 == 0: await asyncio.sleep(0.5) 
+            if count % 5 == 0: 
+                await asyncio.sleep(0.5) 
         except Exception as e:
             logging.error(f"Gagal seting {symbol}: {e}")
             print(f"❌ Gagal seting {symbol}: {e}")
@@ -104,7 +181,8 @@ async def update_btc_trend():
 
     try:
         bars = await exchange.fetch_ohlcv(config.BTC_SYMBOL, config.BTC_TIMEFRAME, limit=100)
-        if not bars: return "NEUTRAL"
+        if not bars: 
+            return "NEUTRAL"
 
         df = pd.DataFrame(bars, columns=['time','open','high','low','close','volume'])
         ema_btc = df.ta.ema(length=config.BTC_EMA_PERIOD)
@@ -162,18 +240,21 @@ async def _async_eksekusi_binance(symbol, side, entry_price, sl_price, tp1, coin
 
         # --- A. LIMIT ORDER (Liquidity Hunt) ---
         if order_type == 'limit':
-            await exchange.create_order(symbol, 'limit', side, amount_final, price_final)
-            print(f"⏳ {symbol} Limit Order placed at {price_final}. Menunggu fill...")
-            await kirim_tele(msg + "\n⚠️ <i>Pending Limit Order</i>")
-            return True
+            try:
+                await exchange.create_order(symbol, 'limit', side, amount_final, price_final)
+                print(f"⏳ {symbol} Limit Order placed at {price_final}. Menunggu fill...")
+                await kirim_tele(msg + "\n⚠️ <i>Pending Limit Order</i>")
+                return True
+            except Exception as e:
+                print(f"❌ Limit order gagal: {e}")
+                # Fallback ke market order jika limit gagal
+                print("🔄 Fallback ke market order...")
+                order_type = 'market'
 
         # --- B. MARKET ORDER (Normal) ---
-        else:
+        if order_type == 'market':
             await exchange.create_order(symbol, 'market', side, amount_final)
             await kirim_tele(msg + "\n🚀 <i>Market Executed</i>")
-            
-            # Pasang SL/TP Langsung (Opsional, karena Safety Monitor juga akan handle)
-            # Kita biarkan Safety Monitor yang handle agar logika terpusat satu pintu
             return True
 
     except Exception as e:
@@ -183,135 +264,300 @@ async def _async_eksekusi_binance(symbol, side, entry_price, sl_price, tp1, coin
 # ==========================================
 # 2. MONITOR & SAFETY (AUTO SL/TP - TRACKER PRIORITY)
 # ==========================================
-async def monitor_positions_safety():
-    """
-    Fungsi Satpam V11 (Dynamic Config Support):
-    - Mengutamakan catatan lokal (JSON) daripada API untuk mencegah spam.
-    - Mengambil nilai SL/TP secara dinamis berdasarkan strategi yang aktif di config.py.
-    """
-    global safety_orders_tracker 
-
+async def check_stop_orders(symbol):
+    """Cek apakah stop orders sudah terpasang untuk simbol tertentu."""
     try:
-        # 1. Ambil Posisi Aktif dari Binance
-        pos_raw = await exchange.fetch_positions()
-        # Filter hanya posisi yang size-nya > 0
-        active_positions = [p for p in pos_raw if float(p.get('contracts', 0)) > 0]
-        
-        # List simbol yang sedang aktif sekarang (untuk keperluan cleanup nanti)
-        active_symbols_now = [] 
-
-        for pos in active_positions:
-            symbol = pos['symbol']
-            # Normalisasi simbol (misal METIS/USDT:USDT -> METIS/USDT)
-            market_symbol = symbol.split(':')[0] if ':' in symbol else symbol
-            active_symbols_now.append(market_symbol)
-
-            # --- CEK TRACKER DULU ---
-            # Jika simbol ini sudah tercatat di tracker, ANGGAP AMAN. 
-            if market_symbol in safety_orders_tracker:
-                continue 
-
-            # ==========================================================
-            # JIKA SAMPAI SINI, BERARTI POSISI BARU ATAU BELUM DIAMANKAN
-            # ==========================================================
-            
-            # --- DETEKSI ARAH POSISI ---
-            raw_amt = float(pos['info'].get('positionAmt', 0))
-            if raw_amt > 0: is_long_pos = True
-            elif raw_amt < 0: is_long_pos = False
-            else: continue 
-
-            print(f"🔍 Mendeteksi posisi baru/unsecured: {market_symbol}...")
-
-            # --- KALKULASI SL/TP ---
-            amount = float(pos['contracts'])
-            entry_price = float(pos['entryPrice'])
-            
-            # Fetch ATR untuk jarak dinamis
-            try:
-                # [UPDATE] Limit diperbesar sedikit agar perhitungan ATR lebih akurat
-                bars = await exchange.fetch_ohlcv(market_symbol, config.TIMEFRAME_EXEC, limit=50)
-                df = pd.DataFrame(bars, columns=['time','open','high','low','close','volume'])
-                atr = df.ta.atr(length=config.ATR_PERIOD).iloc[-1]
-            except:
-                print(f"⚠️ Gagal fetch ATR {market_symbol}, pakai default 1% price.")
-                atr = entry_price * 0.01
-
-            # --- [MODIFIKASI LOGIKA DINAMIS / NO HARDCODE] ---
-            # 1. Mulai dengan asumsi SL Normal
-            multiplier_sl_now = config.ATR_MULTIPLIER_SL
-
-            # 2. Cek apakah Mode Liquidity Hunt (Jebakan) aktif di Config?
-            if getattr(config, 'USE_LIQUIDITY_HUNT', False):
-                # Ambil nilai TRAP_SAFETY_SL dari config (biasanya 0.5)
-                # Parameter ketiga adalah fallback: jika config tsb hilang, kembali ke SL Normal
-                multiplier_sl_now = getattr(config, 'TRAP_SAFETY_SL', config.ATR_MULTIPLIER_SL)
-                print(f"ℹ️ {market_symbol}: Menggunakan Mode Liquidity Hunt SL (x{multiplier_sl_now})")
-            else:
-                print(f"ℹ️ {market_symbol}: Menggunakan Mode Normal SL (x{multiplier_sl_now})")
-
-            # 3. Hitung Jarak Final
-            sl_dist = atr * multiplier_sl_now
-            tp_dist = atr * config.ATR_MULTIPLIER_TP1
-            
-            if is_long_pos:
-                sl_price = entry_price - sl_dist; tp_price = entry_price + tp_dist; sl_side = 'sell'
-            else:
-                sl_price = entry_price + sl_dist; tp_price = entry_price - tp_dist; sl_side = 'buy'
-            
-            amount_final = exchange.amount_to_precision(market_symbol, amount)
-
-            # --- EKSEKUSI PEMASANGAN SL/TP ---
-            try:
-                # 1. Pastikan tidak ada order nyangkut dulu
-                try:
-                    await exchange.cancel_all_orders(market_symbol)
-                    await asyncio.sleep(1) 
-                except: pass
-
-                # 2. Pasang Order Baru
-                tasks = []
-                # SL MARKET
-                params_sl = {'stopPrice': exchange.price_to_precision(market_symbol, sl_price), 'workingType': 'MARK_PRICE', 'reduceOnly': True}
-                tasks.append(exchange.create_order(market_symbol, 'STOP_MARKET', sl_side, amount_final, params=params_sl))
-                
-                # TP MARKET
-                params_tp = {'stopPrice': exchange.price_to_precision(market_symbol, tp_price), 'workingType': 'CONTRACT_PRICE', 'reduceOnly': True}
-                tasks.append(exchange.create_order(market_symbol, 'TAKE_PROFIT_MARKET', sl_side, amount_final, params=params_tp))
-                
-                # Jalankan order
-                await asyncio.gather(*tasks)
-
-                # --- [PENTING] CATAT KE TRACKER AGAR TIDAK DIULANG ---
-                safety_orders_tracker[market_symbol] = {
-                    "status": "SECURED",
-                    "time": time.time(),
-                    "sl": sl_price,
-                    "tp": tp_price
-                }
-                save_tracker() 
-                
-                print(f"✅ {market_symbol} Safety Replaced & Locked in Tracker.")
-                await kirim_tele(f"🛡️ <b>SAFETY SECURED</b>\n{market_symbol}\nSL: {sl_price:.4f} | TP: {tp_price:.4f}\n<i>Status: Locked (Anti-Spam)</i>")
-
-            except Exception as e:
-                print(f"❌ Gagal pasang safety {market_symbol}: {e}")
-
-        # 3. CLEANUP (HAPUS CATATAN KALO POSISI DAH CLOSE)
-        keys_to_delete = []
-        for recorded_symbol in list(safety_orders_tracker.keys()):
-            if recorded_symbol not in active_symbols_now:
-                keys_to_delete.append(recorded_symbol)
-        
-        if keys_to_delete:
-            for k in keys_to_delete:
-                del safety_orders_tracker[k]
-                print(f"🗑️ Posisi {k} closed. Tracker dibersihkan.")
-            save_tracker()
-
+        open_orders = await exchange.fetch_open_orders(symbol)
+        stop_orders = []
+        for order in open_orders:
+            order_type = order['type'].lower()
+            if 'stop' in order_type or 'take_profit' in order_type:
+                stop_orders.append({
+                    'id': order['id'],
+                    'type': order['type'],
+                    'side': order['side'],
+                    'price': order.get('price'),
+                    'stopPrice': order.get('stopPrice')
+                })
+        return stop_orders
     except Exception as e:
-        print(f"Error Safety Monitor: {e}")
+        print(f"⚠️ Error checking stop orders for {symbol}: {e}")
+        return []
+
+def print_tracker_status():
+    """Mencetak status tracker ke terminal."""
+    print("\n" + "="*60)
+    print("📊 SAFETY TRACKER STATUS")
+    print("="*60)
     
+    if not safety_orders_tracker:
+        print("📭 Tracker kosong")
+        return
+    
+    for symbol, data in safety_orders_tracker.items():
+        status = data.get("status", "UNKNOWN")
+        side = data.get("side", "UNKNOWN")
+        entry = data.get("entry_price", 0)
+        sl = data.get("sl", 0)
+        tp = data.get("tp", 0)
+        order_count = len(data.get("order_ids", []))
+        
+        if side == "LONG":
+            profit_pct = ((tp - entry) / entry * 100) if entry > 0 else 0
+            loss_pct = ((entry - sl) / entry * 100) if entry > 0 else 0
+        else:
+            profit_pct = ((entry - tp) / entry * 100) if entry > 0 else 0
+            loss_pct = ((sl - entry) / entry * 100) if entry > 0 else 0
+        
+        print(f"\n📈 {symbol}")
+        print(f"   Status: {status} | Side: {side}")
+        print(f"   Entry: {entry:.6f}")
+        print(f"   SL: {sl:.6f} ({loss_pct:.2f}%)")
+        print(f"   TP: {tp:.6f} ({profit_pct:.2f}%)")
+        print(f"   Orders: {order_count} aktif")
+    
+    print("\n" + "="*60)
+    
+async def monitor_positions_safety():
+    global safety_orders_tracker, safety_monitor_lock
+    
+    # CRITICAL: Acquire lock untuk mencegah concurrent execution
+    async with safety_monitor_lock:
+        try:
+            # 1. AMBIL DATA REAL-TIME
+            pos_raw = await exchange.fetch_positions()
+            # Filter hanya posisi aktif (>0)
+            active_positions = [p for p in pos_raw if float(p.get('contracts', 0)) > 0]
+            
+            active_symbols_now = []
+            now = time.time()
+
+            for pos in active_positions:
+                symbol = pos['symbol']
+                market_symbol = symbol.split(':')[0] if ':' in symbol else symbol
+                active_symbols_now.append(market_symbol)
+
+                current_contracts = float(pos['contracts'])
+                entry_price = float(pos['entryPrice'])
+                current_side = "LONG" if float(pos['info'].get('positionAmt', 0)) > 0 else "SHORT"
+                
+                # Toleransi Perubahan Size (misal kena DCA sedikit atau fee)
+                size_tolerance = current_contracts * 0.05 
+
+                # ==============================================================
+                # LOGIKA ANTI-SPAM (STRICT MODE)
+                # ==============================================================
+                
+                if market_symbol in safety_orders_tracker:
+                    tracker = safety_orders_tracker[market_symbol]
+                    tracked_qty = tracker.get("quantity", 0)
+                    status = tracker.get("status", "UNKNOWN")
+                    
+                    # 1. CEK STATUS PENDING (Sedang OTW pasang)
+                    if status == "PENDING":
+                        # Jika masih pending kurang dari 1 menit, JANGAN GANGGU
+                        if (now - tracker.get("time", 0)) < 60:
+                            print(f"⏳ {market_symbol}: Sedang proses pasang TP/SL (PENDING)... Skip.")
+                            continue
+                        else:
+                            print(f"⚠️ {market_symbol}: Pending macet > 60s. Reset status.")
+                            # Jangan continue, biarkan lanjut ke bawah untuk dipasang ulang
+
+                    # 2. CEK STATUS SECURED (Sudah terpasang)
+                    if status == "SECURED":
+                        # Cek apakah Size berubah drastis (Posisi ditambah/dikurang manual)
+                        if abs(current_contracts - tracked_qty) < size_tolerance:
+                            # JIKA SIZE SAMA & STATUS SECURED -> TIDAK USAH CEK BINANCE SAMA SEKALI
+                            # Ini kunci agar tidak spam. Percaya tracker 100%.
+                            tracker["last_check"] = now
+                            continue 
+                        else:
+                            print(f"⚠️ {market_symbol}: Size berubah ({tracked_qty} -> {current_contracts}). Reset Tracker.")
+                            # Hapus tracker lama agar di-setup ulang sesuai size baru
+                            del safety_orders_tracker[market_symbol]
+                
+                # ==============================================================
+                # JIKA LOLOS DARI ATAS, BERARTI BELUM AMAN. LANJUT PASANG.
+                # ==============================================================
+
+                print(f"🛡️ {market_symbol}: Mendeteksi posisi baru/berubah. Memeriksa safety...")
+
+                # 1. Double Check ke API (Apakah order sudah ada di exchange tapi belum di tracker?)
+                #    Hanya dilakukan jika di tracker kosong/reset.
+                open_orders = await fetch_open_orders_safe(market_symbol, retries=3)
+                
+                existing_sl = []
+                existing_tp = []
+                
+                for o in open_orders:
+                    o_type = str(o['type']).upper()
+                    o_reduce = o.get('reduceOnly', False)
+                    o_side = str(o['side']).lower()
+                    
+                    is_pure_sl = (o_type in ['STOP_MARKET', 'STOP']) and o_reduce
+                    is_pure_tp = (o_type in ['TAKE_PROFIT_MARKET', 'TAKE_PROFIT']) and o_reduce
+                    
+                    # Cek arah (Long punya Sell order, Short punya Buy order)
+                    correct_side = (current_side == "LONG" and o_side == "sell") or \
+                                   (current_side == "SHORT" and o_side == "buy")
+                    
+                    if correct_side:
+                        if is_pure_sl: existing_sl.append(str(o['id']))
+                        elif is_pure_tp: existing_tp.append(str(o['id']))
+
+                has_sl = len(existing_sl) > 0
+                has_tp = len(existing_tp) > 0
+
+                # KASUS A: Order ternyata sudah ada di Binance (Sinkronisasi)
+                if has_sl and has_tp:
+                    print(f"✅ {market_symbol}: Order ditemukan di Exchange. Sync ke Tracker.")
+                    safety_orders_tracker[market_symbol] = {
+                        "status": "SECURED",
+                        "time": now,
+                        "last_check": now,
+                        "entry_price": entry_price,
+                        "quantity": current_contracts,
+                        "side": current_side,
+                        "order_ids": existing_sl + existing_tp
+                    }
+                    save_tracker()
+                    continue
+
+                # KASUS B: Belum ada order. PASANG BARU.
+                
+                # --- BERSIHKAN ORDER SAMPAH DULU ---
+                # Misal cuma ada SL tanpa TP, atau TP tanpa SL, cancel semua biar rapi
+                if len(open_orders) > 0:
+                    print(f"🧹 {market_symbol}: Membersihkan order tidak lengkap sebelum setup...")
+                    try:
+                        await exchange.cancel_all_orders(market_symbol)
+                        await asyncio.sleep(1) # Jeda agar exchange proses cancel
+                    except Exception as e:
+                        print(f"   Gagal cancel: {e}")
+
+                # --- HITUNG HARGA ---
+                try:
+                    bars = await exchange.fetch_ohlcv(market_symbol, config.TIMEFRAME_EXEC, limit=50)
+                    df = pd.DataFrame(bars, columns=['time','open','high','low','close','volume'])
+                    atr = df.ta.atr(length=config.ATR_PERIOD).iloc[-1]
+                except: 
+                    atr = entry_price * 0.01
+
+                # Logic Multiplier
+                multiplier_sl = getattr(config, 'TRAP_SAFETY_SL', config.ATR_MULTIPLIER_SL) if getattr(config, 'USE_LIQUIDITY_HUNT', False) else config.ATR_MULTIPLIER_SL
+                
+                sl_dist = atr * multiplier_sl
+                tp_dist = atr * config.ATR_MULTIPLIER_TP1
+                
+                if current_side == "LONG":
+                    sl_price = entry_price - sl_dist
+                    tp_price = entry_price + tp_dist
+                    sl_side_api = 'sell'
+                else:
+                    sl_price = entry_price + sl_dist
+                    tp_price = entry_price - tp_dist
+                    sl_side_api = 'buy'
+
+                qty_final = exchange.amount_to_precision(market_symbol, current_contracts)
+                p_sl = exchange.price_to_precision(market_symbol, sl_price)
+                p_tp = exchange.price_to_precision(market_symbol, tp_price)
+
+                # --- KUNCI TRACKER SEKARANG (STATE: PENDING) ---
+                # Ini yang mencegah concurrent process lain masuk saat kita lagi request ke API
+                safety_orders_tracker[market_symbol] = {
+                    "status": "PENDING",
+                    "time": now,
+                    "last_check": now,
+                    "quantity": current_contracts,
+                    "side": current_side,
+                    "order_ids": []
+                }
+                save_tracker() # Simpan ke file biar kalau crash statusnya PENDING
+
+                new_ids = []
+                try:
+                    print(f"🚀 {market_symbol}: Memasang TP/SL Baru...")
+                    
+                    # 1. Pasang SL
+                    o_sl = await exchange.create_order(
+                        market_symbol, 'STOP_MARKET', sl_side_api, qty_final, None, 
+                        {'stopPrice': p_sl, 'workingType': 'MARK_PRICE', 'reduceOnly': True}
+                    )
+                    new_ids.append(str(o_sl['id']))
+                    
+                    # 2. Pasang TP
+                    o_tp = await exchange.create_order(
+                        market_symbol, 'TAKE_PROFIT_MARKET', sl_side_api, qty_final, None, 
+                        {'stopPrice': p_tp, 'workingType': 'CONTRACT_PRICE', 'reduceOnly': True}
+                    )
+                    new_ids.append(str(o_tp['id']))
+
+                    # SUKSES -> UPDATE JADI SECURED
+                    safety_orders_tracker[market_symbol].update({
+                        "status": "SECURED",
+                        "sl": float(p_sl),
+                        "tp": float(p_tp),
+                        "entry_price": entry_price,
+                        "order_ids": new_ids
+                    })
+                    save_tracker()
+                    
+                    print(f"✅ {market_symbol}: Safety orders TERPASANG.")
+                    
+                    # Hitung RR untuk laporan
+                    risk = abs(entry_price - float(p_sl))
+                    reward = abs(entry_price - float(p_tp))
+                    rr_ratio = reward / risk if risk > 0 else 0
+                    
+                    await kirim_tele(
+                        f"🛡️ <b>SAFETY SECURED</b>\n"
+                        f"{market_symbol} ({current_side})\n"
+                        f"📍 Entry: {entry_price}\n"
+                        f"🛑 SL: {p_sl}\n"
+                        f"🎯 TP: {p_tp}\n"
+                        f"⚖️ R:R 1:{rr_ratio:.2f}"
+                    )
+
+                except Exception as e:
+                    print(f"❌ Gagal pasang safety {market_symbol}: {e}")
+                    # Jika gagal, HAPUS tracker agar dicoba lagi di loop berikutnya
+                    if market_symbol in safety_orders_tracker:
+                        del safety_orders_tracker[market_symbol]
+                        save_tracker()
+                    
+                    # Cancel order setengah jalan (misal SL masuk, TP gagal)
+                    for oid in new_ids:
+                        try: await exchange.cancel_order(oid, market_symbol)
+                        except: pass
+
+            # ==============================================================
+            # CLEANUP: Hapus Tracker jika posisi sudah ditutup di Binance
+            # ==============================================================
+            tracked_symbols = list(safety_orders_tracker.keys())
+            for tracked in tracked_symbols:
+                if tracked not in active_symbols_now:
+                    # Ambil data sebelum dihapus untuk laporan
+                    tracker_data = safety_orders_tracker[tracked]
+                    reason = await check_close_reason(tracked, tracker_data)
+                    
+                    if reason == "SL_HIT":
+                        msg = "🔴 <b>STOP LOSS HIT</b>"
+                    elif reason == "TP_HIT":
+                        msg = "🟢 <b>TAKE PROFIT HIT</b>"
+                    else:
+                        msg = "👋 <b>Position Closed / Manual</b>"
+                    
+                    await kirim_tele(f"{msg}\n🔐 {tracked}")
+                    
+                    print(f"🗑️ {tracked}: Posisi close. Menghapus tracker.")
+                    del safety_orders_tracker[tracked]
+                    save_tracker()
+
+        except Exception as e:
+            print(f"❌ Error Safety Monitor: {e}")
+            import traceback
+            traceback.print_exc()
+
 # ==========================================
 # 3. ANALISA MARKET (STRATEGI)
 # ==========================================
@@ -365,33 +611,40 @@ async def analisa_market(coin_config, btc_trend_status):
     now = time.time()
     
     # --- CEK COOLDOWN & OPEN ORDERS ---
-    if symbol in last_entry_time and (now - last_entry_time[symbol] < config.COOLDOWN_PER_SYMBOL_SECONDS): return
+    if symbol in last_entry_time and (now - last_entry_time[symbol] < config.COOLDOWN_PER_SYMBOL_SECONDS): 
+        return
 
     try:
         base_symbol = symbol.split('/')[0]
         for pos_sym in positions_cache:
-            if pos_sym == symbol or pos_sym.startswith(base_symbol): return
+            if pos_sym == symbol or pos_sym.startswith(base_symbol): 
+                return
         
         open_orders = await exchange.fetch_open_orders(symbol)
         limit_orders = [o for o in open_orders if o['type'] == 'limit' and o['status'] == 'open']
         if len(limit_orders) > 0:
-            if len(limit_orders) > 1: await exchange.cancel_all_orders(symbol)
+            if len(limit_orders) > 1: 
+                await exchange.cancel_all_orders(symbol)
             return 
             
-    except Exception as e: return 
+    except Exception as e: 
+        return 
 
     # --- FILTER TREND BTC ---
     allowed_signal = "BOTH"
     if symbol != config.BTC_SYMBOL:
-        if btc_trend_status == "BULLISH": allowed_signal = "LONG_ONLY"
-        elif btc_trend_status == "BEARISH": allowed_signal = "SHORT_ONLY"
+        if btc_trend_status == "BULLISH": 
+            allowed_signal = "LONG_ONLY"
+        elif btc_trend_status == "BEARISH": 
+            allowed_signal = "SHORT_ONLY"
 
     try:
         # 1. FETCH DATA (TIMEFRAME TREND & EKSEKUSI)
         bars = await exchange.fetch_ohlcv(symbol, config.TIMEFRAME_EXEC, limit=config.LIMIT_EXEC)
         bars_h1 = await exchange.fetch_ohlcv(symbol, config.TIMEFRAME_TREND, limit=config.LIMIT_TREND) 
         
-        if not bars or not bars_h1: return
+        if not bars or not bars_h1: 
+            return
 
         # 2. PROSES DATA MAJOR TREND FILTER
         df_h1 = pd.DataFrame(bars_h1, columns=['time','open','high','low','close','volume'])
@@ -474,12 +727,14 @@ async def analisa_market(coin_config, btc_trend_status):
                 # Buy di BB Bawah
                 if (price_now <= confirm['BBL']) and (confirm['STOCH_K'] < 20):
                      if (allowed_signal in ["LONG_ONLY", "BOTH"]):
-                        signal = "LONG"; strategy_type = "BB_BOUNCE_BOTTOM"
+                        signal = "LONG"
+                        strategy_type = "BB_BOUNCE_BOTTOM"
                 
                 # Sell di BB Atas
                 elif (price_now >= confirm['BBU']) and (confirm['STOCH_K'] > 80):
                      if (allowed_signal in ["SHORT_ONLY", "BOTH"]):
-                        signal = "SHORT"; strategy_type = "BB_BOUNCE_TOP"
+                        signal = "SHORT"
+                        strategy_type = "BB_BOUNCE_TOP"
 
         # 5. EKSEKUSI
         if signal:
@@ -509,47 +764,49 @@ async def analisa_market(coin_config, btc_trend_status):
 # 4. LOOP UTAMA
 # ==========================================
 async def main():
-    global exchange, positions_cache, global_btc_trend
+    global exchange, positions_cache, global_btc_trend, safety_orders_tracker, safety_monitor_lock
+    
+    # CRITICAL: Initialize async lock
+    safety_monitor_lock = asyncio.Lock()
     
     params = {'apiKey': config.API_KEY_DEMO if config.PAKAI_DEMO else config.API_KEY_LIVE,
               'secret': config.SECRET_KEY_DEMO if config.PAKAI_DEMO else config.SECRET_KEY_LIVE,
               'enableRateLimit': True, 'options': {'defaultType': 'future'}}
     exchange = ccxt.binance(params)
-    if config.PAKAI_DEMO: exchange.enable_demo_trading(True)
+    if config.PAKAI_DEMO: 
+        exchange.enable_demo_trading(True)
 
-    await kirim_tele("🚀 <b>BOT STARTED (Pullback Type))</b>")
+    await kirim_tele("🚀 <b>BOT STARTED (Pullback Sniper + LOCK FIX)</b>")
     await setup_account_settings()
 
-    # --- PERUBAHAN DIMULAI DI SINI ---
-    # 1. Buat "Satpam Pintu" (Semaphore) sesuai limit di config
+    # Semaphore untuk limit konkurensi analisa
     sem = asyncio.Semaphore(config.CONCURRENCY_LIMIT)
 
-    # 2. Fungsi Wrapper untuk membatasi antrian masuk
     async def safe_analisa(k, trend):
-        async with sem: # Hanya izinkan masuk jika "pintu" belum penuh
+        async with sem:
             await analisa_market(k, trend)
-    # --- PERUBAHAN SELESAI ---
 
     while True:
         try:
             pos = await exchange.fetch_positions()
             positions_cache = {p['symbol'].split(':')[0] for p in pos if float(p.get('contracts', 0)) > 0}
             
+            # CRITICAL: Monitor dijalankan SEKALI per loop (tidak concurrent!)
             await monitor_positions_safety()
+            
+            # Tampilkan status
+            print_tracker_status()
 
             btc_trend = await update_btc_trend()
             
-            # Gunakan wrapper 'safe_analisa' di dalam list comprehension
+            # Analisa market bisa concurrent (sudah di-protect semaphore)
             tasks = [safe_analisa(k, btc_trend) for k in config.DAFTAR_KOIN]
-            
-            # Eksekusi (sekarang sudah dibatasi rate limit-nya oleh Semaphore)
             await asyncio.gather(*tasks)
             
             print(f"⏳ Loop selesai. Active Pos: {len(positions_cache)}")
             await asyncio.sleep(10)
 
         except asyncio.CancelledError:
-            # Tangkap jika task di-cancel secara internal
             raise
         except Exception as e:
             print(f"Loop error: {e}")

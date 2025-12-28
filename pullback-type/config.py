@@ -52,7 +52,10 @@ STOCH_OVERBOUGHT = 80
 TIMEFRAME_TREND = '1h'      
 TIMEFRAME_EXEC = '5m'      
 LIMIT_TREND = 500           
-LIMIT_EXEC = 100            
+LIMIT_EXEC = 100
+
+# Toleransi perbedaan entry price untuk dianggap sama posisi (dalam persen)
+ENTRY_PRICE_TOLERANCE = 0.5  # 0.5%
 
 # SETTING RR 1:2 (FIXED)
 ATR_PERIOD = 14             

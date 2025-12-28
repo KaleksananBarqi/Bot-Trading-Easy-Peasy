@@ -1,1 +1,28 @@
-{}
+{
+  "BTC/USDT": {
+    "entry_price": 87792.2,
+    "order_count": 2,
+    "order_ids": [
+      "1000000002817441",
+      "1000000002817442"
+    ],
+    "side": "LONG",
+    "sl": 87685.1,
+    "status": "SECURED",
+    "time": "2025-12-28 15:58:42",
+    "tp": 88027.8
+  },
+  "DOGE/USDT": {
+    "entry_price": 0.12415,
+    "order_count": 2,
+    "order_ids": [
+      "1000000002817206",
+      "1000000002817207"
+    ],
+    "side": "LONG",
+    "sl": 0.12397,
+    "status": "SECURED",
+    "time": "2025-12-28 15:55:16",
+    "tp": 0.12454
+  }
+}
