@@ -31,6 +31,7 @@ BTC_TIMEFRAME = '1h'    # Timeframe khusus untuk menentukan trend BTC
 BTC_EMA_PERIOD = 50     # EMA King Filter
 
 # --- 4. STRATEGI INDIKATOR (PARAMETER) ---
+EMA_TREND_MAJOR = 50
 EMA_FAST = 21           
 EMA_SLOW = 50          
 ADX_PERIOD = 14
@@ -66,8 +67,6 @@ ERROR_SLEEP_DELAY = 5       # Detik jeda jika terjadi error loop
 # A. Sniper / Liquidity Hunt Strategy
 USE_LIQUIDITY_HUNT = True
 # Seberapa jauh entry digeser dari harga SL awal (dalam satuan ATR)
-# 0.0 = Entry pas di harga SL awal
-SNIPER_ENTRY_BUFFER = 0.005  
 # Jarak Safety SL baru setelah entry sniper kejemput (dalam satuan ATR)
 TRAP_SAFETY_SL = 1.0
 

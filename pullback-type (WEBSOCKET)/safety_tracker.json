@@ -1,15 +1,21 @@
 {
   "AAVE/USDT": {
-    "created_at": 1767177435.505554,
-    "entry_id": "81756783",
+    "created_at": 1767182586.5436225,
+    "entry_id": "81790105",
     "status": "WAITING_ENTRY",
-    "strategy": "SIDEWAYS_SCALP"
+    "strategy": "TREND_TRAP"
   },
   "ADA/USDT": {
     "created_at": 1767178010.6239927,
     "entry_id": "529567858",
     "status": "WAITING_ENTRY",
     "strategy": "TREND_TRAP"
+  },
+  "ALGO/USDT": {
+    "created_at": 1767182856.0303597,
+    "entry_id": "164368067",
+    "status": "WAITING_ENTRY",
+    "strategy": "SIDEWAYS_SCALP"
   },
   "ATOM/USDT": {
     "created_at": 1767177987.1275709,
@@ -50,6 +56,24 @@
   "LTC/USDT": {
     "created_at": 1767175827.3229613,
     "entry_id": "902443410",
+    "status": "WAITING_ENTRY",
+    "strategy": "TREND_TRAP"
+  },
+  "NEAR/USDT": {
+    "created_at": 1767179025.8176467,
+    "entry_id": "190657960",
+    "status": "WAITING_ENTRY",
+    "strategy": "TREND_TRAP"
+  },
+  "TRX/USDT": {
+    "created_at": 1767180720.2104516,
+    "entry_id": "612832882",
+    "status": "WAITING_ENTRY",
+    "strategy": "TREND_TRAP"
+  },
+  "XLM/USDT": {
+    "created_at": 1767180685.729218,
+    "entry_id": "297503165",
     "status": "WAITING_ENTRY",
     "strategy": "TREND_TRAP"
   },
