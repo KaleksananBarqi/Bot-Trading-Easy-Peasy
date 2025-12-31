@@ -484,12 +484,12 @@ def fetch_and_save_data():
     print("="*60)
     
     # Konfigurasi
-    START_DATE = "2024-01-01"
-    END_DATE = "2024-03-01"
+    START_DATE = "2025-10-01"
+    END_DATE = "2025-12-30"
     TIMEFRAMES = ['5m', '1h']  # Timeframe yang dibutuhkan untuk strategi
     
     # Ambil simbol dari config bot (hanya beberapa untuk testing)
-    SYMBOLS = [coin['symbol'] for coin in config.DAFTAR_KOIN[:3]]  # Hanya 3 simbol pertama untuk testing
+    SYMBOLS = [coin['symbol'] for coin in config.DAFTAR_KOIN]  # Hanya 3 simbol pertama untuk testing
     
     # Tambahkan BTC untuk filter trend
     SYMBOLS.append('BTC/USDT')

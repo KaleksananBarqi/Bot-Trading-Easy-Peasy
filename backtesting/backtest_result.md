@@ -1,64 +1,89 @@
-# 📊 Laporan Summary: Strategi Pullback Sniper
+# 🚀 Laporan Backtest: Pullback Sniper Strategy
 
-## Laporan Kinerja Portofolio Backtest
+**Tanggal Generate:** 31 Desember 2025
+**File Konfigurasi:** `backtest_results/config_20251231_105256.json`
 
-### 💰 Pertumbuhan Modal (Equity Growth)
+---
+
+## 1. Ringkasan Eksekutif
 
 | Metrik | Nilai |
-| --- | --- |
-| Modal Awal | $10,000.00 |
-| Modal Akhir | $82,022,484.18 |
-| Total Profit | $82,012,484.18 |
-| ROI | 🚀 820,124.84% |
+| :--- | :--- |
+| **Total Profit/Loss** | **+1,060,001,321.11%** 🚀 |
+| **Modal Akhir** | **$1,060,001,421.11** |
+| **Win Rate** | **64.76%** |
+| **Profit Factor** | **3.69** |
+| **Total Trades** | 3,788 |
+| **Max Drawdown** | -12.51% |
 
 ---
 
-### 🎯 Statistik Performa (Win/Loss)
+## 2. Konfigurasi Backtest
 
-| Metrik | Nilai |
-| --- | --- |
-| Total Trades | 2,570 Posisi |
-| Win Rate | 62.33% |
-| Profit Factor | 3.49 (Sangat Sehat) |
-| Avg. Risk/Reward | 1 : 2.11 |
-| Sharpe Ratio | 157.51 (Menunjukkan efisiensi profit yang sangat tinggi terhadap risiko) |
-
----
-
-### 🛡️ Manajemen Risiko (Drawdown)
-
-| Metrik | Nilai |
-| --- | --- |
-| Max Drawdown | -5.04% (Sangat rendah, menunjukkan strategi ini cukup aman dari margin call) |
-| Max Win | $1,546,732.04 |
-| Max Loss | -$573,497.22 |
+* **Periode:** 01 Oktober 2025 - 30 Desember 2025
+* **Modal Awal:** $100.00
+* **Jumlah Simbol:** 12 Pair (USDT)
+* **Leverage:**
+    * 20x: ETH
+    * 15x: SOL, BNB
+    * 10x: XRP, ADA, DOGE, TRX, LTC, AVAX, LINK, ZEC, BTC
 
 ---
 
-### 🚪 Distribusi Exit (Alasan Keluar Market)
+## 3. Detail Performa (Performance Metrics)
 
-| Alasan Exit | Jumlah Trade | Persentase |
-| --- | --- | --- |
-| ✅ Take Profit (TP) | 1,599 | 62.2% |
-| ❌ Stop Loss (SL) | 968 | 37.7% |
-| ⏱️ Time Exit | 3 | 0.1% |
+### 💰 Finansial
+* **Modal Awal:** `$100.00`
+* **Modal Akhir:** `$1,060,001,421.11`
+* **Net Profit:** `$1,060,001,321.11`
+* **Rata-rata Win:** `$592,597.95`
+* **Rata-rata Loss:** `$-294,862.50`
+
+### 🎯 Statistik Trading
+* **Win Rate:** `64.76%`
+* **Profit Factor:** `3.69`
+* **Risk/Reward (Avg):** `2.01`
+* **Sharpe Ratio:** `153.14`
+
+### ⚡ Risiko
+* **Maximum Win (Single Trade):** `$20,195,211.12`
+* **Maximum Loss (Single Trade):** `$-11,614,712.32`
+* **Maximum Drawdown:** `-12.51%`
 
 ---
 
-### 🏆 Aset & Strategi Terbaik
+## 4. Distribusi Exit
+Bagaimana trade ditutup oleh sistem:
 
-#### Top 3 Simbol
+* **Take Profit (TP):** 2,452 trades (64.7%)
+* **Stop Loss (SL):** 1,335 trades (35.2%)
+* **Time Exit:** 1 trades (0.0%)
 
-| Rank | Simbol | Profit |
-| --- | --- | --- |
-| 1. 🥇 | ZEC/USDT | $47.4M |
-| 2. 🥈 | LINK/USDT | $19.6M |
-| 3. 🥉 | AVAX/USDT | $9.4M |
+---
 
-#### Top 3 Setup Strategi
+## 5. Performa Aset (Top 5 Symbols)
+Simbol dengan kontribusi profit terbesar:
 
-| Rank | Strategi | Profit |
-| --- | --- | --- |
-| 1. 🔵 | BB_BOUNCE_BOTTOM | $20.3M |
-| 2. 🔴 | BB_BOUNCE_TOP | $16.7M |
-| 3. 🟢 | TREND_PULLBACK (RSI 50.3) | $3.0M |
+1.  🥇 **ZEC/USDT:** `$1,025,021,659.24` (Dominasi Utama)
+2.  🥈 **LINK/USDT:** `$24,954,783.17`
+3.  🥉 **AVAX/USDT:** `$6,715,901.82`
+4.  **LTC/USDT:** `$2,354,715.38`
+5.  **DOGE/USDT:** `$467,977.00`
+
+---
+
+## 6. Performa Strategi
+Logic entry mana yang menghasilkan profit terbaik:
+
+| Nama Strategi | Total Profit ($) |
+| :--- | :--- |
+| **BB_BOUNCE_TOP** | $175,822,600.03 |
+| **BB_BOUNCE_BOTTOM** | $175,496,070.35 |
+| **TREND_PULLBACK (RSI 52.1)** | $36,652,168.10 |
+| **TREND_PULLBACK (RSI 50.6)** | $35,835,326.13 |
+| **TREND_PULLBACK (RSI 51.1)** | $34,047,164.81 |
+
+---
+
+> **📝 Catatan Analisis:**
+> Hasil backtest menunjukkan pertumbuhan yang **sangat ekstrem** ($100 menjadi $1 Miliar dalam 3 bulan). Kemungkinan besar disebabkan oleh pengaturan *compounding* (bunga berbunga) yang agresif tanpa batasan *max position size*. Dalam kondisi *real market*, likuiditas mungkin tidak akan menampung ukuran posisi sebesar ini pada ZEC/USDT.

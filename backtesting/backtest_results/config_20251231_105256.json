@@ -1,0 +1,22 @@
+{
+  "start_date": "2025-10-01",
+  "end_date": "2025-12-30",
+  "initial_capital": 100,
+  "commission": 0.0004,
+  "symbols_tested": [
+    "XRP/USDT",
+    "SOL/USDT",
+    "LINK/USDT",
+    "BNB/USDT",
+    "ADA/USDT",
+    "DOGE/USDT",
+    "AVAX/USDT",
+    "LTC/USDT",
+    "TRX/USDT",
+    "ZEC/USDT",
+    "ETH/USDT"
+  ],
+  "total_symbols": 11,
+  "btc_data_available": true,
+  "timestamp": "20251231_105256"
+}

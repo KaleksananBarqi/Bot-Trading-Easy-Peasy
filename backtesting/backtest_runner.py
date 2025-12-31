@@ -27,9 +27,9 @@ def run_complete_backtest():
     print("="*60)
     
     # 1. Konfigurasi Backtest
-    START_DATE = "2024-01-01"
-    END_DATE = "2024-03-01"
-    INITIAL_CAPITAL = 10000
+    START_DATE = "2025-10-01"
+    END_DATE = "2025-12-30"
+    INITIAL_CAPITAL = 100
     
     print(f"\n1. KONFIGURASI BACKTEST")
     print(f"   📅 Periode: {START_DATE} hingga {END_DATE}")
@@ -166,10 +166,10 @@ def run_simple_backtest():
     print("="*60)
     
     # Konfigurasi
-    START_DATE = "2024-01-01"
-    END_DATE = "2024-01-07"  # Hanya 1 minggu untuk testing cepat
-    INITIAL_CAPITAL = 1000
-    
+    START_DATE = "2025-10-01"
+    END_DATE = "2025-12-30"  # Hanya 1 minggu untuk testing cepat
+    INITIAL_CAPITAL = 100
+
     print(f"Periode: {START_DATE} hingga {END_DATE}")
     print(f"Modal: ${INITIAL_CAPITAL}")
     

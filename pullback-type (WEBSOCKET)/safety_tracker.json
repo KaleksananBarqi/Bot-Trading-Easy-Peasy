@@ -1,0 +1,62 @@
+{
+  "AAVE/USDT": {
+    "created_at": 1767177435.505554,
+    "entry_id": "81756783",
+    "status": "WAITING_ENTRY",
+    "strategy": "SIDEWAYS_SCALP"
+  },
+  "ADA/USDT": {
+    "created_at": 1767178010.6239927,
+    "entry_id": "529567858",
+    "status": "WAITING_ENTRY",
+    "strategy": "TREND_TRAP"
+  },
+  "ATOM/USDT": {
+    "created_at": 1767177987.1275709,
+    "entry_id": "211059977",
+    "status": "WAITING_ENTRY",
+    "strategy": "SIDEWAYS_SCALP"
+  },
+  "BNB/USDT": {
+    "created_at": 1767177106.311376,
+    "entry_id": "1111067918",
+    "status": "WAITING_ENTRY",
+    "strategy": "TREND_TRAP"
+  },
+  "BTC/USDT": {
+    "created_at": 1767177475.7702434,
+    "entry_id": "11284653355",
+    "status": "WAITING_ENTRY",
+    "strategy": "TREND_TRAP"
+  },
+  "DOT/USDT": {
+    "created_at": 1767178513.9641566,
+    "entry_id": "140831170",
+    "status": "WAITING_ENTRY",
+    "strategy": "SIDEWAYS_SCALP"
+  },
+  "ETH/USDT": {
+    "created_at": 1767177425.3599434,
+    "entry_id": "7906690714",
+    "status": "WAITING_ENTRY",
+    "strategy": "TREND_TRAP"
+  },
+  "LINK/USDT": {
+    "created_at": 1767177030.2082841,
+    "entry_id": "448676188",
+    "status": "WAITING_ENTRY",
+    "strategy": "TREND_TRAP"
+  },
+  "LTC/USDT": {
+    "created_at": 1767175827.3229613,
+    "entry_id": "902443410",
+    "status": "WAITING_ENTRY",
+    "strategy": "TREND_TRAP"
+  },
+  "XMR/USDT": {
+    "created_at": 1767177745.8428855,
+    "entry_id": "214645443",
+    "status": "WAITING_ENTRY",
+    "strategy": "SIDEWAYS_SCALP"
+  }
+}

@@ -578,13 +578,19 @@ class BacktestEngine:
         
         # 3. Distribusi P&L
         ax3 = axes[1, 0]
-        colors = ['green' if x > 0 else 'red' for x in trades_df['pnl_usdt']]
-        ax3.hist(trades_df['pnl_usdt'], bins=30, color=colors, edgecolor='black', alpha=0.7)
+        # Kita plot histogram dulu tanpa warna spesifik per data
+        n, bins, patches = ax3.hist(trades_df['pnl_usdt'], bins=30, edgecolor='black', alpha=0.7)
+        
+        # Lalu kita warnai bar-nya satu per satu berdasarkan posisi bin (positif/negatif)
+        for patch, left_side, right_side in zip(patches, bins[:-1], bins[1:]):
+            center = (left_side + right_side) / 2
+            if center > 0:
+                patch.set_facecolor('green')
+            else:
+                patch.set_facecolor('red')
+
         ax3.axvline(x=0, color='black', linestyle='--', linewidth=1)
         ax3.set_title('Distribusi Profit/Loss', fontsize=12, fontweight='bold')
-        ax3.set_xlabel('P&L (USDT)')
-        ax3.set_ylabel('Frekuensi')
-        ax3.grid(True, alpha=0.3)
         
         # 4. Win Rate per Symbol
         ax4 = axes[1, 1]

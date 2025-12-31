@@ -1,9 +1,18 @@
 {
-  "total_symbols": 3,
+  "total_symbols": 12,
   "symbols": [
     "BTC/USDT",
     "ETH/USDT",
-    "SOL/USDT"
+    "SOL/USDT",
+    "BNB/USDT",
+    "XRP/USDT",
+    "ADA/USDT",
+    "DOGE/USDT",
+    "TRX/USDT",
+    "LTC/USDT",
+    "AVAX/USDT",
+    "LINK/USDT",
+    "ZEC/USDT"
   ],
   "timeframes": [
     "5m",
@@ -15,7 +24,25 @@
     "historical_data/ETH_USDT/5m.csv",
     "historical_data/ETH_USDT/1h.csv",
     "historical_data/SOL_USDT/5m.csv",
-    "historical_data/SOL_USDT/1h.csv"
+    "historical_data/SOL_USDT/1h.csv",
+    "historical_data/BNB_USDT/5m.csv",
+    "historical_data/BNB_USDT/1h.csv",
+    "historical_data/XRP_USDT/5m.csv",
+    "historical_data/XRP_USDT/1h.csv",
+    "historical_data/ADA_USDT/5m.csv",
+    "historical_data/ADA_USDT/1h.csv",
+    "historical_data/DOGE_USDT/5m.csv",
+    "historical_data/DOGE_USDT/1h.csv",
+    "historical_data/TRX_USDT/5m.csv",
+    "historical_data/TRX_USDT/1h.csv",
+    "historical_data/LTC_USDT/5m.csv",
+    "historical_data/LTC_USDT/1h.csv",
+    "historical_data/AVAX_USDT/5m.csv",
+    "historical_data/AVAX_USDT/1h.csv",
+    "historical_data/LINK_USDT/5m.csv",
+    "historical_data/LINK_USDT/1h.csv",
+    "historical_data/ZEC_USDT/5m.csv",
+    "historical_data/ZEC_USDT/1h.csv"
   ],
-  "timestamp": "2025-12-27T14:25:10.168481"
+  "timestamp": "2025-12-31T10:28:19.158290"
 }
