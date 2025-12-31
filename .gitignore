@@ -260,3 +260,4 @@ signal_tracker.json
 __pycache__/
 *.py[cod]
 .json
+pullback-type (WEBSOCKET)/safety_tracker.json
