@@ -49,7 +49,9 @@ SYMBOL_COOLDOWN = {}
 # GLOBAL TREND FILTER
 btc_trend_direction = "NEUTRAL" 
 data_lock = asyncio.Lock()
-
+# Kode ini untuk sinkronisasi safety orders
+safety_lock = asyncio.Lock() 
+safety_event = asyncio.Event() # Alarm untuk membangunkan monitor
 # ==========================================
 # FUNGSI HELPER
 # ==========================================
@@ -240,26 +242,22 @@ class BinanceWSManager:
                 if order_type == 'LIMIT':
                     # Entry Sniper Filled
                     logger.info(f"⚡ LIMIT FILLED: {symbol} | Side: {side} | Price: {price}")
-                    async def fast_safety_trigger():
-                        await asyncio.sleep(2) 
-                        await install_safety_orders(symbol, {'entryPrice': price, 'contracts': float(order_info['z']), 'side': side}) # 'z' is filled quantity
 
-                    asyncio.create_task(fast_safety_trigger())
+                    # [UBAH DISINI] Hapus fast_safety_trigger task. 
+                    # Serahkan ke Monitor lewat Event agar antrian rapi.
                     async with data_lock:
-                        # --- [FIX START] ---
-                        # Cek status saat ini agar tidak menimpa jika sedang diproses
                         curr_tracker = safety_orders_tracker.get(symbol, {})
-                        curr_status = curr_tracker.get('status', 'NONE')
-                        
-                        # Hanya set PENDING jika status belum SECURED atau PROCESSING
-                        if curr_status not in ['SECURED', 'PROCESSING']:
-                            safety_orders_tracker[symbol] = {'status': 'PENDING', 'last_check': time.time()}
-                            save_tracker()
-                        else:
-                            logger.info(f"⚠️ Skipping Tracker Reset for {symbol}: Status is {curr_status}")
-                        # --- [FIX END] ---
+                        # Force status ke PENDING agar monitor memproses
+                        safety_orders_tracker[symbol] = {
+                            'status': 'PENDING', 
+                            'last_check': time.time(),
+                            'entry_fill_price': price # Simpan harga entry fix dari order
+                        }
+                        save_tracker()
+                    
+                    safety_event.set() # <--- (Bangunkan Monitor)
 
-                    msg = (f"⚡ <b>ENTRY FILLED</b>\n🚀 <b>{symbol}</b> Entered @ {price}\n<i>Memasang safety orders...</i>")
+                    msg = (f"⚡ <b>ENTRY FILLED</b>\n🚀 <b>{symbol}</b> Entered @ {price}\n<i>Signal sent to Safety Monitor...</i>")
                     await kirim_tele(msg)
 
                 elif order_type in ['TAKE_PROFIT_MARKET', 'STOP_MARKET']:
@@ -306,14 +304,35 @@ async def fetch_existing_positions():
         print(f"❌ Failed to fetch positions: {e}")
 
 async def install_safety_for_existing_positions():
+    print("🔍 Checking Existing Positions & Orders...")
     current_positions = dict(position_cache_ws)
+    
+    # Ambil semua open order sekaligus untuk efisiensi
+    try:
+        open_orders = await exchange.fetch_open_orders()
+        # Buat dictionary: {'BTC/USDT': 2, 'ETH/USDT': 0} (jumlah order per koin)
+        orders_map = {}
+        for o in open_orders:
+            sym = o['symbol']
+            orders_map[sym] = orders_map.get(sym, 0) + 1
+    except Exception as e:
+        print(f"⚠️ Gagal fetch open orders awal: {e}")
+        orders_map = {}
+
     for base_sym, pos_data in current_positions.items():
         symbol = pos_data['symbol']
-        tracker = safety_orders_tracker.get(symbol, {})
-        status = tracker.get("status", "UNKNOWN")
-        if status != "SECURED":
+        existing_order_count = orders_map.get(symbol, 0)
+        
+        # LOGIKA BARU: Jika sudah ada minimal 2 order (kemungkinan SL & TP), anggap aman
+        if existing_order_count >= 2:
+            safety_orders_tracker[symbol] = {"status": "SECURED", "last_check": time.time()}
+            print(f"   ✅ {symbol}: Terdeteksi aman ({existing_order_count} active orders).")
+        else:
             safety_orders_tracker[symbol] = {"status": "PENDING", "last_check": time.time()}
-            save_tracker()
+            print(f"   ⚠️ {symbol}: Posisi telanjang/kurang order -> Set PENDING.")
+            safety_event.set() # Bangunkan monitor segera
+            
+    save_tracker()
 
 async def initialize_market_data():
     print("📥 Initializing Market Data (REST)...")
@@ -685,61 +704,81 @@ async def install_safety_orders(symbol, pos_data):
 
 async def safety_monitor_hybrid():
     global safety_orders_tracker
+    print("🛡️ Safety Monitor: STANDBY (Event Driven)")
+    
     while True:
         try:
-            now = time.time()
-            async with data_lock:
-                current_positions = dict(position_cache_ws)
+            # [LOGIKA BARU] Tunggu sinyal event ATAU timeout 5 detik (heartbeat)
+            try:
+                await asyncio.wait_for(safety_event.wait(), timeout=5.0)
+            except asyncio.TimeoutError:
+                pass # Lanjut cek rutin jika tidak ada event
             
-            for base_sym, pos_data in current_positions.items():
-                symbol = pos_data['symbol']
-                current_status = safety_orders_tracker.get(symbol, {}).get("status", "NONE")
+            safety_event.clear() # Reset sinyal
+            
+            # [LOCK] Pastikan hanya satu proses safety yang jalan
+            async with safety_lock:
+                now = time.time()
                 
-                if current_status == "NONE" or current_status == "PENDING":
-                    print(f"🛡️ Installing Safety for: {symbol}")
-                    safety_orders_tracker[symbol] = {"status": "PROCESSING", "last_check": now}
-                    order_ids = await install_safety_orders(symbol, pos_data)
-                    if order_ids:
-                        safety_orders_tracker[symbol] = {"status": "SECURED", "order_ids": order_ids, "last_check": now}
-                        save_tracker()
-                    else:
-                        safety_orders_tracker[symbol] = {"status": "PENDING", "last_check": now}
-            
-            # CHECK GHOST ORDERS & EXPIRY
-            active_trackers = list(safety_orders_tracker.items())
-            for sym, tracker in active_trackers:
-                # Cek Expiry Limit Order (jika WAITING_ENTRY)
-                if tracker.get("status") == "WAITING_ENTRY":
-                    if now > tracker.get("expires_at", now + 999999):
-                        print(f"⏳ ORDER EXPIRED: {sym}. Cleaning up...")
-                        del safety_orders_tracker[sym]
-                        try:
+                # Copy data agar thread-safe
+                async with data_lock:
+                    current_positions = dict(position_cache_ws)
+                
+                # LOOP CHECK
+                for base_sym, pos_data in current_positions.items():
+                    symbol = pos_data['symbol']
+                    tracker = safety_orders_tracker.get(symbol, {})
+                    status = tracker.get("status", "NONE")
+                    
+                    # Cek apakah perlu install
+                    if status == "PENDING":
+                        print(f"🛡️ Installing Safety for: {symbol}...")
+                        
+                        # Update status dulu biar gak diproses ulang thread lain
+                        safety_orders_tracker[symbol]["status"] = "PROCESSING"
+                        
+                        # Eksekusi Install
+                        order_ids = await install_safety_orders(symbol, pos_data)
+                        
+                        if order_ids:
+                            safety_orders_tracker[symbol] = {
+                                "status": "SECURED", 
+                                "order_ids": order_ids, 
+                                "last_check": now
+                            }
+                            save_tracker()
+                            print(f"✅ {symbol} Secured.")
+                        else:
+                            # Jika gagal, kembalikan ke PENDING biar dicoba lagi next loop
+                            safety_orders_tracker[symbol]["status"] = "PENDING"
+                            print(f"❌ {symbol} Failed to Secure. Retrying next loop.")
+
+                # CHECK GHOST ORDERS & EXPIRY (Sama seperti logika lama, tapi di dalam lock)
+                active_trackers = list(safety_orders_tracker.items())
+                for sym, tracker in active_trackers:
+                    # Hapus Tracker jika posisi sudah ditutup (tidak ada di current_positions)
+                    base_sym = sym.split('/')[0]
+                    if base_sym not in current_positions and tracker.get("status") in ["SECURED", "PENDING"]:
+                         # Kecuali status WAITING_ENTRY (Limit Order), jangan hapus
+                         if tracker.get("status") != "WAITING_ENTRY":
+                            print(f"🧹 Cleanup Tracker: {sym} (Position Closed)")
+                            del safety_orders_tracker[sym]
+                            save_tracker()
+
+                    # Cek Expiry Limit Order (WAITING_ENTRY)
+                    elif tracker.get("status") == "WAITING_ENTRY":
+                        if now > tracker.get("expires_at", now + 999999):
+                            print(f"⏳ ORDER EXPIRED: {sym}. Canceling...")
                             entry_id = tracker.get("entry_id")
                             if entry_id:
-                                await exchange.cancel_order(entry_id, sym)
-                        except Exception as e:
-                            logger.warning(f"⚠️ Gagal cancel expired order {sym}: {e}")
-                        save_tracker()
+                                try: await exchange.cancel_order(entry_id, sym)
+                                except: pass
+                            del safety_orders_tracker[sym]
+                            save_tracker()
 
-                elif tracker.get("status") == "SECURED":
-                    last_check = tracker.get("last_check", 0)
-                    if (now - last_check) > 300: # 5 Menit Verification
-                        try:
-                            open_orders = await exchange.fetch_open_orders(sym)
-                            real_ids = [str(o['id']) for o in open_orders]
-                            tracked_ids = tracker.get("order_ids", [])
-                            still_active = any(tid in real_ids for tid in tracked_ids)
-                            if not still_active:
-                                print(f"⚠️ GHOST ORDER DETECTED: {sym}. Resetting tracker.")
-                                del safety_orders_tracker[sym] 
-                            else:
-                                safety_orders_tracker[sym]['last_check'] = now
-                        except Exception as e: pass
-            
-            save_tracker()
-            await asyncio.sleep(5) 
         except Exception as e:
-            await asyncio.sleep(config.ERROR_SLEEP_DELAY)
+            logger.error(f"Safety Monitor Error: {e}")
+            await asyncio.sleep(1)
 
 # ==========================================
 # MAIN LOOP

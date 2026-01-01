@@ -60,5 +60,12 @@
     "expires_at": 1767252768.5569313,
     "status": "WAITING_ENTRY",
     "strategy": "TREND_PULLBACK"
+  },
+  "ZEC/USDT": {
+    "created_at": 1767249902.8303628,
+    "entry_id": "1054944636",
+    "expires_at": 1767253502.8303633,
+    "status": "WAITING_ENTRY",
+    "strategy": "BB_BOUNCE_TOP"
   }
 }
