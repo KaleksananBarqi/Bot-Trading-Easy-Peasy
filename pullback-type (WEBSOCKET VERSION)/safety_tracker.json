@@ -1,17 +1,24 @@
 {
-  "LTC/USDT": {
-    "created_at": 1767268038.3343568,
-    "entry_id": "903645204",
-    "expires_at": 1767271638.334357,
+  "DOGE/USDT": {
+    "created_at": 1767268202.8242843,
+    "entry_id": "594678602",
+    "expires_at": 1767271802.8242846,
     "status": "WAITING_ENTRY",
-    "strategy": "BB_BOUNCE_TOP"
+    "strategy": "TREND_PULLBACK"
   },
-  "SOL/USDT": {
-    "last_check": 1767268039.0813165,
+  "LINK/USDT": {
+    "last_check": 1767268866.8561206,
     "order_ids": [
-      "1000000003450957",
-      "1000000003450958"
+      "1000000003452369",
+      "1000000003452370"
     ],
     "status": "SECURED"
+  },
+  "LTC/USDT": {
+    "created_at": 1767268940.7757008,
+    "entry_id": "903657889",
+    "expires_at": 1767272540.775701,
+    "status": "WAITING_ENTRY",
+    "strategy": "BB_BOUNCE_TOP"
   }
 }
