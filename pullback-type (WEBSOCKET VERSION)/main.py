@@ -254,39 +254,60 @@ class BinanceWSManager:
             order_type = order_info['ot'] 
             side = order_info['S']
             price = float(order_info['ap']) 
-            pnl = float(order_info.get('rp', 0)) 
+            pnl = float(order_info.get('rp', 0)) # Realized Profit
+            is_reduce = order_info.get('R', False) # Cek apakah Reduce-Only
 
             if status == 'FILLED':
-                if order_type == 'LIMIT':
-                    # Entry Sniper Filled
-                    logger.info(f"⚡ LIMIT FILLED: {symbol} | Side: {side} | Price: {price}")
-
-                    # [UBAH DISINI] Hapus fast_safety_trigger task. 
-                    # Serahkan ke Monitor lewat Event agar antrian rapi.
+                # --- LOGIC 1: DETEKSI CLOSE (TP/SL) ---
+                # Jika PnL tidak 0, atau tipe order khusus close, atau reduce only
+                if pnl != 0 or order_type in ['TAKE_PROFIT_MARKET', 'STOP_MARKET'] or is_reduce:
+                    logger.info(f"🏁 POSITION CLOSED: {symbol} | PnL: ${pnl:.2f}")
+                    
+                    # Format Pesan
+                    emoji = "💰" if pnl > 0 else "🛑"
+                    title = "TAKE PROFIT HIT" if pnl > 0 else "STOP LOSS HIT"
+                    pnl_str = f"+${pnl:.2f}" if pnl > 0 else f"-${abs(pnl):.2f}"
+                    
+                    msg = (
+                        f"{emoji} <b>{title}</b>\n"
+                        f"✨ <b>{symbol}</b>\n"
+                        f"🏷️ Type: {order_type}\n"
+                        f"💵 Price: {price}\n"
+                        f"💸 PnL: <b>{pnl_str}</b>"
+                    )
+                    await kirim_tele(msg)
+                    
+                    # Update posisi & tracker
+                    await fetch_existing_positions()
+                    
+                    # Bersihkan tracker jika posisi benar-benar habis
                     async with data_lock:
-                        curr_tracker = safety_orders_tracker.get(symbol, {})
-                        # Force status ke PENDING agar monitor memproses
+                        base_sym = symbol.split('/')[0]
+                        if base_sym not in position_cache_ws and symbol in safety_orders_tracker:
+                            del safety_orders_tracker[symbol]
+                            save_tracker()
+
+                # --- LOGIC 2: DETEKSI ENTRY (LIMIT) ---
+                # Hanya jika PnL 0 (belum ada untung rugi) dan BUKAN reduce only
+                elif order_type == 'LIMIT' and not is_reduce:
+                    logger.info(f"⚡ ENTRY FILLED: {symbol} | Price: {price}")
+
+                    async with data_lock:
+                        # Update tracker jadi PENDING agar safety monitor pasang SL/TP
                         safety_orders_tracker[symbol] = {
                             'status': 'PENDING', 
                             'last_check': time.time(),
-                            'entry_fill_price': price # Simpan harga entry fix dari order
+                            'entry_fill_price': price
                         }
                         save_tracker()
                     
-                    safety_event.set() # <--- (Bangunkan Monitor)
+                    safety_event.set() # Bangunkan Monitor
 
                     msg = (f"⚡ <b>ENTRY FILLED</b>\n🚀 <b>{symbol}</b> Entered @ {price}\n<i>Signal sent to Safety Monitor...</i>")
                     await kirim_tele(msg)
 
-                elif order_type in ['TAKE_PROFIT_MARKET', 'STOP_MARKET']:
-                    logger.info(f"🏁 POSITION CLOSED: {symbol} | Type: {order_type} | PnL: ${pnl:.2f}")
-                    pnl_str = f"+${pnl:.2f}" if pnl > 0 else f"-${abs(pnl):.2f}"
-                    msg = (f"{'💰 TAKE PROFIT' if pnl > 0 else '🛑 STOP LOSS'} HIT\n✨ <b>{symbol}</b>\n💸 PnL: <b>{pnl_str}</b>")
-                    await kirim_tele(msg)
-                    await fetch_existing_positions()
-
             elif status == 'CANCELED':
-                logger.warning(f"🚫 ORDER CANCELED: {symbol} | ID: {order_info.get('i')}")
+                logger.warning(f"🚫 ORDER CANCELED: {symbol}")
 
         except Exception as e:
             logger.error(f"⚠️ Order Update Error: {e}", exc_info=True)

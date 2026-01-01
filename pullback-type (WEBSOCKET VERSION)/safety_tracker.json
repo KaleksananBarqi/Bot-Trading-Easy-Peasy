@@ -1,16 +1,17 @@
 {
-  "AVAX/USDT": {
-    "created_at": 1767254792.9827578,
-    "entry_id": "144018632",
-    "expires_at": 1767258392.9827578,
-    "status": "WAITING_ENTRY",
-    "strategy": "TREND_PULLBACK"
-  },
   "LTC/USDT": {
-    "created_at": 1767254793.2237318,
-    "entry_id": "903468709",
-    "expires_at": 1767258393.223732,
+    "created_at": 1767268038.3343568,
+    "entry_id": "903645204",
+    "expires_at": 1767271638.334357,
     "status": "WAITING_ENTRY",
-    "strategy": "TREND_PULLBACK"
+    "strategy": "BB_BOUNCE_TOP"
+  },
+  "SOL/USDT": {
+    "last_check": 1767268039.0813165,
+    "order_ids": [
+      "1000000003450957",
+      "1000000003450958"
+    ],
+    "status": "SECURED"
   }
 }
