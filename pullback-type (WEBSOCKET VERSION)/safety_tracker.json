@@ -56,6 +56,13 @@
     "status": "WAITING_ENTRY",
     "strategy": "TREND_TRAP"
   },
+  "SOL/USDT": {
+    "created_at": 1767239102.2730772,
+    "entry_id": "1555377657",
+    "expires_at": 1767242702.2730775,
+    "status": "WAITING_ENTRY",
+    "strategy": "TREND_PULLBACK"
+  },
   "TRX/USDT": {
     "created_at": 1767238394.435544,
     "entry_id": "613357950",
