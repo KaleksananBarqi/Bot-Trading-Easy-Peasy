@@ -79,6 +79,24 @@ async def kirim_tele(pesan, alert=False):
                                 data={'chat_id': config.TELEGRAM_CHAT_ID, 'text': f"{prefix}{pesan}", 'parse_mode': 'HTML'})
     except: pass
 
+def kirim_tele_sync(pesan):
+    """
+    Fungsi khusus untuk kirim notif saat bot mati/crash.
+    Menggunakan requests biasa (blocking) agar pesan pasti terkirim sebelum process kill.
+    """
+    try:
+        url = f"https://api.telegram.org/bot{config.TELEGRAM_TOKEN}/sendMessage"
+        data = {
+            'chat_id': config.TELEGRAM_CHAT_ID, 
+            'text': pesan, 
+            'parse_mode': 'HTML'
+        }
+        # Timeout 5 detik agar bot tidak hang selamanya jika internet mati
+        requests.post(url, data=data, timeout=5) 
+        print("✅ Notifikasi Telegram terkirim (Sync).")
+    except Exception as e:
+        print(f"❌ Gagal kirim notif exit: {e}")
+
 # ==========================================
 # WEBSOCKET MANAGER
 # ==========================================
@@ -304,35 +322,34 @@ async def fetch_existing_positions():
         print(f"❌ Failed to fetch positions: {e}")
 
 async def install_safety_for_existing_positions():
-    logger.info("🔍 Checking Existing Positions & Orders...")
+    logger.info("🔍 Checking Existing Positions & Orders...") 
     current_positions = dict(position_cache_ws)
     
-    # Ambil semua open order sekaligus untuk efisiensi
-    try:
-        open_orders = await exchange.fetch_open_orders()
-        # Buat dictionary: {'BTC/USDT': 2, 'ETH/USDT': 0} (jumlah order per koin)
-        orders_map = {}
-        for o in open_orders:
-            sym = o['symbol']
-            orders_map[sym] = orders_map.get(sym, 0) + 1
-    except Exception as e:
-        print(f"⚠️ Gagal fetch open orders awal: {e}")
-        orders_map = {}
+    # [OPTIMASI] Jika tidak ada posisi terbuka, tidak perlu cek order. Hemat API.
+    if not current_positions:
+        logger.info("✅ No active positions found. Skipping startup safety check.")
+        return
 
+    # Loop per posisi yang ada
     for base_sym, pos_data in current_positions.items():
         symbol = pos_data['symbol']
-        existing_order_count = orders_map.get(symbol, 0)
         
-        # LOGIKA BARU: Jika sudah ada minimal 2 order (kemungkinan SL & TP), anggap aman
+        try:
+            # [SOLUSI] Fetch order HANYA untuk symbol ini (Anti Warning & Hemat Rate Limit)
+            orders = await exchange.fetch_open_orders(symbol)
+            existing_order_count = len(orders)
+        except Exception as e:
+            logger.warning(f"⚠️ Gagal fetch orders untuk {symbol}: {e}")
+            existing_order_count = 0
+
+        # LOGIKA CEK SAFETY (Sama seperti sebelumnya)
         if existing_order_count >= 2:
             safety_orders_tracker[symbol] = {"status": "SECURED", "last_check": time.time()}
-            # Log Khusus SUCCESS
             logger.info(f"✅ EXISTING CHECK: {symbol} | Status: SECURED ({existing_order_count} active orders)")
         else:
             safety_orders_tracker[symbol] = {"status": "PENDING", "last_check": time.time()}
-            # Log Khusus WARNING
             logger.info(f"⚠️ EXISTING CHECK: {symbol} | Status: PENDING (Only {existing_order_count} orders) -> Triggering Monitor")
-            safety_event.set() # Bangunkan monitor segera
+            safety_event.set() # Bangunkan monitor
             
     save_tracker()
 
@@ -785,6 +802,9 @@ async def safety_monitor_hybrid():
 # ==========================================
 # MAIN LOOP
 # ==========================================
+# ==========================================
+# MAIN LOOP
+# ==========================================
 async def main():
     global exchange
     
@@ -795,6 +815,7 @@ async def main():
     })
     if config.PAKAI_DEMO: exchange.enable_demo_trading(True)
 
+    # Notif start tetap pakai await (karena event loop masih jalan normal)
     await kirim_tele("🤖 <b>BOT STARTED (OPTIMIZED)</b>\nSystem is Online & Healthy.", alert=True)
 
     try:
@@ -817,15 +838,29 @@ async def main():
             except asyncio.CancelledError: raise 
             except Exception: await asyncio.sleep(config.ERROR_SLEEP_DELAY)
 
+    # --- [MODIFIKASI PENTING] ---
+    # Pastikan 'except' ini SEJAJAR dengan 'try' di atas (di dalam def main)
     except KeyboardInterrupt:
         print("\n👋 Bot dimatikan manual.")
+        # Panggil fungsi SYNC (tanpa await)
+        kirim_tele_sync("🛑 <b>BOT STOPPED</b>\nSystem shutdown manually (KeyboardInterrupt).")
+        
     except Exception as e:
         logger.error(f"Bot Crash: {e}", exc_info=True)
+        # Panggil fungsi SYNC (tanpa await)
+        kirim_tele_sync(f"💀 <b>BOT CRASHED</b>\nError: {str(e)}")
+        
     finally:
         print("🔌 Closing connection...")
-        try: await exchange.close()
+        try: 
+            if exchange: await exchange.close()
         except: pass
+        
         print("✅ Shutdown Complete.")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        # Double cover: Jika Ctrl+C ditekan sebelum masuk ke try/except di main
+        pass

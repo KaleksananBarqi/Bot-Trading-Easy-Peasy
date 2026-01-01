@@ -1,70 +1,29 @@
 {
-  "AAVE/USDT": {
-    "created_at": 1767182586.5436225,
-    "entry_id": "81790105",
-    "status": "WAITING_ENTRY",
-    "strategy": "TREND_TRAP"
-  },
   "ADA/USDT": {
-    "created_at": 1767178010.6239927,
-    "entry_id": "529567858",
+    "created_at": 1767253570.5958738,
+    "entry_id": "530756990",
+    "expires_at": 1767257170.595874,
     "status": "WAITING_ENTRY",
-    "strategy": "TREND_TRAP"
-  },
-  "ALGO/USDT": {
-    "created_at": 1767182856.0303597,
-    "entry_id": "164368067",
-    "status": "WAITING_ENTRY",
-    "strategy": "SIDEWAYS_SCALP"
-  },
-  "ATOM/USDT": {
-    "created_at": 1767177987.1275709,
-    "entry_id": "211059977",
-    "status": "WAITING_ENTRY",
-    "strategy": "SIDEWAYS_SCALP"
+    "strategy": "TREND_PULLBACK"
   },
   "AVAX/USDT": {
-    "created_at": 1767249168.9511137,
-    "entry_id": "143973782",
-    "expires_at": 1767252768.951114,
+    "created_at": 1767253570.3498778,
+    "entry_id": "144008791",
+    "expires_at": 1767257170.349878,
     "status": "WAITING_ENTRY",
     "strategy": "TREND_PULLBACK"
   },
-  "DOT/USDT": {
-    "created_at": 1767178513.9641566,
-    "entry_id": "140831170",
-    "status": "WAITING_ENTRY",
-    "strategy": "SIDEWAYS_SCALP"
-  },
-  "NEAR/USDT": {
-    "created_at": 1767179025.8176467,
-    "entry_id": "190657960",
-    "status": "WAITING_ENTRY",
-    "strategy": "TREND_TRAP"
-  },
-  "XLM/USDT": {
-    "created_at": 1767180685.729218,
-    "entry_id": "297503165",
-    "status": "WAITING_ENTRY",
-    "strategy": "TREND_TRAP"
-  },
-  "XMR/USDT": {
-    "created_at": 1767177745.8428855,
-    "entry_id": "214645443",
-    "status": "WAITING_ENTRY",
-    "strategy": "SIDEWAYS_SCALP"
-  },
-  "XRP/USDT": {
-    "created_at": 1767249168.556931,
-    "entry_id": "1278946291",
-    "expires_at": 1767252768.5569313,
+  "LTC/USDT": {
+    "created_at": 1767252422.7585666,
+    "entry_id": "903437404",
+    "expires_at": 1767256022.7585669,
     "status": "WAITING_ENTRY",
     "strategy": "TREND_PULLBACK"
   },
-  "ZEC/USDT": {
-    "created_at": 1767249902.8303628,
-    "entry_id": "1054944636",
-    "expires_at": 1767253502.8303633,
+  "SOL/USDT": {
+    "created_at": 1767253707.257673,
+    "entry_id": "1555942538",
+    "expires_at": 1767257307.2576733,
     "status": "WAITING_ENTRY",
     "strategy": "BB_BOUNCE_TOP"
   }
