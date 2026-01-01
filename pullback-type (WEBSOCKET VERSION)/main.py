@@ -802,12 +802,10 @@ async def safety_monitor_hybrid():
 # ==========================================
 # MAIN LOOP
 # ==========================================
-# ==========================================
-# MAIN LOOP
-# ==========================================
 async def main():
     global exchange
     
+    # ... (Bagian inisialisasi exchange & load tracker SAMA SEPERTI SEBELUMNYA) ...
     exchange = ccxt.binance({
         'apiKey': config.API_KEY_DEMO if config.PAKAI_DEMO else config.API_KEY_LIVE,
         'secret': config.SECRET_KEY_DEMO if config.PAKAI_DEMO else config.SECRET_KEY_LIVE,
@@ -815,8 +813,7 @@ async def main():
     })
     if config.PAKAI_DEMO: exchange.enable_demo_trading(True)
 
-    # Notif start tetap pakai await (karena event loop masih jalan normal)
-    await kirim_tele("🤖 <b>BOT STARTED (OPTIMIZED)</b>\nSystem is Online & Healthy.", alert=True)
+    await kirim_tele("🤖 <b>BOT STARTED</b>\nSystem Online.", alert=True)
 
     try:
         load_tracker()
@@ -828,39 +825,36 @@ async def main():
         asyncio.create_task(ws_manager.start_stream())
         asyncio.create_task(safety_monitor_hybrid())
         
-        print("🚀 BOT RUNNING (FULL STRATEGY + RECOVERY + VERIFICATION)...")
+        print("🚀 BOT RUNNING...")
         
         while True:
-            try:
-                tasks = [analisa_market_hybrid(koin) for koin in config.DAFTAR_KOIN]
-                await asyncio.gather(*tasks, return_exceptions=True)
-                await asyncio.sleep(1) 
-            except asyncio.CancelledError: raise 
-            except Exception: await asyncio.sleep(config.ERROR_SLEEP_DELAY)
+            # Loop utama tetap bersih, biarkan error naik ke atas
+            tasks = [analisa_market_hybrid(koin) for koin in config.DAFTAR_KOIN]
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await asyncio.sleep(1) 
 
-    # --- [MODIFIKASI PENTING] ---
-    # Pastikan 'except' ini SEJAJAR dengan 'try' di atas (di dalam def main)
-    except KeyboardInterrupt:
-        print("\n👋 Bot dimatikan manual.")
-        # Panggil fungsi SYNC (tanpa await)
-        kirim_tele_sync("🛑 <b>BOT STOPPED</b>\nSystem shutdown manually (KeyboardInterrupt).")
-        
-    except Exception as e:
-        logger.error(f"Bot Crash: {e}", exc_info=True)
-        # Panggil fungsi SYNC (tanpa await)
-        kirim_tele_sync(f"💀 <b>BOT CRASHED</b>\nError: {str(e)}")
-        
     finally:
+        # Cleanup resource async tetap di sini
         print("🔌 Closing connection...")
         try: 
             if exchange: await exchange.close()
         except: pass
-        
-        print("✅ Shutdown Complete.")
 
+# ==========================================
+# NOTIF MATIKAM BOT
+# ==========================================
 if __name__ == "__main__":
     try:
+        # Jalankan program async
         asyncio.run(main())
+        
     except KeyboardInterrupt:
-        # Double cover: Jika Ctrl+C ditekan sebelum masuk ke try/except di main
-        pass
+        # INI JALAN DI LUAR LOOP ASYNCIO
+        # Jadi tidak akan diganggu oleh pembatalan task
+        print("\n👋 Bot dimatikan manual (Detected in Main Thread).")
+        kirim_tele_sync("🛑 <b>BOT STOPPED</b>\nSystem shutdown manually via Terminal.")
+        
+    except Exception as e:
+        # Menangkap error fatal yang menyebabkan crash sampai keluar program
+        print(f"\n💀 Fatal Error: {e}")
+        kirim_tele_sync(f"💀 <b>BOT CRASHED (FATAL)</b>\nError: {str(e)}")

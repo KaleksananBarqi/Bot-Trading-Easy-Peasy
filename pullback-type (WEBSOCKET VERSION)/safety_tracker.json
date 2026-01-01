@@ -1,30 +1,16 @@
 {
-  "ADA/USDT": {
-    "created_at": 1767253570.5958738,
-    "entry_id": "530756990",
-    "expires_at": 1767257170.595874,
-    "status": "WAITING_ENTRY",
-    "strategy": "TREND_PULLBACK"
-  },
   "AVAX/USDT": {
-    "created_at": 1767253570.3498778,
-    "entry_id": "144008791",
-    "expires_at": 1767257170.349878,
+    "created_at": 1767254792.9827578,
+    "entry_id": "144018632",
+    "expires_at": 1767258392.9827578,
     "status": "WAITING_ENTRY",
     "strategy": "TREND_PULLBACK"
   },
   "LTC/USDT": {
-    "created_at": 1767252422.7585666,
-    "entry_id": "903437404",
-    "expires_at": 1767256022.7585669,
+    "created_at": 1767254793.2237318,
+    "entry_id": "903468709",
+    "expires_at": 1767258393.223732,
     "status": "WAITING_ENTRY",
     "strategy": "TREND_PULLBACK"
-  },
-  "SOL/USDT": {
-    "created_at": 1767253707.257673,
-    "entry_id": "1555942538",
-    "expires_at": 1767257307.2576733,
-    "status": "WAITING_ENTRY",
-    "strategy": "BB_BOUNCE_TOP"
   }
 }
