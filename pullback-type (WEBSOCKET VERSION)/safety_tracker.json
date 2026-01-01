@@ -23,18 +23,19 @@
     "status": "WAITING_ENTRY",
     "strategy": "SIDEWAYS_SCALP"
   },
-  "BNB/USDT": {
-    "created_at": 1767184312.5455098,
-    "entry_id": "1111302432",
-    "expires_at": 1767187912.5455103,
+  "BTC/USDT": {
+    "created_at": 1767238907.7788892,
+    "entry_id": "11301956765",
+    "expires_at": 1767242507.7788897,
     "status": "WAITING_ENTRY",
     "strategy": "TREND_PULLBACK"
   },
-  "BTC/USDT": {
-    "created_at": 1767177475.7702434,
-    "entry_id": "11284653355",
+  "DOGE/USDT": {
+    "created_at": 1767238394.6352758,
+    "entry_id": "593954144",
+    "expires_at": 1767241994.635276,
     "status": "WAITING_ENTRY",
-    "strategy": "TREND_TRAP"
+    "strategy": "TREND_PULLBACK"
   },
   "DOT/USDT": {
     "created_at": 1767178513.9641566,
@@ -42,23 +43,12 @@
     "status": "WAITING_ENTRY",
     "strategy": "SIDEWAYS_SCALP"
   },
-  "ETH/USDT": {
-    "created_at": 1767177425.3599434,
-    "entry_id": "7906690714",
-    "status": "WAITING_ENTRY",
-    "strategy": "TREND_TRAP"
-  },
-  "LINK/USDT": {
-    "created_at": 1767178937.3341615,
-    "entry_id": "448696157",
-    "status": "WAITING_ENTRY",
-    "strategy": "TREND_TRAP"
-  },
   "LTC/USDT": {
-    "created_at": 1767175827.3229613,
-    "entry_id": "902443410",
+    "created_at": 1767238907.5817823,
+    "entry_id": "903260628",
+    "expires_at": 1767242507.5817826,
     "status": "WAITING_ENTRY",
-    "strategy": "TREND_TRAP"
+    "strategy": "TREND_PULLBACK"
   },
   "NEAR/USDT": {
     "created_at": 1767179025.8176467,
@@ -67,10 +57,11 @@
     "strategy": "TREND_TRAP"
   },
   "TRX/USDT": {
-    "created_at": 1767180720.2104516,
-    "entry_id": "612832882",
+    "created_at": 1767238394.435544,
+    "entry_id": "613357950",
+    "expires_at": 1767241994.4355443,
     "status": "WAITING_ENTRY",
-    "strategy": "TREND_TRAP"
+    "strategy": "TREND_PULLBACK"
   },
   "XLM/USDT": {
     "created_at": 1767180685.729218,
@@ -83,12 +74,5 @@
     "entry_id": "214645443",
     "status": "WAITING_ENTRY",
     "strategy": "SIDEWAYS_SCALP"
-  },
-  "ZEC/USDT": {
-    "created_at": 1767184034.2446656,
-    "entry_id": "1053862899",
-    "expires_at": 1767187634.244666,
-    "status": "WAITING_ENTRY",
-    "strategy": "BB_BOUNCE_BOTTOM"
   }
 }

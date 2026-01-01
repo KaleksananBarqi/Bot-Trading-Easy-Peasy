@@ -238,9 +238,21 @@ class BinanceWSManager:
                 if order_type == 'LIMIT':
                     # Entry Sniper Filled
                     logger.info(f"⚡ LIMIT FILLED: {symbol} | Side: {side} | Price: {price}")
+                    
                     async with data_lock:
-                        safety_orders_tracker[symbol] = {'status': 'PENDING', 'last_check': time.time()}
-                        save_tracker()
+                        # --- [FIX START] ---
+                        # Cek status saat ini agar tidak menimpa jika sedang diproses
+                        curr_tracker = safety_orders_tracker.get(symbol, {})
+                        curr_status = curr_tracker.get('status', 'NONE')
+                        
+                        # Hanya set PENDING jika status belum SECURED atau PROCESSING
+                        if curr_status not in ['SECURED', 'PROCESSING']:
+                            safety_orders_tracker[symbol] = {'status': 'PENDING', 'last_check': time.time()}
+                            save_tracker()
+                        else:
+                            logger.info(f"⚠️ Skipping Tracker Reset for {symbol}: Status is {curr_status}")
+                        # --- [FIX END] ---
+
                     msg = (f"⚡ <b>ENTRY FILLED</b>\n🚀 <b>{symbol}</b> Entered @ {price}\n<i>Memasang safety orders...</i>")
                     await kirim_tele(msg)
 
@@ -407,11 +419,22 @@ async def analisa_market_hybrid(coin_config):
     if symbol in SYMBOL_COOLDOWN and now < SYMBOL_COOLDOWN[symbol]: return
     base_sym = symbol.split('/')[0]
     
-    # Cek cache posisi
-    is_in_position = False
+    # --- [FIX START] ---
+    # Cek cache posisi ATAU order gantung
+    is_busy = False
     async with data_lock:
-        if base_sym in position_cache_ws: is_in_position = True
-    if is_in_position: return 
+        # 1. Cek apakah sudah punya posisi aktif (Futures Position)
+        if base_sym in position_cache_ws: 
+            is_busy = True
+        
+        # 2. Cek apakah sedang antri Limit Order (WAITING_ENTRY)
+        #    Ini yang sebelumnya KETINGGALAN, bikin bot pasang-cancel terus
+        tracker = safety_orders_tracker.get(symbol, {})
+        if tracker.get("status") == "WAITING_ENTRY":
+            is_busy = True
+
+    if is_busy: return 
+    # --- [FIX END] ---
 
     # --- 1. SIAPKAN DATA ---
     try:
@@ -598,7 +621,18 @@ async def install_safety_orders(symbol, pos_data):
     entry_price = float(pos_data['entryPrice'])
     quantity = float(pos_data['contracts'])
     side = pos_data['side']
-    
+
+    # --- [FIX START] ---
+    # 1. Cancel semua order lama di symbol ini sebelum pasang baru
+    # Ini mencegah duplikasi jika fungsi terpanggil 2x
+    try:
+        await exchange.cancel_all_orders(symbol)
+        logger.info(f"🧹 Cleared existing orders for {symbol} before safety installation.")
+        await asyncio.sleep(1) # Beri jeda sedikit agar exchange memproses cancel
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to cancel old orders {symbol}: {e}")
+    # --- [FIX END] ---
+
     try:
         async with data_lock:
             bars = market_data_store.get(symbol, {}).get(config.TIMEFRAME_EXEC, [])
