@@ -23,7 +23,11 @@ LOG_FILENAME = 'bot_trading.log'
 TRACKER_FILENAME = 'safety_tracker.json'
 DEFAULT_LEVERAGE = 10
 DEFAULT_MARGIN_TYPE = 'isolated' 
-DEFAULT_AMOUNT_USDT = 10  
+  
+# --- SETTING DYNAMIC SIZING (COMPOUNDING) ---
+USE_DYNAMIC_SIZE = True       # Set True untuk aktifkan compounding
+RISK_PERCENT_PER_TRADE = 5.0  # Bot akan pakai 5% dari saldo USDT Available per trade
+DEFAULT_AMOUNT_USDT = 10      # Cadangan jika dynamic false / error
 
 # --- 3. FILTER BTC (GLOBAL TREND) ---
 BTC_SYMBOL = 'BTC/USDT'
@@ -57,7 +61,7 @@ ATR_MULTIPLIER_SL = 1.0
 ATR_MULTIPLIER_TP1 = 2.2
 MIN_ORDER_USDT = 5           
 ORDER_TYPE = 'market'     
-COOLDOWN_PER_SYMBOL_SECONDS = 300 
+COOLDOWN_PER_SYMBOL_SECONDS = 18000 # Waktu istirahat per koin setelah posisi ditutup (detik)
 CONCURRENCY_LIMIT = 20
 ORDER_SLTP_RETRIES = 3      # Jumlah percobaan pasang SL/TP jika gagal
 ORDER_SLTP_RETRY_DELAY = 2  # Detik jeda antar percobaan

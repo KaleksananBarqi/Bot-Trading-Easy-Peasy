@@ -627,7 +627,27 @@ async def execute_order(symbol, side, params, strategy, coin_cfg):
         except: pass
 
         leverage = coin_cfg.get('leverage', config.DEFAULT_LEVERAGE)
-        amount = coin_cfg.get('amount', config.DEFAULT_AMOUNT_USDT)
+        #amount = coin_cfg.get('amount', config.DEFAULT_AMOUNT_USDT) -> kita jadinya pakai dynamic sizing, kalau mau pakai fixed, uncomment ini dan comment bagian bawah
+        # --- DYNAMIC POSITION SIZING ---
+        amount = config.DEFAULT_AMOUNT_USDT # Default fallback
+        saldo_sekarang = 0
+        if config.USE_DYNAMIC_SIZE:
+            try:
+                # Ambil saldo real-time dari Futures Wallet
+                balance = await exchange.fetch_balance()
+                saldo_sekarang = float(balance['USDT']['free']) # Saldo yg nganggur
+                
+                # Hitung margin berdasarkan % saldo
+                amount = saldo_sekarang * (config.RISK_PERCENT_PER_TRADE / 100)
+                
+                # Safety: Pastikan tidak kurang dari $5 (aturan Binance)
+                if amount < 5.0: amount = 5.0
+            except Exception as e:
+                logger.error(f"⚠️ Gagal fetch balance untuk dynamic size: {e}")
+                amount = coin_cfg.get('amount', config.DEFAULT_AMOUNT_USDT)
+        else:
+            # Pakai fixed amount dari config
+            amount = coin_cfg.get('amount', config.DEFAULT_AMOUNT_USDT)
         margin_digunakan = amount 
         size_total_usdt = amount * leverage
         margin_type = coin_cfg.get('margin_type', config.DEFAULT_MARGIN_TYPE)
