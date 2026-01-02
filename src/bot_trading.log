@@ -1,0 +1,97 @@
+2026-01-02 11:27:08,210 - INFO - [install_safety_for_existing_positions] - 🔍 Checking Existing Positions & Orders...
+2026-01-02 11:27:08,210 - INFO - [install_safety_for_existing_positions] - ✅ No active positions found. Skipping startup safety check.
+2026-01-02 11:27:09,358 - INFO - [execute_order] - 🚀 PREPARING ORDER: XRP/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 1.8779679605332233
+2026-01-02 11:27:09,498 - INFO - [execute_order] - ✅ LIMIT PLACED: XRP/USDT | ID: 1281851055
+2026-01-02 11:27:09,702 - INFO - [execute_order] - 🚀 PREPARING ORDER: BTC/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 88621.1212745097
+2026-01-02 11:27:09,843 - INFO - [execute_order] - ✅ LIMIT PLACED: BTC/USDT | ID: 11327496991
+2026-01-02 11:28:46,837 - INFO - [handle_order_update] - ⚡ ENTRY FILLED: XRP/USDT | Price: 1.878
+2026-01-02 11:28:46,838 - INFO - [safety_monitor_hybrid] - 🛡️ SAFETY MONITOR: Installing orders for XRP/USDT...
+2026-01-02 11:28:47,180 - INFO - [install_safety_orders] - 🧹 Hard Sweep orders for XRP/USDT
+2026-01-02 11:28:49,189 - INFO - [install_safety_orders] - ✅ SAFETY ORDERS PLACED: XRP/USDT
+2026-01-02 11:28:49,969 - INFO - [safety_monitor_hybrid] - ✅ XRP/USDT SECURED. Order IDs saved.
+2026-01-02 11:30:01,652 - INFO - [execute_order] - 🚀 PREPARING ORDER: ETH/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 3008.623538227432
+2026-01-02 11:30:01,701 - INFO - [execute_order] - 🚀 PREPARING ORDER: AVAX/USDT | Side: buy | Strat: BB_BOUNCE_BOTTOM | Price: 13.547183236308165
+2026-01-02 11:30:01,792 - INFO - [execute_order] - ✅ LIMIT PLACED: ETH/USDT | ID: 7925789037
+2026-01-02 11:30:01,992 - INFO - [execute_order] - ✅ LIMIT PLACED: AVAX/USDT | ID: 144622199
+2026-01-02 11:30:04,570 - INFO - [execute_order] - 🚀 PREPARING ORDER: BNB/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 863.9401281516065
+2026-01-02 11:30:04,617 - INFO - [execute_order] - 🚀 PREPARING ORDER: ADA/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 0.3586644348765334
+2026-01-02 11:30:04,670 - INFO - [execute_order] - 🚀 PREPARING ORDER: DOGE/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 0.1274410204357575
+2026-01-02 11:30:04,716 - INFO - [execute_order] - ✅ LIMIT PLACED: BNB/USDT | ID: 1116326505
+2026-01-02 11:30:04,918 - INFO - [execute_order] - ✅ LIMIT PLACED: ADA/USDT | ID: 531938156
+2026-01-02 11:30:05,117 - INFO - [execute_order] - ✅ LIMIT PLACED: DOGE/USDT | ID: 596187700
+2026-01-02 11:47:48,575 - INFO - [handle_order_update] - 🏁 POSITION CLOSED: XRP/USDT | PnL: $-0.10
+2026-01-02 11:47:48,759 - INFO - [handle_order_update] - 🧹 Cleanup orphaned orders for XRP/USDT
+2026-01-02 11:47:49,275 - INFO - [execute_order] - 🚀 PREPARING ORDER: XRP/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 1.8751536396498694
+2026-01-02 11:47:49,416 - INFO - [execute_order] - ✅ LIMIT PLACED: XRP/USDT | ID: 1281893874
+2026-01-02 11:52:50,326 - WARNING - [handle_order_update] - 🚫 ORDER CANCELED: XRP/USDT
+2026-01-02 11:52:50,609 - INFO - [execute_order] - 🚀 PREPARING ORDER: XRP/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 1.8743855225320216
+2026-01-02 11:52:50,752 - INFO - [execute_order] - ✅ LIMIT PLACED: XRP/USDT | ID: 1281903429
+2026-01-02 11:58:58,647 - INFO - [handle_order_update] - ⚡ ENTRY FILLED: BTC/USDT | Price: 88621.1
+2026-01-02 11:58:58,649 - INFO - [safety_monitor_hybrid] - 🛡️ SAFETY MONITOR: Installing orders for BTC/USDT...
+2026-01-02 11:58:59,029 - INFO - [install_safety_orders] - 🧹 Hard Sweep orders for BTC/USDT
+2026-01-02 11:59:00,946 - INFO - [install_safety_orders] - ✅ SAFETY ORDERS PLACED: BTC/USDT
+2026-01-02 11:59:01,775 - INFO - [safety_monitor_hybrid] - ✅ BTC/USDT SECURED. Order IDs saved.
+2026-01-02 12:02:57,804 - INFO - [handle_order_update] - ⚡ ENTRY FILLED: XRP/USDT | Price: 1.8744
+2026-01-02 12:02:57,808 - INFO - [safety_monitor_hybrid] - 🛡️ SAFETY MONITOR: Installing orders for XRP/USDT...
+2026-01-02 12:02:58,267 - INFO - [install_safety_orders] - 🧹 Hard Sweep orders for XRP/USDT
+2026-01-02 12:03:00,083 - INFO - [install_safety_orders] - ✅ SAFETY ORDERS PLACED: XRP/USDT
+2026-01-02 12:03:00,887 - INFO - [safety_monitor_hybrid] - ✅ XRP/USDT SECURED. Order IDs saved.
+2026-01-02 12:25:27,215 - INFO - [handle_order_update] - ⚡ ENTRY FILLED: ADA/USDT | Price: 0.3587
+2026-01-02 12:25:27,216 - INFO - [safety_monitor_hybrid] - 🛡️ SAFETY MONITOR: Installing orders for ADA/USDT...
+2026-01-02 12:25:27,577 - INFO - [install_safety_orders] - 🧹 Hard Sweep orders for ADA/USDT
+2026-01-02 12:25:29,252 - WARNING - [install_safety_orders] - ⚠️ Safety Retry 1 Failed ADA/USDT: binance {"code":-2021,"msg":"Order would immediately trigger."}
+2026-01-02 12:25:31,609 - WARNING - [install_safety_orders] - ⚠️ Safety Retry 2 Failed ADA/USDT: binance {"code":-2021,"msg":"Order would immediately trigger."}
+2026-01-02 12:25:33,767 - WARNING - [install_safety_orders] - ⚠️ Safety Retry 3 Failed ADA/USDT: binance {"code":-2021,"msg":"Order would immediately trigger."}
+2026-01-02 12:25:35,845 - ERROR - [install_safety_orders] - ❌ SAFETY FAILED ADA/USDT after retries!
+NoneType: None
+2026-01-02 12:25:35,846 - WARNING - [safety_monitor_hybrid] - ❌ ADA/USDT Failed to install safety orders. Retrying...
+2026-01-02 12:25:40,848 - INFO - [safety_monitor_hybrid] - 🛡️ SAFETY MONITOR: Installing orders for ADA/USDT...
+2026-01-02 12:25:41,546 - INFO - [install_safety_orders] - 🧹 Hard Sweep orders for ADA/USDT
+2026-01-02 12:25:43,224 - WARNING - [install_safety_orders] - ⚠️ Safety Retry 1 Failed ADA/USDT: binance {"code":-2021,"msg":"Order would immediately trigger."}
+2026-01-02 12:25:45,384 - WARNING - [install_safety_orders] - ⚠️ Safety Retry 2 Failed ADA/USDT: binance {"code":-2021,"msg":"Order would immediately trigger."}
+2026-01-02 12:25:46,337 - INFO - [handle_order_update] - 🏁 POSITION CLOSED: XRP/USDT | PnL: $-0.16
+2026-01-02 12:25:46,476 - INFO - [handle_order_update] - 🧹 Cleanup orphaned orders for XRP/USDT
+2026-01-02 12:25:47,540 - WARNING - [install_safety_orders] - ⚠️ Safety Retry 3 Failed ADA/USDT: binance {"code":-2021,"msg":"Order would immediately trigger."}
+2026-01-02 12:25:49,645 - ERROR - [install_safety_orders] - ❌ SAFETY FAILED ADA/USDT after retries!
+NoneType: None
+2026-01-02 12:25:49,646 - WARNING - [safety_monitor_hybrid] - ❌ ADA/USDT Failed to install safety orders. Retrying...
+2026-01-02 12:27:31,865 - INFO - [handle_order_update] - ⚡ ENTRY FILLED: AVAX/USDT | Price: 13.547
+2026-01-02 12:27:31,869 - INFO - [safety_monitor_hybrid] - 🛡️ SAFETY MONITOR: Installing orders for AVAX/USDT...
+2026-01-02 12:27:32,339 - INFO - [install_safety_orders] - 🧹 Hard Sweep orders for AVAX/USDT
+2026-01-02 12:27:34,181 - INFO - [install_safety_orders] - ✅ SAFETY ORDERS PLACED: AVAX/USDT
+2026-01-02 12:27:34,984 - INFO - [safety_monitor_hybrid] - ✅ AVAX/USDT SECURED. Order IDs saved.
+2026-01-02 12:28:56,479 - INFO - [handle_order_update] - ⚡ ENTRY FILLED: ETH/USDT | Price: 3008.62
+2026-01-02 12:28:56,481 - INFO - [safety_monitor_hybrid] - 🛡️ SAFETY MONITOR: Installing orders for ETH/USDT...
+2026-01-02 12:28:56,826 - INFO - [install_safety_orders] - 🧹 Hard Sweep orders for ETH/USDT
+2026-01-02 12:28:58,657 - INFO - [install_safety_orders] - ✅ SAFETY ORDERS PLACED: ETH/USDT
+2026-01-02 12:28:59,443 - INFO - [safety_monitor_hybrid] - ✅ ETH/USDT SECURED. Order IDs saved.
+2026-01-02 12:29:34,786 - INFO - [handle_order_update] - ⚡ ENTRY FILLED: BNB/USDT | Price: 863.94
+2026-01-02 12:29:34,790 - INFO - [safety_monitor_hybrid] - 🛡️ SAFETY MONITOR: Installing orders for BNB/USDT...
+2026-01-02 12:29:35,176 - INFO - [install_safety_orders] - 🧹 Hard Sweep orders for BNB/USDT
+2026-01-02 12:29:36,989 - INFO - [install_safety_orders] - ✅ SAFETY ORDERS PLACED: BNB/USDT
+2026-01-02 12:29:37,800 - INFO - [safety_monitor_hybrid] - ✅ BNB/USDT SECURED. Order IDs saved.
+2026-01-02 12:30:07,807 - INFO - [safety_monitor_hybrid] - ⏳ LIMIT ORDER EXPIRED: DOGE/USDT. Canceling entry...
+2026-01-02 12:30:08,151 - WARNING - [handle_order_update] - 🚫 ORDER CANCELED: DOGE/USDT
+2026-01-02 12:30:09,221 - INFO - [execute_order] - 🚀 PREPARING ORDER: DOGE/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 0.12717753504009136
+2026-01-02 12:30:09,363 - INFO - [execute_order] - ✅ LIMIT PLACED: DOGE/USDT | ID: 596264683
+2026-01-02 12:35:03,243 - INFO - [execute_order] - 🚀 PREPARING ORDER: LTC/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 79.37797819019677
+2026-01-02 12:35:03,385 - INFO - [execute_order] - ✅ LIMIT PLACED: LTC/USDT | ID: 904502082
+2026-01-02 12:40:02,418 - INFO - [execute_order] - 🚀 PREPARING ORDER: XRP/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 1.871991775422818
+2026-01-02 12:40:02,562 - INFO - [execute_order] - ✅ LIMIT PLACED: XRP/USDT | ID: 1281995112
+2026-01-02 12:45:03,373 - INFO - [execute_order] - 🚀 PREPARING ORDER: TRX/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 0.2853997600648388
+2026-01-02 12:45:03,515 - INFO - [execute_order] - ✅ LIMIT PLACED: TRX/USDT | ID: 614272760
+2026-01-02 12:45:04,498 - INFO - [handle_order_update] - ⚡ ENTRY FILLED: TRX/USDT | Price: 0.2854
+2026-01-02 12:45:04,499 - INFO - [safety_monitor_hybrid] - 🛡️ SAFETY MONITOR: Installing orders for TRX/USDT...
+2026-01-02 12:45:04,795 - INFO - [install_safety_orders] - 🧹 Hard Sweep orders for TRX/USDT
+2026-01-02 12:45:06,651 - INFO - [install_safety_orders] - ✅ SAFETY ORDERS PLACED: TRX/USDT
+2026-01-02 12:45:07,458 - INFO - [safety_monitor_hybrid] - ✅ TRX/USDT SECURED. Order IDs saved.
+2026-01-02 12:47:47,849 - INFO - [handle_order_update] - 🏁 POSITION CLOSED: AVAX/USDT | PnL: $0.80
+2026-01-02 12:47:48,053 - INFO - [handle_order_update] - 🧹 Cleanup orphaned orders for AVAX/USDT
+2026-01-02 12:47:48,473 - INFO - [execute_order] - 🚀 PREPARING ORDER: AVAX/USDT | Side: buy | Strat: TREND_PULLBACK | Price: 13.556633648946699
+2026-01-02 12:47:48,614 - INFO - [execute_order] - ✅ LIMIT PLACED: AVAX/USDT | ID: 144650197
+2026-01-02 12:51:57,410 - INFO - [handle_order_update] - 🏁 POSITION CLOSED: BNB/USDT | PnL: $0.88
+2026-01-02 12:51:57,554 - INFO - [handle_order_update] - 🧹 Cleanup orphaned orders for BNB/USDT
+2026-01-02 12:53:47,536 - INFO - [handle_order_update] - 🏁 POSITION CLOSED: BNB/USDT | PnL: $-0.09
+2026-01-02 12:53:47,885 - INFO - [handle_order_update] - 🧹 Cleanup orphaned orders for BNB/USDT
+2026-01-02 12:54:31,536 - INFO - [handle_order_update] - 🏁 POSITION CLOSED: BNB/USDT | PnL: $-0.10
+2026-01-02 12:54:31,860 - INFO - [handle_order_update] - 🧹 Cleanup orphaned orders for BNB/USDT
