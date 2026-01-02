@@ -631,15 +631,18 @@ async def execute_order(symbol, side, params, strategy, coin_cfg):
         # --- DYNAMIC POSITION SIZING ---
         amount = config.DEFAULT_AMOUNT_USDT # Default fallback
         saldo_sekarang = 0
+        saldo_display = "N/A" # variabel buat ditampilkan di telegram
         if config.USE_DYNAMIC_SIZE:
             try:
                 # Ambil saldo real-time dari Futures Wallet
                 balance = await exchange.fetch_balance()
                 saldo_sekarang = float(balance['USDT']['free']) # Saldo yg nganggur
-                
+                #log ke console dan file
+                logger.info(f"💰 Cek Saldo: Available Balance = ${saldo_sekarang:2f}")
+                #simpan format string untuk tele
+                saldo_display = f"${saldo_sekarang:.2f}"
                 # Hitung margin berdasarkan % saldo
                 amount = saldo_sekarang * (config.RISK_PERCENT_PER_TRADE / 100)
-                
                 # Safety: Pastikan tidak kurang dari $5 (aturan Binance)
                 if amount < 5.0: amount = 5.0
             except Exception as e:
@@ -706,6 +709,7 @@ async def execute_order(symbol, side, params, strategy, coin_cfg):
 
         msg = (
             f"🎯 <b>NEW SETUP ({strategy})</b>\n━━━━━━━━━━━━━━━━━━\n"
+            f"🏦 <b>Avail Balance:</b> {saldo_display}\n"
             f"🪙 <b>{symbol}</b> | {icon_side}\n"
             f"📊 Type: {params['type'].upper()} ({margin_type} x{leverage})\n"
             f"💰 <b>Margin:</b> ${margin_digunakan:.2f}\n" 
