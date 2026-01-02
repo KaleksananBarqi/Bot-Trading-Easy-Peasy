@@ -8,3 +8,5 @@ __pycache__/
 .env
 .json
 *.json
+.log
+*.log
