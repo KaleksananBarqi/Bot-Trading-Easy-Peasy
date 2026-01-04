@@ -779,18 +779,43 @@ async def install_safety_orders(symbol, pos_data):
     p_tp = exchange.price_to_precision(symbol, tp_price)
     qty_final = exchange.amount_to_precision(symbol, quantity)
 
-    # 3. Attempt place orders
+# 3. PASANG ORDER (MODE: CLOSE POSITION + CUSTOM TRIGGER)
+    try:
+        # A. STOP LOSS (STOP_MARKET)
+        # Trigger: MARK PRICE (Sesuai Request)
+        o_sl = await exchange.create_order(
+            symbol, 
+            'STOP_MARKET', 
+            side_api, 
+            None,   # Quantity None (Close Position)
+            None,   
+            {
+                'stopPrice': p_sl, 
+                'closePosition': True,
+                'workingType': 'MARK_PRICE'   # <-- SL = Mark Price
+            }
+        )
 
-    for attempt in range(config.ORDER_SLTP_RETRIES):
-        try:
-            o_sl = await exchange.create_order(symbol, 'STOP_MARKET', side_api, qty_final, None, {'stopPrice': p_sl, 'workingType': 'MARK_PRICE', 'reduceOnly': True})
-            o_tp = await exchange.create_order(symbol, 'TAKE_PROFIT_MARKET', side_api, qty_final, None, {'stopPrice': p_tp, 'workingType': 'CONTRACT_PRICE', 'reduceOnly': True})
-            
-            logger.info(f"✅ SAFETY ORDERS PLACED: {symbol}")
-            msg = (f"🛡️ <b>SAFETY SECURED</b>\nCoin: <b>{symbol}</b>\n✅ SL Set: {p_sl}\n✅ TP Set: {p_tp}")
-            await kirim_tele(msg)
-            return [str(o_sl['id']), str(o_tp['id'])]
-        except Exception as e:
+        # B. TAKE PROFIT (TAKE_PROFIT_MARKET)
+        # Trigger: CONTRACT_PRICE a.k.a LAST PRICE (Sesuai Request)
+        o_tp = await exchange.create_order(
+            symbol, 
+            'TAKE_PROFIT_MARKET', 
+            side_api, 
+            None,   # Quantity None (Close Position)
+            None,   
+            {
+                'stopPrice': p_tp, 
+                'closePosition': True,
+                'workingType': 'CONTRACT_PRICE' # <-- TP = Last Price
+            }
+        )
+        
+        logger.info(f"✅ SAFETY ORDERS (CLOSE POS MODE): {symbol}")
+        msg = (f"🛡️ <b>SAFETY SECURED</b>\nCoin: <b>{symbol}</b>\n✅ SL: {p_sl} (Mark)\n✅ TP: {p_tp} (Last)\n(Mode: Close Position)")
+        await kirim_tele(msg)
+        return [str(o_sl['id']), str(o_tp['id'])]
+    except Exception as e:
             error_msg = str(e)
             
             # 4. Deteksi error kalau market gerak terlalu cepat jadi sl dan tp harganya diluar plan/setup

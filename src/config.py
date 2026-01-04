@@ -90,22 +90,22 @@ SIDEWAYS_ADX_MAX = 20
 # Jika leverage/amount tidak diisi, akan memakai DEFAULT dari Section 2
 DAFTAR_KOIN = [
     # --- Major Coins (Cross Margin) ---
-    {"symbol": "BTC/USDT", "leverage": 20, "margin_type": "cross", "amount": 50},
-    {"symbol": "ETH/USDT", "leverage": 20, "margin_type": "cross", "amount": 40},
+    {"symbol": "BTC/USDT", "leverage": 30, "margin_type": "cross", "amount": 50},
+    #{"symbol": "ETH/USDT", "leverage": 20, "margin_type": "cross", "amount": 40},
 
     # --- Strong Alts (Isolated, Mid Leverage) ---
-    {"symbol": "SOL/USDT", "leverage": 15, "margin_type": "isolated", "amount": 30},
-    {"symbol": "BNB/USDT", "leverage": 15, "margin_type": "isolated", "amount": 30},
+    {"symbol": "SOL/USDT", "leverage": 30, "margin_type": "isolated", "amount": 30},
+    #{"symbol": "BNB/USDT", "leverage": 15, "margin_type": "isolated", "amount": 30},
     
     # --- Standard Alts (Sesuai Backtest) ---
     {"symbol": "XRP/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
     {"symbol": "ADA/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
-    {"symbol": "DOGE/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
-    {"symbol": "TRX/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "DOGE/USDT", "leverage": 30, "margin_type": "isolated", "amount": 15},
+    {"symbol": "TRX/USDT", "leverage": 20, "margin_type": "isolated", "amount": 15},
     {"symbol": "LTC/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
-    {"symbol": "AVAX/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
-    {"symbol": "LINK/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "AVAX/USDT", "leverage": 20, "margin_type": "isolated", "amount": 15},
+    #{"symbol": "LINK/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
     
     # --- THE CHAMPION (WAJIB ADA) ---
-    {"symbol": "ZEC/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    #{"symbol": "ZEC/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
 ]
