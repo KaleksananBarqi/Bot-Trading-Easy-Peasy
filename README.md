@@ -1,4 +1,4 @@
-# 📖 Easy Peasy Trading Bot (Smart Hybrid Edition)
+# 🤖 Easy Peasy Trading Bot: Hybrid Sniper Strategy
 
 <img width="1249" height="882" alt="Image" src="https://github.com/user-attachments/assets/9627dc67-76d4-4c80-8904-efe8f8c1d33c" />
 
@@ -7,51 +7,46 @@
 ![Strategy](https://img.shields.io/badge/Strategy-Hybrid%20Sniper-red?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
 
-## 📖 Deskripsi Project
+## 📖 Easy Peasy Trading Bot (Smart Hybrid Edition)
+Easy Peasy Trading Bot adalah sistem trading algoritmik otomatis untuk pasar Binance Futures. Dibangun menggunakan Python, bot ini menerapkan pendekatan Hybrid Strategy yang adaptif: mampu beralih strategi saat pasar Trending maupun Sideways.
 
-**Easy Peasy Trading Bot** adalah sistem trading algoritmik otomatis untuk pasar **Binance Futures**. Dibangun menggunakan Python, bot ini menerapkan pendekatan **Hybrid Strategy** yang adaptif: mampu beralih strategi saat pasar Trending maupun Sideways.
-
-Versi terbaru ini dilengkapi dengan *"Smart Correlation Engine"* dan *"Sector Risk Management"*, membuat bot mampu membedakan mana koin yang harus patuh pada tren Bitcoin dan mana koin yang sedang *"Decoupled"* (bergerak mandiri), serta mencegah penumpukan risiko pada satu kategori koin saja.
-
----
+Versi terbaru ini dilengkapi dengan **"Smart Correlation Engine"** dan **"Sector Risk Management"**, membuat bot mampu membedakan mana koin yang harus patuh pada tren Bitcoin dan mana koin yang sedang "Decoupled" (bergerak mandiri), serta mencegah penumpukan risiko pada satu kategori koin saja.
 
 ## 🚀 Fitur Unggulan
 
 ### 1. 🧠 Hybrid Logic Engine
-Bot tidak terpaku pada satu gaya trading. Menggunakan **ADX (Average Directional Index)** sebagai otak utama:
-- **Trend Mode (ADX > 25):** Mengaktifkan strategi *Trend Trap Pullback*. Bot menunggu harga koreksi cantik ke area EMA sebelum ikut tren.
-- **Sideways Mode (ADX < 20):** Mengaktifkan strategi *BB Bounce Scalp*. Bot melakukan jual-beli cepat (ping-pong) di area batas Bollinger Bands saat pasar tenang.
+Bot tidak terpaku pada satu gaya trading. Menggunakan ADX (Average Directional Index) sebagai otak utama:
+*   **Trend Mode (ADX > 25):** Mengaktifkan strategi Trend Trap Pullback. Bot menunggu harga koreksi cantik ke area EMA sebelum ikut tren.
+*   **Sideways Mode (ADX < 20):** Mengaktifkan strategi BB Bounce Scalp. Bot melakukan jual-beli cepat (ping-pong) di area batas Bollinger Bands saat pasar tenang.
 
 ### 2. 👑 Smart King BTC & Auto-Decoupling (NEW!)
 Bot ini memiliki hierarki, namun sekarang lebih cerdas:
-- **Correlation Filter:** Bot menghitung korelasi pergerakan Altcoin terhadap Bitcoin secara real-time.
-- **Strict Mode (High Correlation):** Jika koin bergerak searah dengan BTC (Korelasi > 0.5), bot akan patuh pada tren BTC (King Filter). Jika BTC Bearish, bot dilarang Long.
-- **Decoupled Mode (Low Correlation):** Jika koin terdeteksi bergerak mandiri/berbeda arah dari BTC (Korelasi < 0.5), fitur Auto-Decouple aktif. Bot diizinkan mengambil sinyal (Long/Short) meskipun berlawanan dengan tren BTC. Cocok untuk koin yang sedang dipompa bandar atau ada berita khusus.
+*   **Correlation Filter:** Bot menghitung korelasi pergerakan Altcoin terhadap Bitcoin secara real-time.
+*   **Strict Mode (High Correlation):** Jika koin bergerak searah dengan BTC (Korelasi > 0.5), bot akan patuh pada tren BTC (King Filter). Jika BTC Bearish, bot dilarang Long.
+*   **Decoupled Mode (Low Correlation):** Jika koin terdeteksi bergerak mandiri/berbeda arah dari BTC (Korelasi < 0.5), fitur Auto-Decouple aktif. Bot diizinkan mengambil sinyal (Long/Short) meskipun berlawanan dengan tren BTC. Cocok untuk koin yang sedang dipompa bandar atau ada berita khusus.
 
 ### 3. ⚖️ Sector Exposure Limit (NEW!)
 Manajemen risiko tingkat lanjut berbasis kategori koin.
-- Anda bisa mengelompokkan koin (contoh: L1, MEME, AI, PAYMENT).
-- **Max Position per Category:** Bot membatasi jumlah posisi terbuka dalam satu sektor. Contoh: Jika sudah ada posisi Long di DOGE, bot tidak akan mengambil posisi di SHIB meskipun ada sinyal, untuk mencegah risiko berlebih di sektor Meme.
+*   Anda bisa mengelompokkan koin (contoh: L1, MEME, AI, PAYMENT).
+*   **Max Position per Category:** Bot membatasi jumlah posisi terbuka dalam satu sektor. Contoh: Jika sudah ada posisi Long di DOGE, bot tidak akan mengambil posisi di SHIB meskipun ada sinyal, untuk mencegah risiko berlebih di sektor Meme.
 
 ### 4. 🔫 Sniper / Liquidity Hunt
-Fitur "Anti-Retail" andalan. Alih-alih masuk di harga sekarang (Market), bot menghitung jarak ATR untuk memprediksi letak Stop Loss retail trader. Bot akan memasang **Limit Order** di area likuiditas tersebut untuk mendapatkan harga diskon terbaik ("Sniper Entry") dan mengurangi risiko drawdown.
+Fitur "Anti-Retail" andalan. Alih-alih masuk di harga sekarang (Market), bot menghitung jarak ATR untuk memprediksi letak Stop Loss retail trader. Bot akan memasang Limit Order di area likuiditas tersebut untuk mendapatkan harga diskon terbaik ("Sniper Entry") dan mengurangi risiko drawdown.
 
 ### 5. 🛡️ Guardian Safety Monitor
 Sistem keamanan berbasis Event-Driven Asyncio:
-- Mendeteksi "Ghost Orders" (order nyangkut tanpa posisi).
-- Memastikan setiap posisi terbuka PASTI memiliki **Hard Stop Loss (SL)** dan **Take Profit (TP)**.
-- Membersihkan Limit Order Sniper yang sudah kadaluarsa agar margin tidak tertahan.
+*   Mendeteksi "Ghost Orders" (order nyangkut tanpa posisi).
+*   Memastikan setiap posisi terbuka PASTI memiliki Hard Stop Loss (SL) dan Take Profit (TP).
+*   Membersihkan Limit Order Sniper yang sudah kadaluarsa agar margin tidak tertahan.
 
 ### 6. 💰 Dynamic Compounding
 Manajemen uang otomatis. Bot membaca saldo wallet secara real-time dan menggunakan persentase risiko (default 5%) dari saldo Available. Jika akun tumbuh, ukuran posisi otomatis membesar (Compounding).
 
 ### 7. 📱 Telegram Integration
 Laporan lengkap real-time langsung ke saku Anda:
-- Notifikasi Status Bot & WebSocket.
-- **Detailed Signal:** Menampilkan data teknikal (RSI, ADX), Status Korelasi BTC (🔗 Linked / 🔓 Decoupled), dan Sektor Koin.
-- Laporan PnL (Profit/Loss) otomatis saat posisi ditutup.
-
----
+*   Notifikasi Status Bot & WebSocket.
+*   **Detailed Signal:** Menampilkan data teknikal (RSI, ADX), Status Korelasi BTC (🔗 Linked / 🔓 Decoupled), dan Sektor Koin.
+*   Laporan PnL (Profit/Loss) otomatis saat posisi ditutup.
 
 ## 📊 Performa Backtest (Simulasi)
 
