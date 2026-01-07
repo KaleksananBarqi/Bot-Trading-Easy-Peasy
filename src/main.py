@@ -946,15 +946,20 @@ async def install_safety_orders(symbol, pos_data):
 
                 try:
                     # 5. Tutup posisi market (pakai side_api yang sudah ada)
-                    await exchange.create_order(
+                    closed_order = await exchange.create_order(  # ✅ Simpan hasil order ke variabel
                         symbol, 'MARKET', side_api, qty_final, None,
                         {'reduceOnly': True}
                     )
 
                     logger.info(f"🛑 EMERGENCY CLOSE EXECUTED: {symbol}")
                     # TAMBAHKAN DYNAMIC COOLDOWN
-                    exit_price = float(closed_order.get('average', 0) or 0)
-                    # Tentukan Profit/Loss manual (karena PnL belum tentu muncul di response order)
+                    # Ambil harga exit dari order response
+                    exit_price = 0.0
+                    if 'average' in closed_order and closed_order['average'] is not None:
+                        exit_price = float(closed_order['average'])
+                    elif 'price' in closed_order and closed_order['price'] is not None:
+                        exit_price = float(closed_order['price'])
+                    # Tentukan Profit/Loss manual
                     is_profit_emergency = False
                     if exit_price > 0:
                         if side == "LONG":
@@ -964,13 +969,14 @@ async def install_safety_orders(symbol, pos_data):
                     # Set Cooldown
                     if is_profit_emergency:
                         cd_duration = config.COOLDOWN_IF_PROFIT
-                        res_str = "PROFIT (Pump/Dump)"
+                        res_str = "PROFIT (Emergency Exit)"
                     else:
                         cd_duration = config.COOLDOWN_IF_LOSS
-                        res_str = "LOSS (Safety)"
+                        res_str = "LOSS (Emergency Exit)"
                     SYMBOL_COOLDOWN[symbol] = time.time() + cd_duration
                     logger.info(f"🛑 EMERGENCY CLOSE: {symbol} @ {exit_price} | {res_str}")
-                    msg = (f"🚨 <b>EMERGENCY EXIT MARKET TOO VOLATILE</b>\n{symbol}\n💵 Exit: {exit_price}\n📊 Result: <b>{res_str}</b>\n⏳ Cooldown: {cd_duration}s")
+                    msg = (f"🚨 <b>EMERGENCY EXIT - MARKET TOO VOLATILE</b>\n"
+                            f"{symbol}\n💵 Exit: {exit_price}\n📊 Result: <b>{res_str}</b>\n⏳ Cooldown: {cd_duration}s")
                     await kirim_tele(msg)
                     
                     # 6. Hapus tracker karena posisi sudah ditutup
