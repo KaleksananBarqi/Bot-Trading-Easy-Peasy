@@ -58,17 +58,18 @@ def run_complete_backtest():
         print("❌ Tidak ada data untuk backtest, keluar...")
         return None
     
-    # Pisahkan BTC data
+# Pisahkan BTC data untuk Trend Filter (tetap ambil 1h-nya)
     btc_data_dict = all_data.get('BTC/USDT', None)
     
-    # Ekstrak DataFrame BTC dari dictionary
+    # Ekstrak DataFrame BTC dari dictionary untuk parameter 'btc_data'
     if btc_data_dict and isinstance(btc_data_dict, dict):
         btc_data = btc_data_dict.get('1h', None)
     else:
         btc_data = None
     
-    # Hapus BTC dari symbol_data
-    symbol_data = {k: v for k, v in all_data.items() if k != 'BTC/USDT'}
+    # PERBAIKAN: JANGAN hapus BTC dari symbol_data agar tetap di-trade
+    # Kita gunakan shallow copy agar aman
+    symbol_data = all_data.copy()
     
     # Validasi data
     symbol_data = fetcher.validate_data(symbol_data)

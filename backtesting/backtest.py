@@ -65,9 +65,9 @@ class BacktestEngine:
         
         # Bollinger Bands
         bb = ta.bbands(df['close'], length=config.BB_LENGTH, std=config.BB_STD)
-        df['BBL'] = bb[f'BBL_{config.BB_LENGTH}_{config.BB_STD}']
-        df['BBM'] = bb[f'BBM_{config.BB_LENGTH}_{config.BB_STD}']
-        df['BBU'] = bb[f'BBU_{config.BB_LENGTH}_{config.BB_STD}']
+        df['BBL'] = bb.iloc[:, 0]  # Lower Band
+        df['BBM'] = bb.iloc[:, 1]  # Middle Band
+        df['BBU'] = bb.iloc[:, 2]  # Upper Band
         
         # Stochastic RSI
         stoch_rsi = ta.stochrsi(df['close'], 
@@ -540,6 +540,38 @@ class BacktestEngine:
         strategy_perf = trades_df.groupby('strategy')['pnl_usdt'].sum().sort_values(ascending=False)
         for strategy, pnl in strategy_perf.head(5).items():
             print(f"   {strategy}: ${pnl:.2f}")
+
+        print(f"\n📋 SEMUA KOIN DAN PnL:")
+        # Kita hitung ulang atau pakai variabel yang sudah ada
+        all_symbol_perf = trades_df.groupby('symbol')['pnl_usdt'].sum().sort_values(ascending=False)
+        
+        # Tambahan: Hitung jumlah trade per koin agar informasinya lebih lengkap
+        trade_counts = trades_df['symbol'].value_counts()
+        
+        for symbol, pnl in all_symbol_perf.items():
+            count = trade_counts.get(symbol, 0)
+            # Format: Simbol rata kiri 10 karakter, PnL format uang, jumlah trade
+            print(f"   {symbol:<10}: ${pnl:,.2f} ({count} trades)")
+        
+        print(f"\n📉 SEMUA KOIN DAN TOTAL KERUGIAN (LOSS ONLY):")
+        
+        # 1. Filter hanya trade yang PnL-nya negatif (< 0)
+        losing_trades_only = trades_df[trades_df['pnl_usdt'] < 0]
+        
+        if losing_trades_only.empty:
+            print("   ✅ Tidak ada loss sama sekali! (Perfect Run)")
+        else:
+            # 2. Hitung total loss per symbol
+            # ascending=True agar loss terbesar (angka paling minus) muncul paling atas
+            loss_by_symbol = losing_trades_only.groupby('symbol')['pnl_usdt'].sum().sort_values(ascending=True)
+            
+            # Hitung jumlah trade yang loss
+            loss_counts = losing_trades_only['symbol'].value_counts()
+            
+            for symbol, total_loss in loss_by_symbol.items():
+                count = loss_counts.get(symbol, 0)
+                # Format: Simbol, Total Loss (Merah/Minus), Jumlah trade rugi
+                print(f"   {symbol:<10}: ${total_loss:,.2f} ({count} x Stop Loss)")
         
         # Visualisasi
         self.plot_results(trades_df, equity_df)
