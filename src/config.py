@@ -93,24 +93,38 @@ SIDEWAYS_ADX_MAX = 20
 # --- 7. DAFTAR KOIN ---
 # Jika leverage/amount tidak diisi, akan memakai DEFAULT dari Section 2
 DAFTAR_KOIN = [
-    # Kategori: KING
+    # --- Kategori: KING (Market Mover) ---
     {"symbol": "BTC/USDT", "category": "KING", "leverage": 30, "margin_type": "cross", "amount": 50},
     
-    # Kategori: L1 (Smart Contract)
-    {"symbol": "SOL/USDT", "category": "L1", "leverage": 30, "margin_type": "isolated", "amount": 15},
-    {"symbol": "ETH/USDT", "category": "L1", "leverage": 20, "margin_type": "cross", "amount": 40},
-    {"symbol": "BNB/USDT", "category": "L1", "leverage": 15, "margin_type": "isolated", "amount": 30},
-    {"symbol": "AVAX/USDT", "category": "L1", "leverage": 20, "margin_type": "isolated", "amount": 15},
-    {"symbol": "ADA/USDT", "category": "L1", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    # --- Kategori: LAYER 1 (Smart Contract Platform) ---
+    # Blockchain utama tempat aplikasi (dApps) dibangun
+    {"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "cross", "amount": 40},
+    {"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 30, "margin_type": "isolated", "amount": 15},
+    {"symbol": "BNB/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 30},
+    {"symbol": "AVAX/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
+    {"symbol": "ADA/USDT", "category": "LAYER_1", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "SUI/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
+    {"symbol": "TRX/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
+    
+    # Kategori: PAYMENT SPECIALIST (New Gen L1)
+    # XPL (Plasma) adalah L1, tapi fokus utamanya adalah infrastruktur pembayaran stablecoin.
+    {"symbol": "XPL/USDT", "category": "LAYER_1", "leverage": 10, "margin_type": "isolated", "amount": 10}, 
 
-    # Kategori: PAYMENT / OLD GEN
-    {"symbol": "XRP/USDT", "category": "PAYMENT", "leverage": 10, "margin_type": "isolated", "amount": 15},
-    {"symbol": "LTC/USDT", "category": "PAYMENT", "leverage": 10, "margin_type": "isolated", "amount": 5},
+    # --- Kategori: INFRASTRUCTURE / ORACLE ---
+    # Jembatan data antara dunia nyata dan blockchain (Bukan L1)
+    {"symbol": "LINK/USDT", "category": "ORACLE", "leverage": 20, "margin_type": "isolated", "amount": 15},
+
+    # --- Kategori: LEGACY PAYMENT ---
+    # Koin generasi lama yang fungsi utamanya transfer value
+    {"symbol": "XRP/USDT", "category": "PAYMENT_LEGACY", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "LTC/USDT", "category": "PAYMENT_LEGACY", "leverage": 10, "margin_type": "isolated", "amount": 5},
     
-    # Kategori: MEME
+    # --- Kategori: MEMECOIN ---
+    # Berbasis komunitas, tanpa utilitas teknis berat
     {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 30, "margin_type": "isolated", "amount": 5},
+    {"symbol": "PEPE/USDT", "category": "MEME", "leverage": 20, "margin_type": "isolated", "amount": 5},
     
-    # Kategori: DEFI / PRIVACY / OTHERS
-    {"symbol": "TRX/USDT", "category": "L1", "leverage": 20, "margin_type": "isolated", "amount": 15},
+    # --- Kategori: PRIVACY ---
+    # Fokus pada anonimitas
     {"symbol": "ZEC/USDT", "category": "PRIVACY", "leverage": 10, "margin_type": "isolated", "amount": 15},
 ]
