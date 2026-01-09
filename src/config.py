@@ -12,6 +12,34 @@ API_KEY_LIVE = os.getenv("BINANCE_API_KEY")
 SECRET_KEY_LIVE = os.getenv("BINANCE_SECRET_KEY")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+AI_API_KEY = os.getenv("AI_API_KEY")
+CRYPTOPANIC_API_KEY = os.getenv("CRYPTOPANIC_API_KEY")
+
+# --- 1.B AI & DATA SOURCE CONFIG ---
+AI_MODEL_NAME = 'xiaomi/mimo-v2-flash:free' # atau model lain jika tersedia
+AI_CONFIDENCE_THRESHOLD = 75       # Minimal confidence untuk eksekusi
+Sentiment_Provider = 'RSS_Feed'    # Diganti dari CryptoPanic ke RSS
+OnChain_Provider = 'DefiLlama'
+WHALE_THRESHOLD_USDT = 100000      # Transaksi > $100k dianggap Whale
+
+# --- RSS FEEDS CONFIG ---
+RSS_FEED_URLS = [
+    # 1. Media Besar & Berita Umum
+    "https://www.theblock.co/rss.xml",
+    "https://cryptoslate.com/feed/",
+    "https://blockworks.co/feed/",
+    "https://news.bitcoin.com/feed/",
+    
+    # 2. Market Updates (Cepat)
+    "https://u.today/rss",
+    "https://www.newsbtc.com/feed/",
+    "https://dailyhodl.com/feed/",
+    "https://beincrypto.com/feed/",
+    
+    # 3. Aggregators (Cheat Code)
+    "https://news.google.com/rss/search?q=cryptocurrency+when:1h&hl=en-US&gl=US&ceid=US:en",
+    "https://www.reddit.com/r/CryptoCurrency/top/.rss?t=hour"
+]
 
 # --- WEBSOCKET CONFIG ---
 WS_URL_FUTURES_LIVE = "wss://fstream.binance.com/stream?streams="
@@ -42,23 +70,18 @@ EMA_TREND_MAJOR = 50
 EMA_FAST = 21           
 EMA_SLOW = 50          
 ADX_PERIOD = 14
-ADX_LIMIT_TREND  = 30 
-ADX_LIMIT_CHOPPY = 20 
 VOL_MA_PERIOD = 20      # Digunakan untuk filter volume
 BB_LENGTH = 20
 BB_STD = 2.0 
 STOCHRSI_LEN = 14
 STOCHRSI_K = 3
 STOCHRSI_D = 3
-STOCH_OVERSOLD = 20
-STOCH_OVERBOUGHT = 80
 
 # --- 5. TEKNIKAL & EKSEKUSI ---
 TIMEFRAME_TREND = '1h'      
 TIMEFRAME_EXEC = '5m'      
 LIMIT_TREND = 500           
 LIMIT_EXEC = 100
-ENTRY_PRICE_TOLERANCE = 0.5 
 ATR_PERIOD = 14             
 ATR_MULTIPLIER_SL = 1.0
 ATR_MULTIPLIER_TP1 = 2.2
@@ -81,10 +104,6 @@ TRAP_SAFETY_SL = 1.0
 # B. Trend Trap
 USE_TREND_TRAP_STRATEGY = True  
 TREND_TRAP_ADX_MIN = 25         
-TREND_TRAP_RSI_LONG_MIN = 40    
-TREND_TRAP_RSI_LONG_MAX = 60    # <--- Ubah ini jika ingin lebih agresif di Bull Market  
-TREND_TRAP_RSI_SHORT_MIN = 40   # <--- Ubah ini jika ingin lebih agresif di Bear Market
-TREND_TRAP_RSI_SHORT_MAX = 60   
 
 # C. Sideways Scalp
 USE_SIDEWAYS_SCALP = True       
@@ -101,28 +120,28 @@ DAFTAR_KOIN = [
     {"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "cross", "amount": 40},
     {"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 30, "margin_type": "isolated", "amount": 15},
     #{"symbol": "BNB/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 30},
-    {"symbol": "AVAX/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
-    {"symbol": "ADA/USDT", "category": "LAYER_1", "leverage": 10, "margin_type": "isolated", "amount": 15},
-    {"symbol": "SUI/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
-    {"symbol": "TRX/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
+    #{"symbol": "AVAX/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
+    #{"symbol": "ADA/USDT", "category": "LAYER_1", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    #{"symbol": "SUI/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
+    #{"symbol": "TRX/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
     
     # Kategori: PAYMENT SPECIALIST (New Gen L1)
     # XPL (Plasma) adalah L1, tapi fokus utamanya adalah infrastruktur pembayaran stablecoin.
-    {"symbol": "XPL/USDT", "category": "LAYER_1", "leverage": 10, "margin_type": "isolated", "amount": 10}, 
+    #{"symbol": "XPL/USDT", "category": "LAYER_1", "leverage": 10, "margin_type": "isolated", "amount": 10}, 
 
     # --- Kategori: INFRASTRUCTURE / ORACLE ---
     # Jembatan data antara dunia nyata dan blockchain (Bukan L1)
-    {"symbol": "LINK/USDT", "category": "ORACLE", "leverage": 20, "margin_type": "isolated", "amount": 15},
+    #{"symbol": "LINK/USDT", "category": "ORACLE", "leverage": 20, "margin_type": "isolated", "amount": 15},
 
     # --- Kategori: LEGACY PAYMENT ---
     # Koin generasi lama yang fungsi utamanya transfer value
-    {"symbol": "XRP/USDT", "category": "PAYMENT_LEGACY", "leverage": 10, "margin_type": "isolated", "amount": 15},
-    {"symbol": "LTC/USDT", "category": "PAYMENT_LEGACY", "leverage": 10, "margin_type": "isolated", "amount": 5},
+    #{"symbol": "XRP/USDT", "category": "PAYMENT_LEGACY", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    #{"symbol": "LTC/USDT", "category": "PAYMENT_LEGACY", "leverage": 10, "margin_type": "isolated", "amount": 5},
     
     # --- Kategori: MEMECOIN ---
     # Berbasis komunitas, tanpa utilitas teknis berat
-    {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 30, "margin_type": "isolated", "amount": 5},
-    {"symbol": "1000PEPE/USDT", "category": "MEME", "leverage": 20, "margin_type": "isolated", "amount": 5},
+    #{"symbol": "DOGE/USDT", "category": "MEME", "leverage": 30, "margin_type": "isolated", "amount": 5},
+    #{"symbol": "1000PEPE/USDT", "category": "MEME", "leverage": 20, "margin_type": "isolated", "amount": 5},
     
     # --- Kategori: PRIVACY ---
     # Fokus pada anonimitas
