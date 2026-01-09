@@ -446,12 +446,26 @@ async def install_safety_for_existing_positions():
     for base_sym, pos_data in current_positions.items():
         symbol = pos_data['symbol']
         
+        # [FIX FINAL]: TRUST THE TRACKER!
+        # Jika status sudah SECURED, jangan validasi ke binance lagi.
+        # Ini mencegah bot salah baca (dikiranya 0 order) lalu memaksa pasang baru.
+        if symbol in safety_orders_tracker and safety_orders_tracker[symbol].get('status') == 'SECURED':
+            logger.info(f"💾 Loaded SECURED status for {symbol}. Skipping startup check.")
+            continue
+        
         try:
             # [SOLUSI] Fetch order HANYA untuk symbol ini (Anti Warning & Hemat Rate Limit)
             orders = await exchange.fetch_open_orders(symbol)
             existing_order_count = len(orders)
         except Exception as e:
             logger.warning(f"⚠️ Gagal fetch orders untuk {symbol}: {e}")
+            # [FIX 3]: JANGAN anggap 0 jika gagal fetch!
+            # Biarkan status apa adanya (misal SECURED dari file json sebelumnya)
+            # Dengan 'continue', kita skip update tracker untuk simbol ini, jadi dia tetap aman.
+            if symbol in safety_orders_tracker and safety_orders_tracker[symbol]['status'] == "SECURED":
+                logger.info(f"🛡️ Connection failed, keeping {symbol} as SECURED (Trusting file).")
+                continue 
+            
             existing_order_count = 0
 
         # LOGIKA CEK SAFETY (Sama seperti sebelumnya)
@@ -883,6 +897,10 @@ async def install_safety_orders(symbol, pos_data):
         await asyncio.sleep(1.5) # Jeda sedikit lebih lama agar API Binance sinkron
     except Exception as e:
         logger.warning(f"⚠️ Hard sweep failed: {e}")
+        # [FIX 4]: Jika gagal bersih-bersih, JANGAN pasang baru!
+        # Kalau dipaksa, nanti error -4130 (Order Existing)
+        logger.error("🛑 ABORTING SAFETY INSTALL: Failed to clean old orders.")
+        return []
     # 2. Hitung SL & TP berdasarkan ATR
     try:
         async with data_lock:
