@@ -12,7 +12,7 @@ API_KEY_LIVE = os.getenv("BINANCE_API_KEY")
 SECRET_KEY_LIVE = os.getenv("BINANCE_SECRET_KEY")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
- 
+
 # --- 2. GLOBAL RISK ---
 DEFAULT_LEVERAGE = 10
 DEFAULT_MARGIN_TYPE = 'isolated' 
@@ -101,8 +101,18 @@ DAFTAR_KOIN = [
     {"symbol": "XPL/USDT", "leverage": 10, "margin_type": "isolated", "amount": 10},
     {"symbol": "LINK/USDT", "leverage": 20, "margin_type": "isolated", "amount": 15},
     {"symbol": "XRP/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
-    {"symbol": "LTC/USDT", "leverage": 10, "margin_type": "isolated", "amount": 5},
-    {"symbol": "DOGE/USDT", "leverage": 30, "margin_type": "isolated", "amount": 5},
-    {"symbol": "PEPE/USDT", "leverage": 20, "margin_type": "isolated", "amount": 5},
+    {"symbol": "LTC/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "DOGE/USDT", "leverage": 30, "margin_type": "isolated", "amount": 15},
+    {"symbol": "PEPE/USDT", "leverage": 20, "margin_type": "isolated", "amount": 15},
     {"symbol": "ZEC/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "FHE/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "TRADOOR/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "BREV/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "ARIA/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "RECALL/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "RAVE/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "SPK/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "TA/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "HOME/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "NAORIS/USDT", "leverage": 10, "margin_type": "isolated", "amount": 15},
 ]

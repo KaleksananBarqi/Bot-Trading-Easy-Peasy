@@ -100,7 +100,7 @@ DAFTAR_KOIN = [
     # Blockchain utama tempat aplikasi (dApps) dibangun
     {"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "cross", "amount": 40},
     {"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 30, "margin_type": "isolated", "amount": 15},
-    {"symbol": "BNB/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 30},
+    #{"symbol": "BNB/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 30},
     {"symbol": "AVAX/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
     {"symbol": "ADA/USDT", "category": "LAYER_1", "leverage": 10, "margin_type": "isolated", "amount": 15},
     {"symbol": "SUI/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
@@ -122,9 +122,9 @@ DAFTAR_KOIN = [
     # --- Kategori: MEMECOIN ---
     # Berbasis komunitas, tanpa utilitas teknis berat
     {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 30, "margin_type": "isolated", "amount": 5},
-    {"symbol": "PEPE/USDT", "category": "MEME", "leverage": 20, "margin_type": "isolated", "amount": 5},
+    {"symbol": "1000PEPE/USDT", "category": "MEME", "leverage": 20, "margin_type": "isolated", "amount": 5},
     
     # --- Kategori: PRIVACY ---
     # Fokus pada anonimitas
-    {"symbol": "ZEC/USDT", "category": "PRIVACY", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    #{"symbol": "ZEC/USDT", "category": "PRIVACY", "leverage": 10, "margin_type": "isolated", "amount": 15},
 ]
