@@ -15,6 +15,16 @@ import config
 # KONFIGURASI LOGGER (FILE + CONSOLE)
 # ==========================================
 from datetime import datetime, timedelta, timezone
+import sys
+
+# [FIX] Force UTF-8 untuk Windows Console agar emoji tidak crash
+# Ini memaksa stdout windows untuk menerima karakter utf-8 (emoji)
+if sys.platform.startswith('win'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except AttributeError:
+        # Fallback untuk python versi sangat lama, meski jarang terjadi di 3.10+
+        pass
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -27,10 +37,12 @@ def wib_time(*args):
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - [%(funcName)s] - %(message)s')
 formatter.converter = wib_time 
 
-file_handler = logging.FileHandler(config.LOG_FILENAME)
+# [FIX] Tambahkan encoding='utf-8' agar file log bisa menyimpan emoji
+file_handler = logging.FileHandler(config.LOG_FILENAME, encoding='utf-8')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
+# Console Handler (sys.stdout sudah di-reconfigure ke utf-8 di atas)
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
