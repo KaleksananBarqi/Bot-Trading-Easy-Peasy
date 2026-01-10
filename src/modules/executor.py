@@ -139,17 +139,27 @@ class OrderExecutor:
                 await kirim_tele(f"⏳ <b>LIMIT PLACED ({strategy_tag})</b>\n{symbol} {side} @ {price_exec:.4f}\n(Trap SL set by ATR: {atr_value:.4f})")
 
             else: # MARKET
-                order = await self.exchange.create_order(symbol, 'market', side, qty)
-                await kirim_tele(f"✅ <b>MARKET FILLED</b>\n{symbol} {side} (Size: ${amount_usdt*leverage:.2f})")
-                
-                # Simpan metadata agar safety monitor bisa ambil info ATR walaupun status NONE
-                # Kita inject sementara ke tracker, nanti akan diupdate jadi SECURED oleh monitor
+                # [FIX RACE CONDITION]
+                # Simpan metadata SEBELUM order dilempar supaya Safety Monitor
+                # langsung punya data ATR saat mendeteksi posisi baru.
                 self.safety_orders_tracker[symbol] = {
-                    "status": "PENDING_SAFETY", # Temporary Flag
+                    "status": "PENDING", 
                     "strategy": strategy_tag,
-                    "atr_value": atr_value
+                    "atr_value": atr_value,
+                    "created_at": time.time()
                 }
                 self.save_tracker()
+
+                try:
+                    order = await self.exchange.create_order(symbol, 'market', side, qty)
+                    await kirim_tele(f"✅ <b>MARKET FILLED</b>\n{symbol} {side} (Size: ${amount_usdt*leverage:.2f})")
+                except Exception as e:
+                    # [ROLLBACK] Jika order gagal, hapus dari tracker
+                    logger.error(f"❌ Market Order Failed {symbol}, rolling back tracker...")
+                    if symbol in self.safety_orders_tracker:
+                        del self.safety_orders_tracker[symbol]
+                        self.save_tracker()
+                    raise e
 
         except Exception as e:
             logger.error(f"❌ Entry Failed {symbol}: {e}")
