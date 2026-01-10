@@ -63,7 +63,7 @@ Laporan lengkap real-time langsung ke saku Anda:
 
 ---
 
-## 📊 Performa Backtest (Simulasi)
+## 📊 Performa Backtest
 Berdasarkan pengujian data historis (1 - 30 Des 2025):
 
 | Metric | Value |
@@ -75,7 +75,7 @@ Berdasarkan pengujian data historis (1 - 30 Des 2025):
 | **Profit Factor** | 3.85 |
 | **Top Coin** | ZEC/USDT (Champion 🏆) |
 
-> *Disclaimer: Hasil masa lalu tidak menjamin kinerja masa depan.*
+> *Disclaimer: Simulasi Backtesting Hanya Menggunakan Data Tehnikal dan Tanpa Menggunakan AI dll.*
 
 ---
 
