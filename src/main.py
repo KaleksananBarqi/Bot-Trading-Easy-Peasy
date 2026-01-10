@@ -272,7 +272,7 @@ async def main():
             
             if time_elapsed < timeframe_exec_seconds:
                 # Skip AI to save cost/spam
-                logger.info(f"⏳ {symbol} AI Skip (Wait {int(timeframe_exec_seconds - time_elapsed)}s)")
+                #logger.info(f"⏳ {symbol} AI Skip (Wait {int(timeframe_exec_seconds - time_elapsed)}s)")
                 await asyncio.sleep(config.LOOP_SLEEP_DELAY)
                 continue
 
