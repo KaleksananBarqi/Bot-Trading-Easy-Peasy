@@ -145,6 +145,26 @@ async def main():
                         f"💸 PnL: <b>{pnl_str}</b>"
                     )
                 await kirim_tele(msg)
+            
+            else:
+                # ENTRY FILL (RP = 0)
+                # Cek jika ini adalah LIMIT ORDER yang terisi
+                order_type = o.get('o', 'UNKNOWN')
+                if order_type == 'LIMIT':
+                     price_filled = float(o.get('ap', 0))
+                     qty_filled = float(o.get('q', 0))
+                     side_filled = o['S'] # BUY/SELL
+                     size_usdt = qty_filled * price_filled
+                     
+                     msg = (
+                        f"✅ <b>LIMIT ENTRY FILLED</b>\n"
+                        f"✨ <b>{sym}</b>\n"
+                        f"🏷️ Type: {order_type}\n"
+                        f"🚀 Side: {side_filled}\n"
+                        f"📏 Size: ${size_usdt:.2f}\n"
+                        f"💵 Price: {price_filled}"
+                     )
+                     await kirim_tele(msg)
 
             # Trigger safety check immediately
             await executor.sync_positions()
