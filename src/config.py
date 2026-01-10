@@ -72,7 +72,7 @@ DEFAULT_AMOUNT_USDT = 10      # Cadangan jika dynamic false / error
   
 # --- SETTING DYNAMIC SIZING (COMPOUNDING) ---
 USE_DYNAMIC_SIZE = True       # Set True untuk aktifkan compounding
-RISK_PERCENT_PER_TRADE = 10  # Bot akan pakai 5% dari saldo USDT Available per trade
+RISK_PERCENT_PER_TRADE = 5  # Bot akan pakai 5% dari saldo USDT Available per trade
 # Setingan buat pair correlation
 MAX_POSITIONS_PER_CATEGORY = 1   # Maksimal 1 posisi per "Sektor"
 CORRELATION_THRESHOLD_BTC = 0.5  # Jika korelasi < 0.5, anggap "Jalan Sendiri" (Abaikan BTC Trend)
@@ -141,8 +141,8 @@ DAFTAR_KOIN = [
     
     # --- Kategori: LAYER 1 (Smart Contract Platform) ---
     # Blockchain utama tempat aplikasi (dApps) dibangun
-    #{"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "cross", "amount": 40},
-    #{"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 30, "margin_type": "isolated", "amount": 15},
+    {"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "cross", "amount": 40},
+    {"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 30, "margin_type": "isolated", "amount": 15},
     #{"symbol": "BNB/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 30},
     #{"symbol": "AVAX/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 15},
     #{"symbol": "ADA/USDT", "category": "LAYER_1", "leverage": 10, "margin_type": "isolated", "amount": 15},
@@ -169,5 +169,5 @@ DAFTAR_KOIN = [
     
     # --- Kategori: PRIVACY ---
     # Fokus pada anonimitas
-    #{"symbol": "ZEC/USDT", "category": "PRIVACY", "leverage": 10, "margin_type": "isolated", "amount": 15},
+    {"symbol": "ZEC/USDT", "category": "PRIVACY", "leverage": 10, "margin_type": "isolated", "amount": 15},
 ]

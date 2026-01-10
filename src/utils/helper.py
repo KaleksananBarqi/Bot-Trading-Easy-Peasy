@@ -79,6 +79,7 @@ def kirim_tele_sync(pesan):
 # ==========================================
 # FORMATTING TOOLS
 # ==========================================
+def format_currency(num):
     if num is None: return "0.00"
     return f"{num:,.2f}"
 

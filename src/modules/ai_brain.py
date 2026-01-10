@@ -8,9 +8,11 @@ import re
 class AIBrain:
     def __init__(self):
         if config.AI_API_KEY:
+            import httpx
             self.client = OpenAI(
                 base_url=config.AI_BASE_URL,
                 api_key=config.AI_API_KEY,
+                http_client=httpx.Client()
             )
             self.model_name = config.AI_MODEL_NAME
             logger.info(f"🧠 AI Brain Initialized: {self.model_name} via OpenRouter")
