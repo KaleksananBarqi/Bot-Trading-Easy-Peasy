@@ -1,55 +1,69 @@
-# 🤖 Easy Peasy Trading Bot: Hybrid Sniper Strategy
-
-<img width="1177" height="905" alt="Image" src="https://github.com/user-attachments/assets/b55b4aea-b6bc-4316-896d-dc4839645536" />
+# 🤖 Easy Peasy Trading Bot: AI-Powered Hybrid Sniper
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)
 ![Binance](https://img.shields.io/badge/Binance-Futures-yellow?style=for-the-badge&logo=binance)
+![AI](https://img.shields.io/badge/AI-DeepSeek%2FOpenAI-blueviolet?style=for-the-badge)
 ![Strategy](https://img.shields.io/badge/Strategy-Hybrid%20Sniper-red?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
 
-## 📖 Easy Peasy Trading Bot (Smart Hybrid Edition)
-Easy Peasy Trading Bot adalah sistem trading algoritmik otomatis untuk pasar Binance Futures. Dibangun menggunakan Python, bot ini menerapkan pendekatan Hybrid Strategy yang adaptif: mampu beralih strategi saat pasar Trending maupun Sideways.
+## 📖 Easy Peasy Trading Bot (AI-Integrated Edition)
 
-Versi terbaru ini dilengkapi dengan **"Smart Correlation Engine"** dan **"Sector Risk Management"**, membuat bot mampu membedakan mana koin yang harus patuh pada tren Bitcoin dan mana koin yang sedang "Decoupled" (bergerak mandiri), serta mencegah penumpukan risiko pada satu kategori koin saja.
+**Easy Peasy Trading Bot** adalah sistem trading algoritmik otomatis untuk pasar Binance Futures. Dibangun menggunakan Python, bot ini menerapkan pendekatan Hybrid Strategy yang adaptif dan kini diperkuat oleh **Artificial Intelligence**.
+
+Versi terbaru ini tidak hanya mengandalkan indikator teknikal, tetapi juga dilengkapi dengan **"AI Brain"**, **"Sentiment Analysis"**, dan **"On-Chain Detector"**. Bot mampu membaca berita global, mendeteksi pergerakan paus (Whale), serta menganalisis kondisi psikologis pasar (Fear & Greed) sebelum mengambil keputusan trading.
+
+---
 
 ## 🚀 Fitur Unggulan
 
-### 1. 🧠 Hybrid Logic Engine
-Bot tidak terpaku pada satu gaya trading. Menggunakan ADX (Average Directional Index) sebagai otak utama:
+### 1. 🧠 AI-Powered Decision Brain (NEW!)
+Bot terintegrasi dengan LLM (via OpenRouter/DeepSeek/OpenAI) untuk memvalidasi sinyal.
+*   **Fundamental & Technical Fusion:** AI menganalisis data teknikal (RSI, ADX, EMA) yang digabungkan dengan sentimen pasar untuk memberikan keputusan: `BUY`, `SELL`, atau `WAIT`.
+*   **Confidence Score:** Trade hanya dieksekusi jika AI memberikan skor keyakinan (confidence) yang tinggi.
+
+### 2. 📰 Global Sentiment & News Analysis (NEW!)
+Jangan trading buta melawan arus berita.
+*   **Fear & Greed Index:** Mengambil data real-time dari CoinMarketCap untuk mengetahui psikologi pasar.
+*   **News Aggregator:** Bot membaca headline berita kripto terbaru (RSS Feed) untuk mendeteksi sentimen positif/negatif secara global.
+
+### 3. 🐋 Whale & On-Chain Detector (NEW!)
+Mendeteksi jejak uang besar (Smart Money).
+*   **Whale Alert:** Memantau transaksi besar di pasar secara real-time via WebSocket.
+*   **Stablecoin Inflow:** (Integrasi DefiLlama) Memantau arus masuk uang (USDT/USDC) ke exchange sebagai tanda potensi pump pasar.
+
+### 4. ⚡ Hybrid Logic Engine
+Menggunakan ADX (Average Directional Index) sebagai otak teknikal utama:
 *   **Trend Mode (ADX > 25):** Mengaktifkan strategi Trend Trap Pullback. Bot menunggu harga koreksi cantik ke area EMA sebelum ikut tren.
 *   **Sideways Mode (ADX < 20):** Mengaktifkan strategi BB Bounce Scalp. Bot melakukan jual-beli cepat (ping-pong) di area batas Bollinger Bands saat pasar tenang.
 
-### 2. 👑 Smart King BTC & Auto-Decoupling (NEW!)
-Bot ini memiliki hierarki, namun sekarang lebih cerdas:
-*   **Correlation Filter:** Bot menghitung korelasi pergerakan Altcoin terhadap Bitcoin secara real-time.
-*   **Strict Mode (High Correlation):** Jika koin bergerak searah dengan BTC (Korelasi > 0.5), bot akan patuh pada tren BTC (King Filter). Jika BTC Bearish, bot dilarang Long.
-*   **Decoupled Mode (Low Correlation):** Jika koin terdeteksi bergerak mandiri/berbeda arah dari BTC (Korelasi < 0.5), fitur Auto-Decouple aktif. Bot diizinkan mengambil sinyal (Long/Short) meskipun berlawanan dengan tren BTC. Cocok untuk koin yang sedang dipompa bandar atau ada berita khusus.
+### 5. 👑 Smart King BTC & Auto-Decoupling
+Bot memiliki hierarki korelasi yang cerdas:
+*   **Strict Mode:** Jika korelasi Altcoin terhadap BTC tinggi (> 0.5), bot patuh pada tren BTC. Jika BTC Bearish, dilarang Long.
+*   **Decoupled Mode:** Jika koin terdeteksi bergerak mandiri (Korelasi < 0.5), fitur Auto-Decouple aktif. Bot diizinkan mengambil sinyal berlawanan dengan BTC.
 
-### 3. ⚖️ Sector Exposure Limit (NEW!)
+### 6. ⚖️ Sector Exposure Limit
 Manajemen risiko tingkat lanjut berbasis kategori koin.
-*   Anda bisa mengelompokkan koin (contoh: L1, MEME, AI, PAYMENT).
-*   **Max Position per Category:** Bot membatasi jumlah posisi terbuka dalam satu sektor. Contoh: Jika sudah ada posisi Long di DOGE, bot tidak akan mengambil posisi di SHIB meskipun ada sinyal, untuk mencegah risiko berlebih di sektor Meme.
+*   Anda bisa mengelompokkan koin (contoh: L1, MEME, AI).
+*   **Max Position per Category:** Mencegah penumpukan risiko pada satu sektor saja (misal: tidak akan *all-in* di koin Meme secara bersamaan).
 
-### 4. 🔫 Sniper / Liquidity Hunt
-Fitur "Anti-Retail" andalan. Alih-alih masuk di harga sekarang (Market), bot menghitung jarak ATR untuk memprediksi letak Stop Loss retail trader. Bot akan memasang Limit Order di area likuiditas tersebut untuk mendapatkan harga diskon terbaik ("Sniper Entry") dan mengurangi risiko drawdown.
+### 7. 🔫 Sniper / Liquidity Hunt
+Fitur "Anti-Retail" andalan. Bot menghitung jarak ATR untuk memprediksi letak Stop Loss retail trader, lalu memasang Limit Order di area likuiditas tersebut untuk mendapatkan harga diskon terbaik ("Sniper Entry").
 
-### 5. 🛡️ Guardian Safety Monitor
+### 8. 🛡️ Guardian Safety Monitor
 Sistem keamanan berbasis Event-Driven Asyncio:
-*   Mendeteksi "Ghost Orders" (order nyangkut tanpa posisi).
-*   Memastikan setiap posisi terbuka PASTI memiliki Hard Stop Loss (SL) dan Take Profit (TP).
-*   Membersihkan Limit Order Sniper yang sudah kadaluarsa agar margin tidak tertahan.
+*   Mendeteksi "Ghost Orders".
+*   Memastikan setiap posisi memiliki Hard Stop Loss (SL) dan Take Profit (TP).
+*   Pembersihan otomatis order yang kadaluarsa.
 
-### 6. 💰 Dynamic Compounding
-Manajemen uang otomatis. Bot membaca saldo wallet secara real-time dan menggunakan persentase risiko (default 5%) dari saldo Available. Jika akun tumbuh, ukuran posisi otomatis membesar (Compounding).
-
-### 7. 📱 Telegram Integration
+### 9. 📱 Advanced Telegram Integration
 Laporan lengkap real-time langsung ke saku Anda:
-*   Notifikasi Status Bot & WebSocket.
-*   **Detailed Signal:** Menampilkan data teknikal (RSI, ADX), Status Korelasi BTC (🔗 Linked / 🔓 Decoupled), dan Sektor Koin.
-*   Laporan PnL (Profit/Loss) otomatis saat posisi ditutup.
+*   **AI Reasoning:** Menampilkan alasan kenapa AI mengambil keputusan tersebut.
+*   **Sentiment Data:** Laporan Fear & Greed Index dan berita terhangat.
+*   **PnL Report:** Laporan keuntungan otomatis.
+
+---
 
 ## 📊 Performa Backtest (Simulasi)
-
 Berdasarkan pengujian data historis (1 - 30 Des 2025):
 
 | Metric | Value |
@@ -61,108 +75,89 @@ Berdasarkan pengujian data historis (1 - 30 Des 2025):
 | **Profit Factor** | 3.85 |
 | **Top Coin** | ZEC/USDT (Champion 🏆) |
 
-> *Disclaimer: Hasil masa lalu tidak menjamin kinerja masa depan. Backtest menggunakan data historis optimal.*
+> *Disclaimer: Hasil masa lalu tidak menjamin kinerja masa depan.*
 
 ---
 
-## 🛠️ Cara Install (Untuk Pemula)
+## 🛠️ Cara Install
 
-Ikuti langkah ini satu per satu. Jangan terburu-buru.
+Ikuti langkah ini satu per satu.
 
 ### Persiapan
 Pastikan komputer/laptop Anda sudah terinstall:
-1.  **Python** (Versi 3.10 ke atas). [Download di sini](https://www.python.org/downloads/).
-2.  **Git** (Opsional, untuk clone repo).
+1.  **Python** (Versi 3.10 ke atas).
+2.  **Git**.
 
-### Langkah 1: Download / Clone Repository
-Buka terminal (CMD atau PowerShell), lalu arahkan ke folder di mana Anda ingin menyimpan bot.
+### Langkah 1: Clone Repository
 ```bash
 gh repo clone KaleksananBarqi/Bot-Trading-Easy-Peasy-Binance
-
+cd Bot-Trading-Easy-Peasy-Binance
 ```
 
-*(Atau cukup download ZIP dari GitHub dan ekstrak).*
-
-### Langkah 2: Buat Virtual Environment (Wajib)
-
-Ini agar library bot tidak bentrok dengan sistem komputer lain.
-
+### Langkah 2: Buat Virtual Environment
+**Windows:**
 ```bash
-# Untuk Windows
 python -m venv venv
 .\venv\Scripts\activate
+```
 
-# Untuk Linux/Mac
+**Linux/Mac:**
+```bash
 python3 -m venv venv
 source venv/bin/activate
-
 ```
-
-*Tanda berhasil: Di terminal akan muncul tulisan `(venv)` di sebelah kiri.*
 
 ### Langkah 3: Install Dependencies
-
-Install semua "kebutuhan" bot yang ada di file `requirements.txt`.
-
 ```bash
 pip install -r requirements.txt
-
 ```
 
-### Langkah 4: Konfigurasi API Key
+### Langkah 4: Konfigurasi API Key (.env)
+Buat file `.env` dan isi data berikut (Dapatkan API Key dari provider masing-masing):
 
-1. Buat file baru bernama `.env` di dalam folder project.
-2. Buka file `.env` dengan Notepad/VS Code, lalu isi data berikut (Dapatkan dari Binance & BotFather Telegram):
-
-```env
-# Binance API (Pilih mau pakai Testnet atau Live)
+```ini
+# --- BINANCE (Exchange) ---
 BINANCE_API_KEY=masukan_api_key_asli_disini
 BINANCE_SECRET_KEY=masukan_secret_key_asli_disini
+# Jika pakai Testnet
+BINANCE_TESTNET_KEY=key_testnet
+BINANCE_TESTNET_SECRET=secret_testnet
 
-# Binance Testnet (Untuk latihan/demo)
-BINANCE_TESTNET_KEY=masukan_key_testnet_disini
-BINANCE_TESTNET_SECRET=masukan_secret_testnet_disini
-
-# Telegram Config
-TELEGRAM_TOKEN=123456:ABC-DefGhiJklmNoPqrStu...
+# --- TELEGRAM (Notifikasi) ---
+TELEGRAM_TOKEN=123456:ABC-Def...
 TELEGRAM_CHAT_ID=123456789
 
+# --- AI & SENTIMENT (New Features) ---
+# Dapatkan di: https://openrouter.ai/keys
+AI_API_KEY=sk-or-v1-xxxxxxxx...
+AI_MODEL_NAME=deepseek/deepseek-r1:free
+
+# Dapatkan di: https://coinmarketcap.com/api/
+CMC_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx
 ```
 
-### Langkah 5: Sesuaikan Config (Opsional)
-
-Buka file `config.py`. Anda bisa mengubah:
-
-* `PAKAI_DEMO = True` (Ubah ke `False` jika ingin pakai uang asli).
-* `RISK_PERCENT_PER_TRADE = 5.0` (Resiko per trade).
-* `DAFTAR_KOIN` (List koin yang ingin ditradingkan).
+### Langkah 5: Sesuaikan Config
+Buka file `config.py`. Atur parameter trading, daftar koin, dan manajemen risiko sesuai selera.
 
 ### Langkah 6: Jalankan Bot 🚀
-
 ```bash
 python main.py
-
 ```
-
-Jika berhasil, akan muncul pesan di terminal:
-`✅ WebSocket Connected! System Online.`
-
----
-
-## ⚠️ Disclaimer (Penting!)
-
-Bot ini adalah alat bantu trading (tools), bukan mesin pencetak uang ajaib.
-
-1. **Resiko Tinggi:** Trading Futures memiliki resiko likuidasi (uang habis).
-2. **DYOR (Do Your Own Research):** Penulis tidak bertanggung jawab atas kerugian finansial yang terjadi akibat penggunaan kode ini.
-3. **Gunakan Testnet:** Sangat disarankan mencoba di akun DEMO (Testnet) minimal 1 minggu sebelum menggunakan uang asli.
+Jika berhasil, akan muncul pesan:
+> `🧠 AI Brain Initialized ✅ WebSocket Connected! System Online.`
 
 ---
+
+## ⚠️ Disclaimer
+> **Resiko Tinggi:** Trading Futures memiliki resiko likuidasi yang signfikan.
+>
+> **DYOR (Do Your Own Research):** Penulis tidak bertanggung jawab atas kerugian finansial yang mungkin terjadi.
+>
+> **AI Hallucination:** Keputusan AI tidak 100% akurat. Selalu gunakan Stop Loss dan Money Management yang bijak.
 
 ## 👨‍💻 Author & Credits
-
 **Developed by Kaleksanan Barqi Aji Massani**
 *Customer Success & Tech Enthusiast*
 
-* **Logic Core:** Based on Hybrid Price Action (Trend + Mean Reversion).
-* **Special Thanks:** To Open Source Community (CCXT, Pandas TA) & Crypto Analyst Mentors.
+*   **Core Logic:** Hybrid Price Action + AI Analysis.
+*   **Credits:** CCXT, Pandas TA, OpenAI/OpenRouter, CoinMarketCap API.
