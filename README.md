@@ -154,6 +154,8 @@ Jika berhasil, akan muncul pesan:
 > **DYOR (Do Your Own Research):** Penulis tidak bertanggung jawab atas kerugian finansial yang mungkin terjadi.
 >
 > **AI Hallucination:** Keputusan AI tidak 100% akurat. Selalu gunakan Stop Loss dan Money Management yang bijak.
+>
+> **API Service:** Kami menyarankan anda untuk membeli layanan API yang mumpuni, terutama untuk data likuidasi, onchain, dll.
 
 ## 👨‍💻 Author & Credits
 **Developed by Kaleksanan Barqi Aji Massani**
