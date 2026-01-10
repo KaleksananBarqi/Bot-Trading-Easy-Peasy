@@ -367,7 +367,7 @@ async def main():
                            f"• Entry: {entry_price:.4f}\n"
                            f"• TP: {tp_price:.4f}\n"
                            f"• SL: {sl_price:.4f}\n"
-                           f"• R:R: {rr_ratio:.2f}\n\n"
+                           f"• R:R: 1:{rr_ratio:.2f}\n\n"
                            f"💰 <b>Size & Risk:</b>\n"
                            f"• Margin: ${margin_usdt:.2f}\n"
                            f"• Size: ${position_size_usdt:.2f} (x{lev})\n\n"
