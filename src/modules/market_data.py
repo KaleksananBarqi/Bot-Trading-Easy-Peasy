@@ -197,7 +197,7 @@ class MarketDataManager:
             bars_btc = self.market_store.get(config.BTC_SYMBOL, {}).get(config.BTC_TIMEFRAME, [])
             
             if len(bars_sym) < period or len(bars_btc) < period:
-                return 0.99 # Default high correlation to be safe (Follow BTC)
+                return config.DEFAULT_CORRELATION_HIGH # Default high correlation to be safe (Follow BTC)
             
             # Create DF
             df_sym = pd.DataFrame(bars_sym, columns=['timestamp','o','h','l','c','v'])
@@ -207,7 +207,7 @@ class MarketDataManager:
             merged = pd.merge(df_sym[['timestamp','c']], df_btc[['timestamp','c']], on='timestamp', suffixes=('_sym', '_btc'))
             
             if len(merged) < period:
-                return 0.99
+                return config.DEFAULT_CORRELATION_HIGH
                 
             # Calc Correlation
             corr = merged['c_sym'].rolling(period).corr(merged['c_btc']).iloc[-1]
@@ -217,7 +217,7 @@ class MarketDataManager:
             
         except Exception as e:
             logger.error(f"Corr Error {symbol}: {e}")
-            return 0.99 # Fallback
+            return config.DEFAULT_CORRELATION_HIGH # Fallback
 
     def get_technical_data(self, symbol):
         """Retrieve aggregated technical data for AI Prompt"""
@@ -231,7 +231,7 @@ class MarketDataManager:
             df['EMA_SLOW'] = df.ta.ema(length=config.EMA_SLOW) # EMA Trend Major
             
             # 2. RSI & ADX
-            df['RSI'] = df.ta.rsi(length=14)
+            df['RSI'] = df.ta.rsi(length=config.RSI_PERIOD)
             df['ADX'] = df.ta.adx(length=config.ADX_PERIOD)[f"ADX_{config.ADX_PERIOD}"]
             
             # 3. Volume MA
@@ -244,10 +244,10 @@ class MarketDataManager:
                 df['BB_UPPER'] = bb.iloc[:, 2]
             
             # 5. Stochastic RSI
-            stoch_rsi = df.ta.stochrsi(length=config.STOCHRSI_LEN, rsi_length=14, k=config.STOCHRSI_K, d=config.STOCHRSI_D)
+            stoch_rsi = df.ta.stochrsi(length=config.STOCHRSI_LEN, rsi_length=config.RSI_PERIOD, k=config.STOCHRSI_K, d=config.STOCHRSI_D)
             # keys example: STOCHRSIk_14_14_3_3, STOCHRSId_14_14_3_3
-            k_key = f"STOCHRSIk_{config.STOCHRSI_LEN}_14_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
-            d_key = f"STOCHRSId_{config.STOCHRSI_LEN}_14_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
+            k_key = f"STOCHRSIk_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
+            d_key = f"STOCHRSId_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
             df['STOCH_K'] = stoch_rsi[k_key]
             df['STOCH_D'] = stoch_rsi[d_key]
 

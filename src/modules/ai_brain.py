@@ -9,7 +9,7 @@ class AIBrain:
     def __init__(self):
         if config.AI_API_KEY:
             self.client = OpenAI(
-                base_url="https://openrouter.ai/api/v1",
+                base_url=config.AI_BASE_URL,
                 api_key=config.AI_API_KEY,
             )
             self.model_name = config.AI_MODEL_NAME
@@ -29,8 +29,8 @@ class AIBrain:
             # Generate Content
             completion = self.client.chat.completions.create(
                 extra_headers={
-                    "HTTP-Referer": "https://github.com/KaleksananBarqi/Bot-Trading-Easy-Peasy", # Optional. Site URL for rankings on openrouter.ai.
-                    "X-Title": "Bot Trading Easy Peasy", # Optional. Site title for rankings on openrouter.ai.
+                    "HTTP-Referer": config.AI_APP_URL, 
+                    "X-Title": config.AI_APP_TITLE, 
                 },
                 model=self.model_name,
                 messages=[

@@ -6,7 +6,7 @@ from src.utils.helper import logger
 
 class SentimentAnalyzer:
     def __init__(self):
-        self.fng_url = "https://pro-api.coinmarketcap.com/v3/fear-and-greed/latest"
+        self.fng_url = config.CMC_FNG_URL
         self.last_fng = {"value": 50, "classification": "Neutral"}
         self.last_news = []
 
@@ -24,7 +24,7 @@ class SentimentAnalyzer:
                 logger.warning("⚠️ CMC_API_KEY not found. Using default neutral sentiment.")
                 return
 
-            resp = requests.get(self.fng_url, headers=headers, params=params, timeout=10)
+            resp = requests.get(self.fng_url, headers=headers, params=params, timeout=config.API_REQUEST_TIMEOUT)
             data = resp.json()
             
             # Error code bisa integer 0 atau string "0"
@@ -58,7 +58,7 @@ class SentimentAnalyzer:
             return
 
         all_news = []
-        max_per_source = 2 # Ambil sedikit per source agar variatif
+        max_per_source = config.NEWS_MAX_PER_SOURCE # Ambil sedikit per source agar variatif
         
         # Shuffle URLs agar tidak melulu sumber yang sama di awal jika list panjang
         # Tapi karena kita iterasi semua, shuffle tidak terlalu penting untuk fetch,
@@ -94,7 +94,7 @@ class SentimentAnalyzer:
         random.shuffle(all_news)
         
         # Batasi total berita yang disimpan (misal top 15) agar prompt tidak kepanjangan
-        self.last_news = all_news[:15]
+        self.last_news = all_news[:config.NEWS_RETENTION_LIMIT]
         
         logger.info(f"📰 News Fetched: {len(self.last_news)} headlines aggregated from RSS.")
 

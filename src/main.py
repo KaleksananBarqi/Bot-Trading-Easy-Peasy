@@ -57,11 +57,11 @@ async def safety_monitor_loop():
                         executor.save_tracker()
             
             # Sleep 
-            await asyncio.sleep(5)
+            await asyncio.sleep(config.ERROR_SLEEP_DELAY)
             
         except Exception as e:
             logger.error(f"Safety Loop Error: {e}")
-            await asyncio.sleep(5)
+            await asyncio.sleep(config.ERROR_SLEEP_DELAY)
 
 async def main():
     global market_data, sentiment, onchain, ai_brain, executor
@@ -80,7 +80,7 @@ async def main():
         'options': {
             'defaultType': 'future',
             'adjustForTimeDifference': True, 
-            'recvWindow': 10000
+            'recvWindow': config.API_RECV_WINDOW
         }
     })
     if config.PAKAI_DEMO: exchange.enable_demo_trading(True)
@@ -197,13 +197,13 @@ async def main():
             base_sym = symbol.split('/')[0]
             if base_sym in executor.position_cache:
                 # logger.info(f"Skipping {symbol} (Active Position)")
-                await asyncio.sleep(1)
+                await asyncio.sleep(config.LOOP_SLEEP_DELAY)
                 continue
             
             # 2. Cooldown Check
             if executor.is_under_cooldown(symbol):
                 # Logger handled inside is_under_cooldown but we can skip silently here to reduce spam
-                await asyncio.sleep(1)
+                await asyncio.sleep(config.LOOP_SLEEP_DELAY)
                 continue
 
             # [NEW] Check Category Limit
@@ -212,7 +212,7 @@ async def main():
                 current_cat_count = executor.get_open_positions_count_by_category(category)
                 if current_cat_count >= config.MAX_POSITIONS_PER_CATEGORY:
                    # logger.info(f"Skip {symbol}: Category {category} Full ({current_cat_count}/{config.MAX_POSITIONS_PER_CATEGORY})")
-                   await asyncio.sleep(1)
+                   await asyncio.sleep(config.LOOP_SLEEP_DELAY)
                    continue
             
             # --- STEP C: TRADITIONAL FILTER FIRST ---
@@ -273,7 +273,7 @@ async def main():
             if time_elapsed < timeframe_exec_seconds:
                 # Skip AI to save cost/spam
                 # logger.info(f"⏳ {symbol} AI Skip (Wait {int(timeframe_exec_seconds - time_elapsed)}s)")
-                await asyncio.sleep(1)
+                await asyncio.sleep(config.LOOP_SLEEP_DELAY)
                 continue
 
             # ... (Existing Code)
@@ -387,7 +387,7 @@ async def main():
 
         except Exception as e:
             logger.error(f"Main Loop Error: {e}")
-            await asyncio.sleep(5)
+            await asyncio.sleep(config.ERROR_SLEEP_DELAY)
 
 if __name__ == "__main__":
     try:

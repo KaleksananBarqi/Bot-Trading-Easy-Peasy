@@ -131,7 +131,7 @@ class OrderExecutor:
                     "status": "WAITING_ENTRY",
                     "entry_id": str(order['id']),
                     "created_at": time.time(),
-                    "expires_at": time.time() + 147600,
+                    "expires_at": time.time() + config.LIMIT_ORDER_EXPIRY_SECONDS,
                     "strategy": strategy_tag,
                     "atr_value": atr_value # Save ATR for Safety Calculation
                 }
@@ -195,8 +195,8 @@ class OrderExecutor:
         
         else:
             # --- FALLBACK PERCENTAGE ---
-            sl_percent = 0.01 # 1% SL
-            tp_percent = 0.02 # 2% TP
+            sl_percent = config.DEFAULT_SL_PERCENT
+            tp_percent = config.DEFAULT_TP_PERCENT
             
             if side == "LONG":
                 sl_price = entry_price * (1 - sl_percent)

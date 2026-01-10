@@ -61,19 +61,19 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data):
 
     # 4. Construct Prompt
     prompt = f"""
-ROLE: You are an expert Crypto Trading AI with a focus on Risk Management and Trend Following.
+ROLE: {config.AI_SYSTEM_ROLE}
 
 TASK: Analyze the current market data for {symbol} and decide whether to OPEN a position or WAIT.
 
 DATA CONTEXT:
 ----------------------------------------
-A. TECHNICAL INDICATORS (H1 / 5m)
+A. TECHNICAL INDICATORS ({config.TIMEFRAME_TREND} / {config.TIMEFRAME_EXEC})
 - Price: {price}
 - Trend vs BTC: {btc_trend} (King Filter)
 - EMA Trend: {ema_pos} (Fast), {trend_major} (Slow/Major)
-- RSI (14): {rsi:.2f}
-- ADX (14): {adx:.2f}
-- StochRSI (3,3): K={stoch_k:.2f}, D={stoch_d:.2f}
+- RSI ({config.RSI_PERIOD}): {rsi:.2f}
+- ADX ({config.ADX_PERIOD}): {adx:.2f}
+- StochRSI ({config.STOCHRSI_K},{config.STOCHRSI_D}): K={stoch_k:.2f}, D={stoch_d:.2f}
 - Bollinger Bands: Up={bb_upper:.2f}, Low={bb_lower:.2f}
 - Volume: {volume} (Avg: {vol_ma})
 - ATR: {atr:.4f}

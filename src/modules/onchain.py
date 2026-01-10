@@ -17,7 +17,7 @@ class OnChainAnalyzer:
             msg = f"{emoji} {side} {symbol} worth ${size_usdt:,.0f}"
             self.whale_transactions.append(msg)
             # Keep only last 10
-            if len(self.whale_transactions) > 10:
+            if len(self.whale_transactions) > config.WHALE_HISTORY_LIMIT:
                self.whale_transactions.pop(0)
             
             # logger.info(f"Detect Whale: {msg}")
@@ -28,8 +28,8 @@ class OnChainAnalyzer:
         For now, we simulate or keep it Neutral to avoid dependencies blocking execution.
         """
         try:
-            url = "https://stablecoins.llama.fi/stablecoincharts/all"
-            resp = requests.get(url, timeout=10)
+            url = config.DEFILLAMA_STABLECOIN_URL
+            resp = requests.get(url, timeout=config.API_REQUEST_TIMEOUT)
             data = resp.json()
             
             if data and len(data) > 2:
@@ -51,9 +51,9 @@ class OnChainAnalyzer:
                 if curr_val and prev_val:
                     change_pct = ((curr_val - prev_val) / prev_val) * 100
                     
-                    if change_pct > 0.05:
+                    if change_pct > config.STABLECOIN_INFLOW_THRESHOLD_PERCENT:
                         self.stablecoin_inflow = "Positive"
-                    elif change_pct < -0.05:
+                    elif change_pct < -config.STABLECOIN_INFLOW_THRESHOLD_PERCENT:
                         self.stablecoin_inflow = "Negative"
                     else:
                         self.stablecoin_inflow = "Neutral"

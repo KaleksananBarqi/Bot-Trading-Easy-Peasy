@@ -22,6 +22,22 @@ Sentiment_Provider = 'RSS_Feed'    # Diganti dari CryptoPanic ke RSS
 OnChain_Provider = 'DefiLlama'
 WHALE_THRESHOLD_USDT = 100000      # Transaksi > $100k dianggap Whale
 
+# [REFACTORED] AI & DATA SOURCE
+AI_BASE_URL = "https://openrouter.ai/api/v1"
+AI_APP_URL = "https://github.com/KaleksananBarqi/Bot-Trading-Easy-Peasy"
+AI_APP_TITLE = "Bot Trading Easy Peasy"
+AI_SYSTEM_ROLE = "You are an expert Crypto Trading AI with a focus on Risk Management and Trend Following."
+
+CMC_FNG_URL = "https://pro-api.coinmarketcap.com/v3/fear-and-greed/latest"
+API_REQUEST_TIMEOUT = 10
+NEWS_MAX_PER_SOURCE = 2
+NEWS_RETENTION_LIMIT = 15
+
+DEFILLAMA_STABLECOIN_URL = "https://stablecoins.llama.fi/stablecoincharts/all"
+STABLECOIN_INFLOW_THRESHOLD_PERCENT = 0.05
+WHALE_HISTORY_LIMIT = 10
+DEFAULT_CORRELATION_HIGH = 0.99
+
 # --- RSS FEEDS CONFIG ---
 RSS_FEED_URLS = [
     # 1. Media Besar & Berita Umum
@@ -45,6 +61,7 @@ RSS_FEED_URLS = [
 WS_URL_FUTURES_LIVE = "wss://fstream.binance.com/stream?streams="
 WS_URL_FUTURES_TESTNET = "wss://stream.binancefuture.com/stream?streams="
 WS_KEEP_ALIVE_INTERVAL = 1800  # Detik untuk refresh listen key
+API_RECV_WINDOW = 10000        # RecvWindow untuk CCXT
 
 # --- 2. GLOBAL RISK & SYSTEM FILES ---
 LOG_FILENAME = 'bot_trading.log'
@@ -69,6 +86,7 @@ BTC_EMA_PERIOD = 50     # EMA King Filter
 EMA_TREND_MAJOR = 50
 EMA_FAST = 21           
 EMA_SLOW = 50          
+RSI_PERIOD = 14         # [REFACTORED]
 ADX_PERIOD = 14
 VOL_MA_PERIOD = 20      # Digunakan untuk filter volume
 BB_LENGTH = 20
@@ -93,6 +111,12 @@ CONCURRENCY_LIMIT = 20
 ORDER_SLTP_RETRIES = 3      # Jumlah percobaan pasang SL/TP jika gagal
 ORDER_SLTP_RETRY_DELAY = 2  # Detik jeda antar percobaan
 ERROR_SLEEP_DELAY = 5       # Detik jeda jika terjadi error loop
+LOOP_SLEEP_DELAY = 1        # Jeda loop normal
+
+# [REFACTORED] EXECUTOR DEFAULTS
+DEFAULT_SL_PERCENT = 0.01   # 1%
+DEFAULT_TP_PERCENT = 0.02   # 2%
+LIMIT_ORDER_EXPIRY_SECONDS = 147600 # ~41 Jam
 
 # --- 6. SETTING STRATEGI SNIPER (MODIFIED) ---
 # A. Sniper / Liquidity Hunt Strategy
