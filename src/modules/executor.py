@@ -54,12 +54,6 @@ class OrderExecutor:
         # Rumus: Pakai sekian % dari saldo
         risk_amount = balance * (config.RISK_PERCENT_PER_TRADE / 100)
         
-        # Logika Tambahan: Kalau leverage gede, apakah size dikecilkan? 
-        # Untuk sekarang kita anggap Risk Unit = Base Margin (Cost).
-        # Jadi kalau Balance $1000, Risk 5% = $50.
-        # Kita akan buka posisi dengan Initial Margin $50.
-        # Total Position Size = $50 * Leverage.
-        
         # Cek minimum
         if risk_amount < config.MIN_ORDER_USDT:
             return config.MIN_ORDER_USDT

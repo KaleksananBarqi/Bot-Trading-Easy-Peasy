@@ -160,13 +160,42 @@ async def main():
                      side_filled = o['S'] # BUY/SELL
                      size_usdt = qty_filled * price_filled
                      
+                     # [MODIFIED] Calculate TP/SL for Notification
+                     tracker = executor.safety_orders_tracker.get(sym, {})
+                     atr_val = tracker.get('atr_value', 0)
+                     
+                     tp_str = "-"
+                     sl_str = "-"
+                     rr_str = "-"
+                     
+                     if atr_val > 0:
+                         dist_sl = atr_val * config.TRAP_SAFETY_SL
+                         dist_tp = atr_val * config.ATR_MULTIPLIER_TP1
+                         
+                         if side_filled.upper() == 'BUY':
+                             sl_p = price_filled - dist_sl
+                             tp_p = price_filled + dist_tp
+                         else: # SELL
+                             sl_p = price_filled + dist_sl
+                             tp_p = price_filled - dist_tp
+                             
+                         tp_str = f"{tp_p:.4f}"
+                         sl_str = f"{sl_p:.4f}"
+                         
+                         rr = dist_tp / dist_sl if dist_sl > 0 else 0
+                         rr_str = f"1:{rr:.2f}"
+                     
                      msg = (
                         f"✅ <b>LIMIT ENTRY FILLED</b>\n"
                         f"✨ <b>{sym}</b>\n"
                         f"🏷️ Type: {order_type}\n"
                         f"🚀 Side: {side_filled}\n"
                         f"📏 Size: ${size_usdt:.2f}\n"
-                        f"💵 Price: {price_filled}"
+                        f"💵 Price: {price_filled}\n\n"
+                        f"🎯 <b>Safety Orders:</b>\n"
+                        f"• TP: {tp_str}\n"
+                        f"• SL: {sl_str}\n"
+                        f"• R:R: {rr_str}"
                      )
                      await kirim_tele(msg)
 
