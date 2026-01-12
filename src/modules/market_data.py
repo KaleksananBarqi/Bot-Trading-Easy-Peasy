@@ -28,7 +28,7 @@ class MarketDataManager:
         for coin in config.DAFTAR_KOIN:
             self.market_store[coin['symbol']] = {
                 config.TIMEFRAME_EXEC: [],
-                config.BTC_TIMEFRAME: []
+                config.TIMEFRAME_TREND: []
             }
         # BTC (Wajib ada helper store)
         if config.BTC_SYMBOL not in self.market_store:
@@ -46,7 +46,7 @@ class MarketDataManager:
             try:
                 # 1. Fetch OHLCV
                 bars_exec = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_EXEC, limit=config.LIMIT_EXEC)
-                bars_trend = await self.exchange.fetch_ohlcv(symbol, config.BTC_TIMEFRAME, limit=config.LIMIT_TREND)
+                bars_trend = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_TREND, limit=config.LIMIT_TREND)
                 
                 # 2. Fetch Funding Rate & Open Interest (Public Endpoint)
                 # Note: CCXT fetch_funding_rate usually works
@@ -56,7 +56,7 @@ class MarketDataManager:
                 
                 async with self.data_lock:
                     self.market_store[symbol][config.TIMEFRAME_EXEC] = bars_exec
-                    self.market_store[symbol][config.BTC_TIMEFRAME] = bars_trend
+                    self.market_store[symbol][config.TIMEFRAME_TREND] = bars_trend
                     self.funding_rates[symbol] = fund_rate.get('fundingRate', 0)
                 
                 logger.info(f"   ✅ Data Loaded: {symbol}")
@@ -112,7 +112,7 @@ class MarketDataManager:
             for coin in config.DAFTAR_KOIN:
                 s_clean = coin['symbol'].replace('/', '').lower()
                 streams.append(f"{s_clean}@kline_{config.TIMEFRAME_EXEC}")
-                streams.append(f"{s_clean}@kline_{config.BTC_TIMEFRAME}")
+                streams.append(f"{s_clean}@kline_{config.TIMEFRAME_TREND}")
                 streams.append(f"{s_clean}@aggTrade") # Whale Detector Stream
             
             # Add BTC Stream manual if not exists
@@ -297,7 +297,7 @@ class MarketDataManager:
         """Calculate Classic Pivot Points based on TAS Timeframe (Trend Timeframe - 1H)"""
         try:
             # Ambil data H1
-            bars = self.market_store.get(symbol, {}).get(config.BTC_TIMEFRAME, [])
+            bars = self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, [])
             if len(bars) < 2: return None
             
             # Gunakan candle terakhir yang COMPLETE (Completed Period)
