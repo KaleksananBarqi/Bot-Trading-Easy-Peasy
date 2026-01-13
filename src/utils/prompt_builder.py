@@ -53,16 +53,19 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data):
 
     # 3.5 Strategy Context
     strategies = []
+    strategies.append("AVAILABLE STRATEGIES TO CHOOSE FROM:")
     
-    # Use Strategy Description from Config
-    strat_desc = config.STRATEGY_DESCRIPTIONS.get(strategy_mode, config.DEFAULT_STRATEGY_DESC)
-    strategies.append(strat_desc)
-
+    # Iterate all strategies from config
+    for name, desc in config.AVAILABLE_STRATEGIES.items():
+        strategies.append(f"[{name}]: {desc}")
+    
+    strategies.append("")
+    strategies.append("ADDITIONAL CONTEXT:")
     if config.USE_LIQUIDITY_HUNT:
-        strategies.append(f"🔫 LIQUIDITY HUNT ACTIVE: Entry will be via LIMIT ORDER at Price +/- {config.ATR_MULTIPLIER_SL} ATR.")
-        strategies.append("   Ensure the setup allows for a wick/scam wick entry.")
+        strategies.append(f"- 🔫 LIQUIDITY HUNT ACTIVE: Entry will be via LIMIT ORDER at Price +/- {config.ATR_MULTIPLIER_SL} ATR.")
+        strategies.append("  (Ensure the setup allows for a wick/scam wick entry).")
     
-    strat_str = "\n".join([f"- {s}" for s in strategies])
+    strat_str = "\n".join([f"{s}" for s in strategies])
 
     # [NEW] Dynamic BTC Instruction
     btc_instruction = ""
@@ -73,7 +76,7 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data):
     prompt = f"""
 ROLE: {config.AI_SYSTEM_ROLE}
 
-TASK: Analyze the current market data for {symbol} and decide whether to OPEN a position or WAIT.
+TASK: Analyze market data for {symbol}. SELECT THE BEST STRATEGY from the available list that matches current conditions (Trend vs Sideways) and decide if we should OPEN a position or WAIT.
 
 DATA CONTEXT:
 ----------------------------------------
@@ -83,7 +86,7 @@ A. TECHNICAL INDICATORS ({config.TIMEFRAME_TREND} / {config.TIMEFRAME_EXEC})
 - BTC Correlation: {btc_corr:.2f}
 - EMA Trend: {ema_pos} (Fast), {trend_major} (Slow/Major)
 - RSI ({config.RSI_PERIOD}): {rsi:.2f}
-- ADX ({config.ADX_PERIOD}): {adx:.2f} [Trend Min: {config.TREND_TRAP_ADX_MIN}, Sideways Max: {config.SIDEWAYS_ADX_MAX}]
+- ADX ({config.ADX_PERIOD}): {adx:.2f} [Note: ADX > 25 = Strong Trend, ADX < 20 = Weak Trend/Sideways]
 - StochRSI ({config.STOCHRSI_K},{config.STOCHRSI_D}): K={stoch_k:.2f}, D={stoch_d:.2f}
 - Bollinger Bands: Up={bb_upper:.2f}, Low={bb_lower:.2f}
 - Pivot Points ({config.TIMEFRAME_TREND}): {pivot_str}
@@ -102,17 +105,16 @@ C. ON-CHAIN / WHALE DATA
 - Recent Large Transactions (Whales):
 {whale_str}
 
-D. ACTIVE STRATEGIES (PRIORITIZE THESE SETUPS)
+D. STRATEGY SELECTION
 {strat_str}
 ----------------------------------------
 
 INSTRUCTIONS:
-1. MARKET STRUCTURE: Analyze Trend Strength (ADX) & Direction (EMA/BTC).
+1. MARKET STRUCTURE: Check ADX for Trend Strength. High ADX -> Trend Strategies. Low ADX -> Sideways Strategies.
    {btc_instruction}
-2. KEY LEVELS: Check if Price is near Support (Pivot S1/S2, BB Lower) or Resistance. Respect provided Pivot Points.
-3. CONFLUENCE: Look for Technical + Sentiment alignment (e.g., RSI Oversold + Fear).
-4. REASONING: Think Step-by-Step (Chain of Thought). List Bullish & Bearish factors.
-5. DECISION: If signals mixed or low confidence, choose WAIT.
+2. SELECT STRATEGY: Choose ONE strategy from the list that perfectly fits the current market structure.
+3. CONFLUENCE: Ensure Technicals + Sentiment align with the chosen strategy.
+4. DECISION: If no strategy is valid or signals are mixed, return WAIT.
 
 OUTPUT FORMAT (JSON ONLY):
 {{
@@ -120,6 +122,7 @@ OUTPUT FORMAT (JSON ONLY):
     "bullish_factors": ["factor 1", "factor 2"],
     "bearish_factors": ["factor 1", "factor 2"]
   }},
+  "selected_strategy": "NAME OF STRATEGY (e.g. STRATEGY A)",
   "decision": "BUY" | "SELL" | "WAIT",
   "reason": "Synthesis of analysis in INDONESIAN LANGUAGE...",
   "confidence": 0-100,

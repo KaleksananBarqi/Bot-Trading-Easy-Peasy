@@ -303,17 +303,10 @@ async def main():
                 await asyncio.sleep(2)
                 continue
 
-            # --- STEP C.5: STRATEGY SELECTION & FILTER UPDATES ---
-            adx_val = tech_data.get('adx', 0)
-            strategy_mode = 'STANDARD'
-            
-            if config.USE_TREND_TRAP_STRATEGY and adx_val >= config.TREND_TRAP_ADX_MIN:
-                strategy_mode = 'TREND_PULLBACK'
-            elif config.USE_SIDEWAYS_SCALP and adx_val <= config.SIDEWAYS_ADX_MAX:
-                strategy_mode = 'BB_BOUNCE'
-            
-            # Update Context for AI
-            tech_data['strategy_mode'] = strategy_mode
+            # --- STEP C.5: STRATEGY SELECTION REMOVED ---
+            # We now let AI decide the strategy based on the prompt.
+            # ADX is still passed in tech_data's 'adx' for AI context.
+            tech_data['strategy_mode'] = 'AI_DECISION' # Placeholder, overridden by AI response
 
             # Filter Logic Update based on Strategy
             # ... (Existing filter logic modified to respect strategy) ...
@@ -358,6 +351,9 @@ async def main():
                 # Mapping AI Output
                 side = 'buy' if decision in ['BUY', 'LONG'] else 'sell'
                 
+                # [NEW] Get Strategy Selected by AI
+                strategy_mode = ai_decision.get('selected_strategy', 'STANDARD')
+
                 if confidence >= config.AI_CONFIDENCE_THRESHOLD:
                     # Execute!
                     lev = coin_cfg.get('leverage', config.DEFAULT_LEVERAGE)
