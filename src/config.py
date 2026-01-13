@@ -80,11 +80,11 @@ CORRELATION_THRESHOLD_BTC = 0.5  # Jika korelasi < 0.5, anggap "Jalan Sendiri" (
 CORRELATION_PERIOD = 30 # Jumlah candle H1 untuk cek kemiripan dengan BTC
 # --- 3. FILTER BTC (GLOBAL TREND) ---
 BTC_SYMBOL = 'BTC/USDT'
-BTC_TIMEFRAME = '1h'    # Timeframe khusus untuk menentukan trend BTC
-BTC_EMA_PERIOD = 50     # EMA King Filter
+BTC_TIMEFRAME = '4h'    # Timeframe khusus untuk menentukan trend BTC
+BTC_EMA_PERIOD = 200     # EMA King Filter
 
 # --- 4. STRATEGI INDIKATOR (PARAMETER) ---
-EMA_TREND_MAJOR = 50
+EMA_TREND_MAJOR = 200
 EMA_FAST = 21           
 EMA_SLOW = 50          
 RSI_PERIOD = 14         # [REFACTORED]
@@ -97,16 +97,16 @@ STOCHRSI_K = 3
 STOCHRSI_D = 3
 
 # --- 5. TEKNIKAL & EKSEKUSI ---
-TIMEFRAME_TREND = '1h'      
-TIMEFRAME_EXEC = '5m'      
+TIMEFRAME_TREND = '4h'      
+TIMEFRAME_EXEC = '1h'      
 LIMIT_TREND = 500           
 LIMIT_EXEC = 100
 ATR_PERIOD = 14             
-ATR_MULTIPLIER_SL = 1.0
-ATR_MULTIPLIER_TP1 = 2.2
+ATR_MULTIPLIER_SL = 2.0
+ATR_MULTIPLIER_TP1 = 3.0
 MIN_ORDER_USDT = 5           
 ORDER_TYPE = 'market'     
-COOLDOWN_IF_PROFIT = 3600 # kalau profit cooldownnya 1 jam untuk ride the trend
+COOLDOWN_IF_PROFIT = 14400 # kalau profit cooldownnya 1 jam untuk ride the trend
 COOLDOWN_IF_LOSS = 18000 # kalau loss coodldownya 5 jam untuk cooling down 
 CONCURRENCY_LIMIT = 20
 ORDER_SLTP_RETRIES = 3      # Jumlah percobaan pasang SL/TP jika gagal
@@ -124,7 +124,7 @@ LIMIT_ORDER_EXPIRY_SECONDS = 147600 # ~41 Jam
 USE_LIQUIDITY_HUNT = True
 # Seberapa jauh entry digeser dari harga SL awal (dalam satuan ATR)
 # Jarak Safety SL baru setelah entry sniper kejemput (dalam satuan ATR)
-TRAP_SAFETY_SL = 1.0
+TRAP_SAFETY_SL = 1.5
 
 # B. Trend Trap
 USE_TREND_TRAP_STRATEGY = True  
@@ -136,9 +136,7 @@ SIDEWAYS_ADX_MAX = 20
 
 # [NEW] Strategy Descriptions for AI Prompt
 STRATEGY_DESCRIPTIONS = {
-    'TREND_PULLBACK': "🔥 PRIMARY STRATEGY: TREND TRAP / PULLBACK. Trend is STRONG. Look for retests of EMA or Support levels (Pivot S1/S2). Condition: StochRSI Oversold in Bull Trend.",
-    'BB_BOUNCE': "🔥 PRIMARY STRATEGY: BB BOUNCE / SCALP. Market is SIDEWAYS. Condition: Buy at BB Lower, Sell at BB Upper. Avoid breakout setups.",
-    'STANDARD': "STANDARD MODE: Follow Trend if aligned with BTC, or Reversal if Extremes."
+    'GOLDEN SWING TREND STRATEGY': "Analisa tren pada H4. Jika Bullish, abaikan sinyal sell jangka pendek. Fokus cari titik pantul di support dinamis (EMA). Prioritaskan setup yang memiliki Risk:Reward minimal 1:2."
 }
 
 # --- 7. DAFTAR KOIN ---
