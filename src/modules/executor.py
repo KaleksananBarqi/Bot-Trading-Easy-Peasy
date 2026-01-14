@@ -281,3 +281,50 @@ class OrderExecutor:
         except Exception as e:
             logger.error(f"Sync Pos Error: {e}")
             return 0
+            
+    async def sync_pending_orders(self):
+        """
+        [NEW] Sync open orders to detect manual cancellations.
+        Only checks symbols that are in 'WAITING_ENTRY' status.
+        """
+        # 1. Identify symbols to check
+        symbols_to_check = []
+        for sym, data in self.safety_orders_tracker.items():
+            if data.get('status') == 'WAITING_ENTRY':
+                symbols_to_check.append(sym)
+                
+        if not symbols_to_check:
+            return
+
+        # 2. Check each symbol
+        for symbol in symbols_to_check:
+            try:
+                # Fetch Open Orders from Binance
+                open_orders = await self.exchange.fetch_open_orders(symbol)
+                open_order_ids = [str(o['id']) for o in open_orders]
+                
+                # Check if our tracked order exists
+                tracker_data = self.safety_orders_tracker[symbol]
+                tracked_id = str(tracker_data.get('entry_id', ''))
+                
+                if tracked_id not in open_order_ids:
+                    # Order is missing! Either Filled or Cancelled.
+                    
+                    # Case A: Filled? (Check Position Cache)
+                    base = symbol.split('/')[0]
+                    if base in self.position_cache:
+                        # It is filled! Update tracker.
+                        logger.info(f"✅ Order {symbol} found filled during sync. Updating tracker to SECURED.")
+                        self.safety_orders_tracker[symbol]['status'] = 'SECURED'
+                        self.safety_orders_tracker[symbol]['last_check'] = time.time()
+                        self.save_tracker()
+                    
+                    # Case B: Cancelled/Expired?
+                    else:
+                        # Not active, not in open orders -> Cancelled manually
+                        logger.info(f"🗑️ Found Stale/Cancelled Order for {symbol}. Removing from tracker.")
+                        del self.safety_orders_tracker[symbol]
+                        self.save_tracker()
+                        
+            except Exception as e:
+                logger.error(f"⚠️ Sync Pending Error for {symbol}: {e}")

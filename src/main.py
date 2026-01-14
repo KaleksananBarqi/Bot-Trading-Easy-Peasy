@@ -39,6 +39,9 @@ async def safety_monitor_loop():
         try:
             # Sync positions from Binance
             count = await executor.sync_positions()
+
+            # [NEW] Sync Pending Orders (Handle Manual Cancel)
+            await executor.sync_pending_orders()
             
             # Check Tracker vs Real Positions
             for base_sym, pos in executor.position_cache.items():
