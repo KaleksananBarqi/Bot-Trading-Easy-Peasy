@@ -75,7 +75,7 @@ DEFAULT_AMOUNT_USDT = 10      # Cadangan jika dynamic false / error
 USE_DYNAMIC_SIZE = False       # Set True untuk aktifkan compounding
 RISK_PERCENT_PER_TRADE = 5  # Bot akan pakai 5% dari saldo USDT Available per trade
 # Setingan buat pair correlation
-MAX_POSITIONS_PER_CATEGORY = 4   # Maksimal 1 posisi per "Sektor"
+MAX_POSITIONS_PER_CATEGORY = 1   # Maksimal 1 posisi per "Sektor"
 CORRELATION_THRESHOLD_BTC = 0.5  # Jika korelasi < 0.5, anggap "Jalan Sendiri" (Abaikan BTC Trend)
 CORRELATION_PERIOD = 30 # Jumlah candle H1 untuk cek kemiripan dengan BTC
 # --- 3. FILTER BTC (GLOBAL TREND) ---
@@ -135,8 +135,8 @@ USE_SIDEWAYS_SCALP = True
 SIDEWAYS_ADX_MAX = 25           
 
 AVAILABLE_STRATEGIES = {
-    'STRATEGY A (SCALP TREND M15)': "Trend Following M15 confirmed by H1 Trend. ADX > 20",
-    'STRATEGY B (SIDEWAYS SCALP M15)': "BB Bounce Strategy (Winrate King). Valid ADX < 25.",
+    'STRATEGY A (SCALP TREND M15)': "Trend Following M15 confirmed by H1 Trend. Valid ADX > 20",
+    'STRATEGY B (SIDEWAYS SCALP M15)': "BB Bounce Strategy. Valid ADX < 25.",
     'STANDARD': "Analisa umum jika tidak ada setup spesifik yang valid. Fokus pada konfluensi teknikal dan sentimen.",
 }
 
