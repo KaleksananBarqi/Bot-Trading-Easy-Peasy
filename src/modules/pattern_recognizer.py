@@ -119,6 +119,8 @@ class PatternRecognizer:
                 "Keep it concise (max 2-3 sentences)."
             )
             
+            logger.info(f"📤 Sending chart image to Vision AI for {symbol}...")
+            
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
