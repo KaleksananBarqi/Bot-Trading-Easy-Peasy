@@ -29,13 +29,15 @@ class MarketDataManager:
         for coin in config.DAFTAR_KOIN:
             self.market_store[coin['symbol']] = {
                 config.TIMEFRAME_EXEC: [],
-                config.TIMEFRAME_TREND: []
+                config.TIMEFRAME_TREND: [],
+                config.TIMEFRAME_SETUP: []
             }
         # BTC (Wajib ada helper store)
         if config.BTC_SYMBOL not in self.market_store:
             self.market_store[config.BTC_SYMBOL] = {
                 config.TIMEFRAME_EXEC: [],
-                config.BTC_TIMEFRAME: []
+                config.TIMEFRAME_TREND: [],
+                config.TIMEFRAME_SETUP: []
             }
 
     async def initialize_data(self):
@@ -48,6 +50,7 @@ class MarketDataManager:
                 # 1. Fetch OHLCV
                 bars_exec = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_EXEC, limit=config.LIMIT_EXEC)
                 bars_trend = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_TREND, limit=config.LIMIT_TREND)
+                bars_setup = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_SETUP, limit=config.LIMIT_SETUP)
                 
                 # 2. Fetch Funding Rate & Open Interest (Public Endpoint)
                 # Note: CCXT fetch_funding_rate usually works
@@ -64,6 +67,7 @@ class MarketDataManager:
                 async with self.data_lock:
                     self.market_store[symbol][config.TIMEFRAME_EXEC] = bars_exec
                     self.market_store[symbol][config.TIMEFRAME_TREND] = bars_trend
+                    self.market_store[symbol][config.TIMEFRAME_SETUP] = bars_setup
                     self.funding_rates[symbol] = fund_rate.get('fundingRate', 0)
                     self.open_interest[symbol] = oi_val
                     
@@ -97,7 +101,7 @@ class MarketDataManager:
     def _update_btc_trend(self):
         """Update Global BTC Trend Direction"""
         try:
-            bars = self.market_store[config.BTC_SYMBOL][config.BTC_TIMEFRAME]
+            bars = self.market_store[config.BTC_SYMBOL][config.TIMEFRAME_TREND]
             if bars:
                 df_btc = pd.DataFrame(bars, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
                 ema_btc = df_btc.ta.ema(length=config.BTC_EMA_PERIOD).iloc[-1]
@@ -134,11 +138,12 @@ class MarketDataManager:
                 s_clean = coin['symbol'].replace('/', '').lower()
                 streams.append(f"{s_clean}@kline_{config.TIMEFRAME_EXEC}")
                 streams.append(f"{s_clean}@kline_{config.TIMEFRAME_TREND}")
+                streams.append(f"{s_clean}@kline_{config.TIMEFRAME_SETUP}")
                 streams.append(f"{s_clean}@aggTrade") # Whale Detector Stream
             
             # Add BTC Stream manual if not exists
             btc_clean = config.BTC_SYMBOL.replace('/', '').lower()
-            btc_s = f"{btc_clean}@kline_{config.BTC_TIMEFRAME}"
+            btc_s = f"{btc_clean}@kline_{config.TIMEFRAME_TREND}"
             if btc_s not in streams: streams.append(btc_s)
 
             # [NEW] Force BTC Whale Stream for Context (Global Whale Data)
@@ -194,7 +199,7 @@ class MarketDataManager:
     async def _maintain_slow_data(self):
         """
         Background task untuk update data yang tidak perlu real-time (Funding Rate & Open Interest).
-        Interval: Mengikuti config.TIMEFRAME_EXEC (misal 15 menit).
+        Interval: Mengikuti config.TIMEFRAME_EXEC.
         """
         interval = parse_timeframe_to_seconds(config.TIMEFRAME_EXEC)
         logger.info(f"🐢 Slow Data Maintenance Started (Interval: {interval}s)")
@@ -258,7 +263,7 @@ class MarketDataManager:
                 self.market_store[sym][interval] = target
         
         # Update BTC Trend Realtime
-        if sym == config.BTC_SYMBOL and interval == config.BTC_TIMEFRAME:
+        if sym == config.BTC_SYMBOL and interval == config.TIMEFRAME_TREND:
             self._update_btc_trend()
 
     async def get_btc_correlation(self, symbol, period=config.CORRELATION_PERIOD):
@@ -266,8 +271,8 @@ class MarketDataManager:
         try:
             if symbol == config.BTC_SYMBOL: return 1.0
             
-            bars_sym = self.market_store.get(symbol, {}).get(config.BTC_TIMEFRAME, [])
-            bars_btc = self.market_store.get(config.BTC_SYMBOL, {}).get(config.BTC_TIMEFRAME, [])
+            bars_sym = self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, [])
+            bars_btc = self.market_store.get(config.BTC_SYMBOL, {}).get(config.TIMEFRAME_TREND, [])
             
             if len(bars_sym) < period or len(bars_btc) < period:
                 return config.DEFAULT_CORRELATION_HIGH # Default high correlation to be safe (Follow BTC)
@@ -336,6 +341,9 @@ class MarketDataManager:
             # 7. Pivot Points (Support/Resistance) from Trend Timeframe (1H)
             pivots = self._calculate_pivot_points(symbol)
             
+            # 8. Market Structure (Swing High/Low)
+            structure = self._calculate_market_structure(symbol)
+
             return {
                 "price": cur['close'],
                 "rsi": cur['RSI'],
@@ -356,12 +364,79 @@ class MarketDataManager:
                 "open_interest": self.open_interest.get(symbol, 0.0),
                 "lsr": self.lsr_data.get(symbol),
                 "pivots": pivots,
+                "market_structure": structure,
                 # [NEW] Candle Timestamp for Smart Throttling
                 "candle_timestamp": int(cur['timestamp'])
             }
         except Exception as e:
             logger.error(f"Get Tech Data Error {symbol}: {e}")
             return None
+
+    def _calculate_market_structure(self, symbol, lookback=5):
+        """
+        Mendeteksi Market Structure (Higher High/Lower Low) pada Timeframe Trend.
+        Menggunakan logika Local Extrema (Fractals) sederhana.
+        """
+        try:
+            bars = self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, [])
+            if len(bars) < 50: return "INSUFFICIENT_DATA"
+            
+            df = pd.DataFrame(bars, columns=['timestamp','open','high','low','close','volume'])
+            
+            # Cari Swing Highs & Lows
+            # Sebuah candle adalah swing high jika high-nya > N candle kiri & kanan
+            # Kita gunakan rolling window manual atau loop sederhana agar efisien
+            
+            swing_highs = []
+            swing_lows = []
+            
+            # Kita scan dari candle ke-lookback sampai 2 candle terakhir (candle aktif jgn dihitung swing dulu)
+            for i in range(lookback, len(df) - lookback - 1):
+                # Check High
+                current_high = df['high'].iloc[i]
+                is_high = True
+                for j in range(1, lookback + 1):
+                    if df['high'].iloc[i-j] >= current_high or df['high'].iloc[i+j] > current_high:
+                        is_high = False
+                        break
+                if is_high:
+                    swing_highs.append(current_high)
+                    
+                # Check Low
+                current_low = df['low'].iloc[i]
+                is_low = True
+                for j in range(1, lookback + 1):
+                    if df['low'].iloc[i-j] <= current_low or df['low'].iloc[i+j] < current_low:
+                        is_low = False
+                        break
+                if is_low:
+                    swing_lows.append(current_low)
+            
+            if len(swing_highs) < 2 or len(swing_lows) < 2:
+                return "UNCLEAR"
+                
+            # Analisa 2 Swing Terakhir
+            last_h = swing_highs[-1]
+            prev_h = swing_highs[-2]
+            last_l = swing_lows[-1]
+            prev_l = swing_lows[-2]
+            
+            structure = "SIDEWAYS"
+            
+            if last_h > prev_h and last_l > prev_l:
+                structure = "BULLISH (HH + HL)"
+            elif last_h < prev_h and last_l < prev_l:
+                structure = "BEARISH (LH + LL)"
+            elif last_h > prev_h and last_l < prev_l:
+                structure = "EXPANDING (Megaphone)"
+            elif last_h < prev_h and last_l > prev_l:
+                structure = "CONSOLIDATION (Triangle)"
+                
+            return structure
+            
+        except Exception as e:
+            logger.error(f"Market Structure Error {symbol}: {e}")
+            return "ERROR"
 
     def _calculate_pivot_points(self, symbol):
         """Calculate Classic Pivot Points based on TAS Timeframe (Trend Timeframe - 1H)"""
