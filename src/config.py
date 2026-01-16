@@ -155,9 +155,20 @@ USE_LIQUIDITY_HUNT = True
 TRAP_SAFETY_SL = 1.2             # Jarak Safety SL Dari Entry Baru (ATR)           
 
 AVAILABLE_STRATEGIES = {
-    'STRATEGY A (SCALP TREND M15)': "Trend Following M15 confirmed by H1 Trend. Valid ADX > 20",
-    'STRATEGY B (SIDEWAYS SCALP M15)': "BB Bounce Strategy. Valid ADX < 25.",
-    'STANDARD': "Analisa umum jika tidak ada setup spesifik yang valid. Fokus pada konfluensi teknikal dan sentimen.",
+    # 1. Fokus pada Pattern + Trend (The Conservative)
+    'PATTERN_CONFLUENCE_TREND': "Strategi ini mewajibkan keselarasan antara Macro Trend H1 dan visual pattern di M30 (misal: Bullish Flag di trend Bullish). Entry dilakukan hanya jika indikator 15m (RSI/StochRSI) baru saja keluar dari area oversold/overbought.",
+
+    # 2. Fokus pada Breakout Volatilitas (The Aggressive)
+    'VOLATILITY_BREAKOUT_ADVANCED': "Mendeteksi breakout dari pattern konsolidasi M30 (Wedges, Triangles, atau Channels). Strategi ini sangat bergantung pada lonjakan Volume, kenaikan Open Interest, dan nilai ADX > 25 di timeframe 15m sebagai validasi kekuatan breakout.",
+
+    # 3. Fokus pada Reversal & Liquidity (The Contrarian)
+    'LIQUIDITY_REVERSAL_MASTER': "Mencari tanda pembalikan arah saat harga menyentuh Pivot Points (S1/R1) atau batas Bollinger Bands. Membutuhkan konfirmasi visual pattern Reversal (Double Top/Bottom, H&S) di M30 dan divergence pada RSI 15m.",
+
+    # 4. Fokus pada Sentimen & Whale Flow (The Follow-the-Money)
+    'SMART_MONEY_FLOW': "Strategi yang mengutamakan data Whale Activity, Stablecoin Inflow, dan LSR (Long/Short Ratio). Entry dilakukan saat 'High Conviction' terlihat dari akumulasi Whale yang didukung oleh pattern Bullish Continuation di M30.",
+
+    # 5. Fallback/Standard
+    'STANDARD_MULTI_CONFIRMATION': "Analisa teknikal komprehensif. Menyeimbangkan Macro Bias, Setup Pattern, dan Execution Trigger. Jika ketiga komponen tidak searah, AI akan cenderung memberikan keputusan WAIT."
 }
 
 # ==============================================================================

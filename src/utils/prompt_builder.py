@@ -96,7 +96,7 @@ ROLE: {config.AI_SYSTEM_ROLE}
 TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. Decide to BUY, SELL, or WAIT.
 
 --------------------------------------------------
-1. MACRO VIEW (TIMEFRAME: {config.TIMEFRAME_TREND} / 1H)
+1. MACRO VIEW (TIMEFRAME: {config.TIMEFRAME_TREND})
 > OBJECTIVE: Determine the Major Trend Bias.
 - Global BTC Trend: {btc_trend} (EMA {config.BTC_EMA_PERIOD})
 - BTC Correlation: {btc_corr:.2f}
@@ -105,14 +105,13 @@ TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. De
 --------------------------------------------------
 
 --------------------------------------------------
-2. SETUP VALIDATION (TIMEFRAME: {config.TIMEFRAME_SETUP} / 30m)
-> OBJECTIVE: Identify Chart Patterns.
-- Vision AI Analysis: {pattern_analysis if pattern_analysis else "Not Available"}
+2. SETUP VALIDATION (TIMEFRAME: {config.TIMEFRAME_SETUP})
+- Chart Pattern Analysis: {pattern_analysis if pattern_analysis else "Not Available"}
 *INSTRUCTION: Use this pattern to confirm the Macro Bias.*
 --------------------------------------------------
 
 --------------------------------------------------
-3. EXECUTION TRIGGER (TIMEFRAME: {config.TIMEFRAME_EXEC} / 15m)
+3. EXECUTION TRIGGER (TIMEFRAME: {config.TIMEFRAME_EXEC})
 > OBJECTIVE: Pinpoint Entry Timing.
 [MOMENTUM]
 - RSI ({config.RSI_PERIOD}): {rsi:.2f}
@@ -149,10 +148,10 @@ STRATEGY SELECTION:
 {strat_str}
 
 FINAL INSTRUCTIONS:
-1. CHECK MACRO BIAS: Is the 1H Structure & BTC Trend supportive?
+1. CHECK MACRO BIAS: Is the {config.TIMEFRAME_TREND} Structure & BTC Trend supportive?
    {btc_instruction}
-2. VERIFY SETUP: Does the 30m Pattern align with the Bias?
-3. CHECK TRIGGER: Are 15m Momentum indicators (RSI/Stoch) giving a clear signal?
+2. VERIFY SETUP: Does the {config.TIMEFRAME_SETUP} Pattern align with the Bias?
+3. CHECK TRIGGER: Are {config.TIMEFRAME_EXEC} Momentum indicators (RSI/Stoch/ADX) giving a clear signal?
 4. DECISION: Return WAIT if signals are conflicting.
 
 OUTPUT FORMAT (JSON ONLY):
