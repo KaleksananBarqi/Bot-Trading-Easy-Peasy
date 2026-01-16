@@ -199,7 +199,7 @@ class MarketDataManager:
     async def _maintain_slow_data(self):
         """
         Background task untuk update data yang tidak perlu real-time (Funding Rate & Open Interest).
-        Interval: Mengikuti config.TIMEFRAME_EXEC (misal 15 menit).
+        Interval: Mengikuti config.TIMEFRAME_EXEC.
         """
         interval = parse_timeframe_to_seconds(config.TIMEFRAME_EXEC)
         logger.info(f"🐢 Slow Data Maintenance Started (Interval: {interval}s)")

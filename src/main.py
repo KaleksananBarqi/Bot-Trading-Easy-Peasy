@@ -249,6 +249,7 @@ async def main():
             # --- STEP A: COLLECT DATA ---
             tech_data = market_data.get_technical_data(symbol)
             if not tech_data:
+                logger.warning(f"⚠️ No tech data or insufficient history for {symbol}")
                 await asyncio.sleep(2)
                 continue
 
@@ -301,11 +302,11 @@ async def main():
                 is_interesting = True
             
             # Filter 2: RSI Extremes (Reversal)
-            if tech_data['rsi'] < 30 or tech_data['rsi'] > 70:
+            if tech_data['rsi'] < config.RSI_OVERSOLD or tech_data['rsi'] > config.RSI_OVERBOUGHT:
                 is_interesting = True
             
             if not is_interesting:
-                # print(f"💤 {symbol} Boring. Skip AI.")
+                logger.info(f"💤 {symbol} Boring (RSI: {tech_data['rsi']:.1f}, Corr: {btc_corr:.2f}). Skip AI.")
                 await asyncio.sleep(2)
                 continue
 
