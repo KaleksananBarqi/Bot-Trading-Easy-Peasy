@@ -19,7 +19,7 @@ CMC_API_KEY = os.getenv("CMC_API_KEY")
 # ==============================================================================
 # --- SECTION 2: SYSTEM & APPLICATION CONFIG ---
 # ==============================================================================
-PAKAI_DEMO = False               # Set True untuk menggunakan Binance Testnet
+PAKAI_DEMO = True               # Set True untuk menggunakan Binance Testnet
 LOG_FILENAME = 'bot_trading.log'
 TRACKER_FILENAME = 'safety_tracker.json'
 
@@ -42,7 +42,7 @@ AI_APP_TITLE = "Bot Trading Easy Peasy"
 
 # Vision AI (Chart Pattern)
 USE_PATTERN_RECOGNITION = True
-AI_VISION_MODEL = 'gpt-4o-mini' # Model hemat cost namun capable untuk vision
+AI_VISION_MODEL = 'meta-llama/llama-4-maverick' # Model hemat cost namun capable untuk vision
 AI_VISION_TEMPERATURE = 0.2
 
 Sentiment_Provider = 'RSS_Feed'  # Pilihan: 'RSS_Feed'
@@ -150,17 +150,9 @@ LIMIT_ORDER_EXPIRY_SECONDS = 147600 # ~41 Jam
 # ==============================================================================
 # --- SECTION 8: SPECIFIC STRATEGY SETTINGS ---
 # ==============================================================================
-# Strategy A: Sniper / Liquidity Hunt
+# Liquidity Hunt
 USE_LIQUIDITY_HUNT = True
-TRAP_SAFETY_SL = 1.2             # Jarak Safety SL (ATR)
-
-# Strategy B: Trend Trap
-USE_TREND_TRAP_STRATEGY = True  
-TREND_TRAP_ADX_MIN = 20         
-
-# Strategy C: Sideways Scalp
-USE_SIDEWAYS_SCALP = True       
-SIDEWAYS_ADX_MAX = 25           
+TRAP_SAFETY_SL = 1.2             # Jarak Safety SL Dari Entry Baru (ATR)           
 
 AVAILABLE_STRATEGIES = {
     'STRATEGY A (SCALP TREND M15)': "Trend Following M15 confirmed by H1 Trend. Valid ADX > 20",

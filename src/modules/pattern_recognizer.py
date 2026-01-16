@@ -4,9 +4,11 @@ import json
 import asyncio
 import pandas as pd
 import mplfinance as mpf
-from openai import OpenAI
+from openai import AsyncOpenAI
 import httpx
 import config
+import matplotlib
+matplotlib.use('Agg') # Force non-interactive backend
 from src.utils.helper import logger
 
 class PatternRecognizer:
@@ -16,10 +18,10 @@ class PatternRecognizer:
         
         # Initialize AI Client for Vision
         if config.USE_PATTERN_RECOGNITION and config.AI_API_KEY:
-            self.client = OpenAI(
+            self.client = AsyncOpenAI(
                 base_url=config.AI_BASE_URL,
                 api_key=config.AI_API_KEY,
-                http_client=httpx.Client()
+                http_client=httpx.AsyncClient()
             )
             self.model = config.AI_VISION_MODEL
             logger.info(f"👁️ Pattern Recognizer Initialized: {self.model}")
