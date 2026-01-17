@@ -94,12 +94,17 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern
     # Strategy List
     strategies = ["AVAILABLE STRATEGIES:"]
     for name, desc in config.AVAILABLE_STRATEGIES.items():
-        strategies.append(f"[{name}]: {desc}")
+        # [MODIFIED] Dynamically format description to replace placeholders like {config.TIMEFRAME_TREND}
+        try:
+            formatted_desc = desc.format(config=config)
+        except Exception:
+            formatted_desc = desc
+        strategies.append(f"[{name}]: {formatted_desc}")
     
     # Additional Context
     strategies.append("\nADDITIONAL RULES:")
     if config.USE_LIQUIDITY_HUNT:
-        strategies.append(f"- LIQUIDITY HUNT: Entry LIMIT at +/- {config.ATR_MULTIPLIER_SL} ATR permitted if structure supports it.")
+        strategies.append(f"- LIQUIDITY HUNT: Entry LIMIT at {config.ATR_MULTIPLIER_SL} ATR permitted if structure supports it.")
     
     strat_str = "\n".join(strategies)
 

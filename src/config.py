@@ -117,8 +117,8 @@ EMA_TREND_MAJOR = 200
 EMA_FAST = 14           
 EMA_SLOW = 50          
 RSI_PERIOD = 14
-RSI_OVERSOLD = 30
-RSI_OVERBOUGHT = 70
+RSI_OVERSOLD = 35
+RSI_OVERBOUGHT = 65
 ADX_PERIOD = 14
 VOL_MA_PERIOD = 20               # Filter volume transaksi
 BB_LENGTH = 20
@@ -179,8 +179,8 @@ AVAILABLE_STRATEGIES = {
 # CATATAN: Jika leverage/amount tiap koin tidak diisi, akan memakai default dari Section 5
 DAFTAR_KOIN = [
     # --- Kategori: LAYER 1 ---
-    #{"symbol": "AVAX/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "XRP/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
     
     # --- Kategori: MEMECOIN ---
-    {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 15, "margin_type": "isolated", "amount": 5},
+   # {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 15, "margin_type": "isolated", "amount": 5},
 ]
