@@ -32,9 +32,9 @@ API_RECV_WINDOW = 10000          # RecvWindow untuk CCXT / Binance
 # ==============================================================================
 # --- SECTION 3: AI BRAIN & PROMPT ENGINE ---
 # ==============================================================================
-AI_MODEL_NAME = 'deepseek/deepseek-chat-v3-0324' 
+AI_MODEL_NAME = 'deepseek/deepseek-v3.2' 
 AI_TEMPERATURE = 0.0             # 0.0 agar AI konsisten & tidak halusinasi
-AI_CONFIDENCE_THRESHOLD = 80     # Minimal confidence score untuk eksekusi
+AI_CONFIDENCE_THRESHOLD = 75     # Minimal confidence score untuk eksekusi
 AI_SYSTEM_ROLE = "You are an elite Crypto Trading AI capable of Adaptive Multi-Strategy Execution. You specialize in identifying Trend Following, Mean Reversion, and Volatility Breakout setups, with an uncompromising focus on Risk Management and Capital Preservation."
 AI_BASE_URL = "https://openrouter.ai/api/v1"
 AI_APP_URL = "https://github.com/KaleksananBarqi/Bot-Trading-Easy-Peasy"
@@ -117,8 +117,8 @@ EMA_TREND_MAJOR = 200
 EMA_FAST = 14           
 EMA_SLOW = 50          
 RSI_PERIOD = 14
-RSI_OVERSOLD = 20
-RSI_OVERBOUGHT = 80
+RSI_OVERSOLD = 30
+RSI_OVERBOUGHT = 70
 ADX_PERIOD = 14
 VOL_MA_PERIOD = 20               # Filter volume transaksi
 BB_LENGTH = 20
