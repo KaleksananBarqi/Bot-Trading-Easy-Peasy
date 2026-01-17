@@ -1,7 +1,7 @@
 # 🤖 Easy Peasy Trading Bot: AI Vision & Logic Sniper
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/6a3f3cc2-9367-4444-9c62-5bfaf7b53e9e" width="25%" alt="Bot Trading Banner" />
+  <img src="https://github.com/user-attachments/assets/6a3f3cc2-9367-4444-9c62-5bfaf7b53e9e" width="45%" alt="Bot Trading Banner" />
 
   <br />
   
