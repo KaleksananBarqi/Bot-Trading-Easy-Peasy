@@ -1,7 +1,7 @@
 # 🤖 Easy Peasy Trading Bot: AI Vision & Logic Sniper
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/10627e10-df96-48c1-9a95-b40f0d2ae207" width="100%" alt="Bot Trading Banner" />
+  <img src="![Image](https://github.com/user-attachments/assets/6a3f3cc2-9367-4444-9c62-5bfaf7b53e9e)" width="100%" alt="Bot Trading Banner" />
 
   <br />
   
@@ -10,6 +10,7 @@
   ![DeepSeek](https://img.shields.io/badge/Brain-DeepSeek%20V3-blueviolet?style=for-the-badge)
   ![Vision AI](https://img.shields.io/badge/Vision-Llama%20Vision-ff69b4?style=for-the-badge)
   ![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
+  ![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial-5D6D7E?style=for-the-badge)
 </div>
 
 ---
@@ -88,16 +89,22 @@ pip install -r requirements.txt
 ```
 
 ### Langkah 4: Konfigurasi `.env`
-Buat file `.env` dari template:
-```ini
-# --- BINANCE ---
-BINANCE_API_KEY=your_binance_key
-BINANCE_SECRET_KEY=your_binance_secret
+Buat file `.env` dari template ini. Pastikan semua variabel terisi!
 
-# --- AI KEYS (PENTING UNTUK FITUR VISION & LOGIC) ---
-AI_API_KEY=sk-or-v1-xxxxxxxx...
-AI_MODEL_NAME=deepseek/deepseek-chat-v3-0324
-# Vision Model (Otomatis dipakai oleh script, tidak perlu diset manual jika default)
+```ini
+# --- BINANCE (Futures) ---
+BINANCE_API_KEY=
+BINANCE_SECRET_KEY=
+BINANCE_TESTNET_KEY=
+BINANCE_TESTNET_SECRET=
+
+# --- NOTIFICATIONS (WAJIB) ---
+TELEGRAM_TOKEN=
+TELEGRAM_CHAT_ID=
+
+# --- AI & EXTERNAL DATA (WAJIB) ---
+AI_API_KEY=
+CMC_API_KEY=
 ```
 
 ### Langkah 5: Jalankan Bot
@@ -119,6 +126,13 @@ python main.py
  ├── 📝 config.py                 # PENGATURAN STRATEGI & RISK
  └── 🚀 main.py                   # Entry Point
 ```
+
+---
+
+## 🤝 Kontribusi
+Ingin berkontribusi bikin bot ini makin "Easy Peasy"? Gas!
+Silakan baca [CONTRIBUTING.md](CONTRIBUTING.md) untuk pedoman kontribusi, standar kode, dan cara pull request.
+Kita sangat menghargai ide strategi baru, perbaikan bug, atau dokumentasi yang lebih baik.
 
 ---
 
