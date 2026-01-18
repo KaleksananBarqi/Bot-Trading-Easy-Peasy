@@ -13,7 +13,7 @@ def format_price(value):
     if value < 50.0: return f"{value:.4f}"
     return f"{value:.2f}"
 
-def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern_analysis=None):
+def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern_analysis=None, trade_scenarios=None):
     """
     Menyusun prompt untuk AI berdasarkan data teknikal, sentimen, dan on-chain.
     Struktur Baru: Multi-Timeframe (Macro -> Setup -> Execution).
@@ -114,6 +114,30 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern
         btc_instruction = f"IMPORTANT: High BTC Correlation ({btc_corr:.2f}). Do NOT open positions against BTC Trend ({btc_trend})."
 
     # ==========================================
+    # 2.5 TRADE SCENARIOS (Market vs Liquidity Hunt)
+    # ==========================================
+    execution_options_str = "N/A"
+    if trade_scenarios:
+        m = trade_scenarios.get('market', {})
+        h = trade_scenarios.get('liquidity_hunt', {})
+        
+        execution_options_str = f"""
+[EXECUTION OPTIONS]
+OPTION A: AGGRESSIVE (MARKET)
+- Entry: Market Price ({format_price(m.get('entry', 0))})
+- Stop Loss: {format_price(m.get('sl', 0))}
+- Take Profit: {format_price(m.get('tp', 0))}
+- Risk:Reward: 1:{m.get('rr', 0)}
+
+OPTION B: PASSIVE (LIQUIDITY HUNT)
+- Entry: Limit Order at {format_price(h.get('entry', 0))} (Sweeping Standard SLs)
+- Stop Loss: {format_price(h.get('sl', 0))}
+- Take Profit: {format_price(h.get('tp', 0))}
+- Risk:Reward: 1:{h.get('rr', 0)}
+*Select OPTION B if you detect a Liquidity Hunt / Stop Run Setup.*
+"""
+
+    # ==========================================
     # 3. PROMPT CONSTRUCTION
     # ==========================================
     prompt = f"""
@@ -175,7 +199,10 @@ TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. De
 --------------------------------------------------
 
 STRATEGY SELECTION:
+STRATEGY SELECTION:
 {strat_str}
+
+{execution_options_str}
 
 FINAL INSTRUCTIONS:
 1. CHECK MACRO BIAS: Is the {config.TIMEFRAME_TREND} Structure & BTC Trend supportive?
@@ -192,6 +219,7 @@ OUTPUT FORMAT (JSON ONLY):
     "execution_trigger": "Valid/Invalid based on indicators"
   }},
   "selected_strategy": "NAME OF STRATEGY",
+  "execution_mode": "MARKET" | "LIQUIDITY_HUNT",
   "decision": "BUY" | "SELL" | "WAIT",
   "reason": "Explain your logic in INDONESIAN language, referencing specific macro and micro factors.",
   "confidence": 0-100,

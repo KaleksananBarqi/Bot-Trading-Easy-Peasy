@@ -13,6 +13,7 @@ import ccxt.async_support as ccxt
 import config
 from src.utils.helper import logger, kirim_tele, kirim_tele_sync, parse_timeframe_to_seconds
 from src.utils.prompt_builder import build_market_prompt
+from src.utils.calc import calculate_trade_scenarios
 
 # MODULE IMPORTS
 from src.modules.market_data import MarketDataManager
@@ -347,7 +348,31 @@ async def main():
             tech_data['order_book'] = ob_depth
             
             tech_data['btc_correlation'] = btc_corr
-            prompt = build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern_ctx)
+            
+            # [NEW] Calculate Trade Scenarios BEFORE AI Call
+            # AI need to know what "Market" vs "Liquidity Hunt" looks like
+            current_price = tech_data['price']
+            # Determine potential side (Assumption for Prompt Context - AI can switch but we give baseline)
+            # We can give both BUY/SELL scenarios or just implied one.
+            # To be neutral, we calculate generic parameters or double scenarios.
+            # However, prompt builder usually contextualizes based on trend. 
+            # Simplification: We send "BUY" scenarios as standard reference, AI understands inverse for sell.
+            # OR better: Calc creates generic structure. Let's stick to "BUY" reference for prompt clarity
+            # unless we detect Bearish trend. Let's try to pass BOTH or Generic.
+            # Current calc implementation needs a side. Let's Default to 'BUY' for visualization,
+            # AI will inverse the logic if it wants to SELL (sl/tp inverted).
+            # Actually, `calc` is cheap. We can check trend.
+            pre_calc_side = 'BUY'
+            if tech_data['trend_major'] == 'Bearish' or tech_data['btc_trend'] == 'BEARISH':
+                pre_calc_side = 'SELL'
+            
+            trade_scenarios = calculate_trade_scenarios(
+                price=current_price,
+                atr=tech_data.get('atr', 0),
+                side=pre_calc_side 
+            )
+
+            prompt = build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern_ctx, trade_scenarios)
             
             # [LOGGING] Print Prompt for Debugging
             logger.info(f"📝 AI PROMPT INPUT for {symbol}:\n{prompt}")
@@ -381,47 +406,42 @@ async def main():
                     else:
                         amt = coin_cfg.get('amount', config.DEFAULT_AMOUNT_USDT)
                     
-                    # --- CALCULATION & PREPARATION ---
-                    order_type = 'market'
-                    entry_price = tech_data['price']
-                    atr_val = tech_data.get('atr', 0)
+                    # --- EXECUTION LOGIC UPDATE ---
+                    # 1. Determine Mode from AI
+                    exec_mode = ai_decision.get('execution_mode', 'MARKET').upper()
                     
-                    # Liquidity Hunt Logic
-                    if config.USE_LIQUIDITY_HUNT and atr_val > 0:
+                    # 2. Re-Calculate PRECISELY for the decided side
+                    # (Helper function `calculate_trade_scenarios` is lightweight)
+                    params = calculate_trade_scenarios(
+                        price=tech_data['price'],
+                        atr=tech_data.get('atr', 0),
+                        side=side
+                    )
+                    
+                    # 3. Select Parameters
+                    final_setup = {}
+                    order_type = 'market'
+                    
+                    if exec_mode == 'LIQUIDITY_HUNT' and params.get('liquidity_hunt'):
+                        # Apply Liquidity Hunt Logic
                         order_type = 'limit'
-                        offset = atr_val * config.ATR_MULTIPLIER_SL
-                        if side == 'buy':
-                            entry_price = tech_data['price'] - offset
-                        else:
-                            entry_price = tech_data['price'] + offset
-                        logger.info(f"🔫 Liquidity Hunt Activated. Limit Order @ {entry_price:.4f} (Last: {tech_data['price']}, ATR: {atr_val})")
-
-                    # Calculate TP/SL for Display
-                    sl_price = 0
-                    tp_price = 0
-                    rr_ratio = 0.0
-
-                    if atr_val > 0:
-                         dist_sl = atr_val * config.TRAP_SAFETY_SL
-                         dist_tp = atr_val * config.ATR_MULTIPLIER_TP1
-                         rr_ratio = dist_tp / dist_sl if dist_sl > 0 else 0
-                         
-                         if side == 'buy':
-                             sl_price = entry_price - dist_sl
-                             tp_price = entry_price + dist_tp
-                         else:
-                             sl_price = entry_price + dist_sl
-                             tp_price = entry_price - dist_tp
+                        mode_data = params['liquidity_hunt']
+                        entry_price = mode_data['entry']
+                        sl_price = mode_data['sl']
+                        tp_price = mode_data['tp']
+                        logger.info(f"🔫 Liquidity Hunt Selected. Limit Order @ {entry_price:.4f}")
                     else:
-                         sl_percent = 0.01; tp_percent = 0.02
-                         rr_ratio = tp_percent / sl_percent
-                         if side == 'buy':
-                            sl_price = entry_price * (1 - sl_percent)
-                            tp_price = entry_price * (1 + tp_percent)
-                         else:
-                            sl_price = entry_price * (1 + sl_percent)
-                            tp_price = entry_price * (1 - tp_percent)
+                        # Default / Market Logic
+                        order_type = 'market'
+                        # Use recalculation from params['market'] to be consistent with what AI saw
+                        mode_data = params['market']
+                        entry_price = tech_data['price'] # Market order uses current price roughly
+                        sl_price = mode_data['sl']
+                        tp_price = mode_data['tp']
 
+                    rr_ratio = abs(tp_price - entry_price) / abs(entry_price - sl_price) if abs(entry_price - sl_price) > 0 else 0
+                    
+                    # Formatting Message
                     margin_usdt = amt
                     position_size_usdt = amt * lev
                     direction_icon = "🟢" if side == 'buy' else "🔴"
@@ -429,13 +449,17 @@ async def main():
                     btc_trend_icon = "🟢" if tech_data['btc_trend'] == "BULLISH" else "🔴"
                     btc_corr_icon = "🔒" if btc_corr >= config.CORRELATION_THRESHOLD_BTC else "🔓"
 
+                    # Execution Type Header
+                    type_str = "🚀 AGRESSIVE (MARKET)" if order_type == 'market' else "🪤 PASSIVE (LIQUIDITY HUNT)"
+
                     msg = (f"🧠 <b>AI SIGNAL MATCHED</b>\n"
+                           f"{type_str}\n\n"
                            f"Coin: {symbol}\n"
                            f"Signal: {direction_icon} {decision} ({confidence}%)\n"
                            f"Timeframe: {config.TIMEFRAME_EXEC}\n"
                            f"BTC Trend: {btc_trend_icon} {tech_data['btc_trend']}\n"
                            f"BTC Correlation: {btc_corr_icon} {btc_corr:.2f}\n"
-                           f"Mode: {strategy_mode}\n\n"
+                           f"Strategy: {strategy_mode}\n\n"
                            f"🛒 <b>Order Details:</b>\n"
                            f"• Type: {order_type.upper()}\n"
                            f"• Entry: {entry_price:.4f}\n"
@@ -451,6 +475,7 @@ async def main():
                     logger.info(f"📤 Sending Tele Message:\n{msg}")
                     await kirim_tele(msg)
                     
+                    atr_val = tech_data.get('atr', 0)
                     await executor.execute_entry(
                         symbol=symbol,
                         side=side,
@@ -458,7 +483,7 @@ async def main():
                         price=entry_price,
                         amount_usdt=amt,
                         leverage=lev,
-                        strategy_tag=f"AI_{strategy_mode}",
+                        strategy_tag=f"AI_{strategy_mode}_{exec_mode}",
                         atr_value=atr_val 
                     )
                 else:

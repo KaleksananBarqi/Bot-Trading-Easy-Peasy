@@ -19,7 +19,7 @@ CMC_API_KEY = os.getenv("CMC_API_KEY")
 # ==============================================================================
 # --- SECTION 2: SYSTEM & APPLICATION CONFIG ---
 # ==============================================================================
-PAKAI_DEMO = False               # Set True untuk menggunakan Binance Testnet
+PAKAI_DEMO = True               # Set True untuk menggunakan Binance Testnet
 LOG_FILENAME = 'bot_trading.log'
 TRACKER_FILENAME = 'safety_tracker.json'
 
@@ -43,7 +43,7 @@ AI_APP_TITLE = "Bot Trading Easy Peasy"
 # Vision AI (Chart Pattern)
 USE_PATTERN_RECOGNITION = True
 AI_VISION_MODEL = 'meta-llama/llama-4-maverick' # Model hemat cost namun capable untuk vision
-AI_VISION_TEMPERATURE = 0.2
+AI_VISION_TEMPERATURE = 0.0
 
 Sentiment_Provider = 'RSS_Feed'  # Pilihan: 'RSS_Feed'
 OnChain_Provider = 'DefiLlama'   # Pilihan: 'DefiLlama'
@@ -78,8 +78,8 @@ RSS_FEED_URLS = [
 # ==============================================================================
 # --- SECTION 5: GLOBAL TRADING RISK MANAGEMENT ---
 # ==============================================================================
-USE_DYNAMIC_SIZE = False         # Set True untuk aktifkan Compounding
-RISK_PERCENT_PER_TRADE = 5       # % dari saldo per trade jika Dynamic True
+USE_DYNAMIC_SIZE = True         # Set True untuk aktifkan Compounding
+RISK_PERCENT_PER_TRADE = 10       # % dari saldo per trade jika Dynamic True
 DEFAULT_AMOUNT_USDT = 10         # Besar posisi awal (Cadangan jika dynamic False)
 MIN_ORDER_USDT = 5                
 
@@ -158,19 +158,19 @@ TRAP_SAFETY_SL = 1.2             # Jarak Safety SL Dari Entry Baru (ATR)
 
 AVAILABLE_STRATEGIES = {
     # 1. Fokus pada Pattern + Trend (The Conservative)
-    'PATTERN_CONFLUENCE_TREND': "Strategi ini mewajibkan keselarasan antara Macro Trend {config.TIMEFRAME_TREND} dan visual pattern di {config.TIMEFRAME_SETUP} (misal: Bullish Flag di trend Bullish). Entry dilakukan hanya jika indikator {config.TIMEFRAME_EXEC} (RSI/StochRSI/ADX) baru saja keluar dari area oversold/overbought.",
+    'PATTERN_CONFLUENCE_TREND': "Strategi ini mewajibkan keselarasan antara Macro Trend {config.TIMEFRAME_TREND} dan visual pattern di {config.TIMEFRAME_SETUP}. RECOMMENDED EXECUTION: [MARKET] untuk menangkap momentum breakout yang valid.",
 
     # 2. Fokus pada Breakout Volatilitas (The Aggressive)
-    'VOLATILITY_BREAKOUT_ADVANCED': "Mendeteksi breakout dari pattern konsolidasi {config.TIMEFRAME_SETUP} (Wedges, Triangles, atau Channels). Strategi ini sangat bergantung pada lonjakan Volume, kenaikan Open Interest, dan nilai ADX > 25 di timeframe {config.TIMEFRAME_EXEC} sebagai validasi kekuatan breakout.",
+    'VOLATILITY_BREAKOUT_ADVANCED': "Mendeteksi breakout signifikan dengan volume tinggi dan ADX > 25. RECOMMENDED EXECUTION: [MARKET] karena harga bergerak cepat dan jarang pullback dalam waktu dekat.",
 
     # 3. Fokus pada Reversal & Liquidity (The Contrarian)
-    'LIQUIDITY_REVERSAL_MASTER': "Mencari tanda pembalikan arah saat harga menyentuh Pivot Points (S1/R1) atau batas Bollinger Bands. Membutuhkan konfirmasi visual pattern Reversal (Double Top/Bottom, H&S) di {config.TIMEFRAME_SETUP} dan divergence pada RSI {config.TIMEFRAME_EXEC}.",
+    'LIQUIDITY_REVERSAL_MASTER': "Mencari pembalikan arah di area Pivot (S1/R1) atau Liquidity Sweep. RECOMMENDED EXECUTION: [LIQUIDITY_HUNT] untuk mendapatkan harga terbaik saat 'Stop Hunt' terjadi, dengan R:R yang jauh lebih superior.",
 
     # 4. Fokus pada Sentimen & Whale Flow (The Follow-the-Money)
-    'SMART_MONEY_FLOW': "Strategi yang mengutamakan data Whale Activity, Stablecoin Inflow, dan LSR (Long/Short Ratio). Entry dilakukan saat 'High Conviction' terlihat dari akumulasi Whale yang didukung oleh pattern Bullish Continuation di {config.TIMEFRAME_SETUP}.",
+    'SMART_MONEY_FLOW': "Mengikuti jejak uang besar (Whale/Institutional). Jika data on-chain bullish kuat tapi harga masih dipahamin 'murah' (konsolidasi), gunakan [LIQUIDITY_HUNT]. Jika harga sudah mulai lari, gunakan [MARKET].",
 
     # 5. Fallback/Standard
-    'STANDARD_MULTI_CONFIRMATION': "Analisa teknikal komprehensif. Menyeimbangkan Macro Bias, Setup Pattern, dan Execution Trigger. Jika ketiga komponen tidak searah, AI akan cenderung memberikan keputusan WAIT."
+    'STANDARD_MULTI_CONFIRMATION': "Analisa teknikal seimbang. Evaluasi Risk:Reward (R:R) dari opsi MARKET vs LIQUIDITY_HUNT. Pilih yang memberikan R:R terbaik dan probabilitas sukses tertinggi."
 }
 
 # ==============================================================================
@@ -180,7 +180,10 @@ AVAILABLE_STRATEGIES = {
 DAFTAR_KOIN = [
     # --- Kategori: LAYER 1 ---
     {"symbol": "XRP/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "BTC/USDT", "category": "KING", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
     
     # --- Kategori: MEMECOIN ---
-   # {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 15, "margin_type": "isolated", "amount": 5},
 ]
