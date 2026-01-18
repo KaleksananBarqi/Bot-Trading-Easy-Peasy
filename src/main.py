@@ -2,7 +2,6 @@
 
 import sys
 import os
-# Fix Module Search Path (Add Project Root)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import asyncio
@@ -43,7 +42,7 @@ async def safety_monitor_loop():
             # Sync positions from Binance
             count = await executor.sync_positions()
 
-            # [NEW] Sync Pending Orders (Handle Manual Cancel)
+            # Sync Pending Orders (Handle Manual Cancel)
             await executor.sync_pending_orders()
             
             # Check Tracker vs Real Positions
@@ -126,7 +125,7 @@ async def main():
             rp = float(o.get('rp', 0))
             logger.info(f"⚡ Order Filled: {sym} {o['S']} @ {o['ap']} | RP: {rp}")
             
-            # [NEW] COOLDOWN LOGIC BASED ON RESULT (Profit/Loss)
+            # COOLDOWN LOGIC BASED ON RESULT (Profit/Loss)
             # Only trigger cooldown if this fill actually closes a position (Realized Profit != 0)
             if rp != 0:
                 if rp > 0:
@@ -159,7 +158,7 @@ async def main():
                     )
                 await kirim_tele(msg)
                 
-                # [FIX] Clean up tracker immediately
+                # Clean up tracker immediately
                 executor.remove_from_tracker(symbol)
             
             else:
@@ -172,7 +171,7 @@ async def main():
                      side_filled = o['S'] # BUY/SELL
                      size_usdt = qty_filled * price_filled
                      
-                     # [MODIFIED] Calculate TP/SL for Notification
+                     # Calculate TP/SL for Notification
                      tracker = executor.safety_orders_tracker.get(sym, {})
                      atr_val = tracker.get('atr_value', 0)
                      
@@ -230,7 +229,7 @@ async def main():
             # Round Robin Scan (One coin per loop to save API/AI limit)
             
             # --- STEP 0: PERIODIC SENTIMENT REFRESH ---
-             # Cek apakah sudah waktunya update berita & F&G (custom interval)
+            # Cek apakah sudah waktunya update berita & F&G (custom interval)
             if time.time() - last_sentiment_update_time >= sentiment_interval_seconds:
                 logger.info("🔄 Refreshing Sentiment & On-Chain Data...")
                 try:
@@ -324,8 +323,7 @@ async def main():
             #logger.info(f"📊 Strategy Mode: {strategy_mode} (ADX: {adx_val:.2f})")
 
             # --- STEP D: AI ANALYSIS ---
-            # --- STEP D: AI ANALYSIS ---
-            # [NEW] Candle-Based Throttling (Smart Execution)
+            # Candle-Based Throttling (Smart Execution)
             # Logic: Hanya tanya AI jika candle Exec Timeframe (misal 1H) sudah close & berganti baru.
             # Kita bandingkan timestamp candle terakhir yang datanya kita ambil vs yang terakhir kita analisa.
             
@@ -341,16 +339,16 @@ async def main():
             # ... (Existing Code)
             logger.info(f"🤖 Asking AI: {symbol} (Corr: {btc_corr:.2f}, Candle: {current_candle_ts}) ...")
             
-            # [NEW] Pattern Recognition (Vision)
+            # Pattern Recognition (Vision)
             pattern_ctx = await pattern_recognizer.analyze_pattern(symbol)
             
-            # [NEW] Order Book Depth Analysis (Scalping Context)
+            # Order Book Depth Analysis (Scalping Context)
             ob_depth = await market_data.get_order_book_depth(symbol)
             tech_data['order_book'] = ob_depth
             
             tech_data['btc_correlation'] = btc_corr
             
-            # [NEW] Calculate Trade Scenarios BEFORE AI Call
+            # Calculate Trade Scenarios BEFORE AI Call
             # AI need to know what "Market" vs "Liquidity Hunt" looks like
             current_price = tech_data['price']
             # Determine potential side (Assumption for Prompt Context - AI can switch but we give baseline)
@@ -375,7 +373,7 @@ async def main():
 
             prompt = build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern_ctx, trade_scenarios)
             
-            # [LOGGING] Print Prompt for Debugging
+            # Print Prompt for Debugging
             logger.info(f"📝 AI PROMPT INPUT for {symbol}:\n{prompt}")
 
             ai_decision = await ai_brain.analyze_market(prompt)
@@ -392,14 +390,14 @@ async def main():
                 # Mapping AI Output
                 side = 'buy' if decision in ['BUY', 'LONG'] else 'sell'
                 
-                # [NEW] Get Strategy Selected by AI
+                # Get Strategy Selected by AI
                 strategy_mode = ai_decision.get('selected_strategy', 'STANDARD')
 
                 if confidence >= config.AI_CONFIDENCE_THRESHOLD:
                     # Execute!
                     lev = coin_cfg.get('leverage', config.DEFAULT_LEVERAGE)
                     
-                    # [NEW] Dynamic Sizing
+                    # Dynamic Sizing
                     dynamic_amt = await executor.calculate_dynamic_amount_usdt(symbol, lev)
                     if dynamic_amt:
                         amt = dynamic_amt
@@ -407,7 +405,7 @@ async def main():
                     else:
                         amt = coin_cfg.get('amount', config.DEFAULT_AMOUNT_USDT)
                     
-                    # --- EXECUTION LOGIC UPDATE ---
+                    # EXECUTION LOGIC UPDATE
                     # 1. Determine Mode from AI
                     exec_mode = ai_decision.get('execution_mode', 'MARKET').upper()
                     
