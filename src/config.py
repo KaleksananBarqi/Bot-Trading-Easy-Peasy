@@ -142,7 +142,7 @@ DEFAULT_TP_PERCENT = 0.025       # 2.5%
 # ATR Based SL/TP Multipliers (Primary)
 ATR_PERIOD = 14             
 ATR_MULTIPLIER_SL = 1.5
-ATR_MULTIPLIER_TP1 = 2.0
+ATR_MULTIPLIER_TP1 = 2.2
 
 # Order Management
 ORDER_SLTP_RETRIES = 3           # Re-try pasang SL/TP jika gagal
@@ -153,7 +153,7 @@ LIMIT_ORDER_EXPIRY_SECONDS = 147600 # ~41 Jam
 # --- SECTION 8: SPECIFIC STRATEGY SETTINGS ---
 # ==============================================================================
 # Liquidity Hunt
-USE_LIQUIDITY_HUNT = True
+# USE_LIQUIDITY_HUNT Removed (Obsolete)
 TRAP_SAFETY_SL = 1.2             # Jarak Safety SL Dari Entry Baru (ATR)           
 
 AVAILABLE_STRATEGIES = {
@@ -179,10 +179,10 @@ AVAILABLE_STRATEGIES = {
 # CATATAN: Jika leverage/amount tiap koin tidak diisi, akan memakai default dari Section 5
 DAFTAR_KOIN = [
     # --- Kategori: LAYER 1 ---
-    {"symbol": "XRP/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
-    {"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
-    {"symbol": "BTC/USDT", "category": "KING", "leverage": 15, "margin_type": "isolated", "amount": 5},
-    {"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    #{"symbol": "XRP/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    #{"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    #{"symbol": "BTC/USDT", "category": "KING", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    #{"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
     
     # --- Kategori: MEMECOIN ---
     {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 15, "margin_type": "isolated", "amount": 5},

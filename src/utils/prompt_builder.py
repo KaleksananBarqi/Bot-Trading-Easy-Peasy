@@ -102,9 +102,8 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern
         strategies.append(f"[{name}]: {formatted_desc}")
     
     # Additional Context
-    strategies.append("\nADDITIONAL RULES:")
-    if config.USE_LIQUIDITY_HUNT:
-        strategies.append(f"- LIQUIDITY HUNT: Entry LIMIT at {config.ATR_MULTIPLIER_SL} ATR permitted if structure supports it.")
+    # strategies.append("\nADDITIONAL RULES:")
+    # (Obsolete Rule Removed)
     
     strat_str = "\n".join(strategies)
 
