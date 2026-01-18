@@ -19,7 +19,7 @@ CMC_API_KEY = os.getenv("CMC_API_KEY")
 # ==============================================================================
 # --- SECTION 2: SYSTEM & APPLICATION CONFIG ---
 # ==============================================================================
-PAKAI_DEMO = True               # Set True untuk menggunakan Binance Testnet
+PAKAI_DEMO = False               # Set True untuk menggunakan Binance Testnet
 LOG_FILENAME = 'bot_trading.log'
 TRACKER_FILENAME = 'safety_tracker.json'
 
@@ -78,7 +78,7 @@ RSS_FEED_URLS = [
 # ==============================================================================
 # --- SECTION 5: GLOBAL TRADING RISK MANAGEMENT ---
 # ==============================================================================
-USE_DYNAMIC_SIZE = True         # Set True untuk aktifkan Compounding
+USE_DYNAMIC_SIZE = False         # Set True untuk aktifkan Compounding
 RISK_PERCENT_PER_TRADE = 10       # % dari saldo per trade jika Dynamic True
 DEFAULT_AMOUNT_USDT = 10         # Besar posisi awal (Cadangan jika dynamic False)
 MIN_ORDER_USDT = 5                

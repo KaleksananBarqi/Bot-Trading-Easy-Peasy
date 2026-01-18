@@ -133,7 +133,6 @@ OPTION B: PASSIVE (LIQUIDITY HUNT)
 - Stop Loss: {format_price(h.get('sl', 0))}
 - Take Profit: {format_price(h.get('tp', 0))}
 - Risk:Reward: 1:{h.get('rr', 0)}
-*Select OPTION B if you detect a Liquidity Hunt / Stop Run Setup.*
 """
 
     # ==========================================
@@ -197,8 +196,7 @@ TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. De
 {news_str}
 --------------------------------------------------
 
-STRATEGY SELECTION:
-STRATEGY SELECTION:
+
 {strat_str}
 
 {execution_options_str}
@@ -208,7 +206,10 @@ FINAL INSTRUCTIONS:
    {btc_instruction}
 2. VERIFY SETUP: Does the {config.TIMEFRAME_SETUP} Pattern align with the Bias?
 3. CHECK TRIGGER: Are {config.TIMEFRAME_EXEC} Momentum indicators (RSI/Stoch/ADX) giving a clear signal?
-4. DECISION: Return WAIT if signals are conflicting.
+4. SELECT STRATEGY & EXECUTION: 
+   - Choose the Strategy that aligns with the Bias.
+   - Select OPTION A (Aggressive) for clear momentum, or OPTION B (Passive) if a Stop Run/Liquidity Sweep is detected.
+5. DECISION: Return WAIT if signals are conflicting.
 
 OUTPUT FORMAT (JSON ONLY):
 {{
