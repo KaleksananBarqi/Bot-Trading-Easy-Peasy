@@ -12,6 +12,8 @@ from src.utils.helper import logger, kirim_tele, wib_time, parse_timeframe_to_se
 class MarketDataManager:
     def __init__(self, exchange):
         self.exchange = exchange
+        self.exchange_public = None # [NEW] Untuk fetch data public di mode testnet
+        
         self.market_store = {} # OHLCV Data
         self.ticker_data = {}  # Live Price / Ticker
         self.funding_rates = {} 
@@ -24,6 +26,13 @@ class MarketDataManager:
         self.ws_url = config.WS_URL_FUTURES_TESTNET if config.PAKAI_DEMO else config.WS_URL_FUTURES_LIVE
         self.listen_key = None
         self.last_heartbeat = time.time()
+        
+        # [NEW] Initialize Public Exchange if Demo Mode
+        if config.PAKAI_DEMO:
+            # Kita butuh akses ke Data LIVE untuk L/S Ratio karena tidak ada di Testnet
+            self.exchange_public = ccxt.binance({
+                'options': {'defaultType': 'future'}
+            })
         
         # Initialize Store Structure
         for coin in config.DAFTAR_KOIN:
@@ -42,6 +51,27 @@ class MarketDataManager:
         
         # Cache for Order Book Analysis to avoid spamming API if managed differently
         self.ob_cache = {} # {symbol: {ts, data}}
+
+    async def _fetch_lsr(self, symbol):
+        """Helper Fetch LSR dengan Fallback ke Public Exchange jika Demo"""
+        try:
+            target_exchange = self.exchange
+            # Jika di mode demo, gunakan exchange public (karena lsr gak ada di testnet)
+            if config.PAKAI_DEMO and self.exchange_public:
+                target_exchange = self.exchange_public
+                
+            clean_sym = symbol.replace('/', '')
+            lsr = await target_exchange.fapiDataGetTopLongShortAccountRatio({
+                'symbol': clean_sym,
+                'period': config.TIMEFRAME_EXEC,
+                'limit': 1
+            })
+            if lsr and len(lsr) > 0:
+                return lsr[0]
+            return None
+        except Exception as e:
+            # logger.warning(f"⚠️ LSR Fetch Failed {symbol}: {e}")
+            return None
 
     async def initialize_data(self):
         """Fetch Initial Historical Data (REST API)"""
@@ -67,25 +97,16 @@ class MarketDataManager:
 
                 # We will update these via Rest mostly or WS if available
                 
+                # 3. Initial LSR (Refactored to Helper)
+                lsr_val = await self._fetch_lsr(symbol)
+
                 async with self.data_lock:
                     self.market_store[symbol][config.TIMEFRAME_EXEC] = bars_exec
                     self.market_store[symbol][config.TIMEFRAME_TREND] = bars_trend
                     self.market_store[symbol][config.TIMEFRAME_SETUP] = bars_setup
                     self.funding_rates[symbol] = fund_rate.get('fundingRate', 0)
                     self.open_interest[symbol] = oi_val
-                    
-                    # 3. Initial LSR
-                    try:
-                        clean_sym = symbol.replace('/', '')
-                        lsr = await self.exchange.fapiDataGetTopLongShortAccountRatio({
-                            'symbol': clean_sym,
-                            'period': config.TIMEFRAME_EXEC,
-                            'limit': 1
-                        })
-                        if lsr:
-                            self.lsr_data[symbol] = lsr[0] # Ambil yang terbaru
-                    except:
-                        self.lsr_data[symbol] = None
+                    self.lsr_data[symbol] = lsr_val
                 
                 logger.info(f"   ✅ Data Loaded: {symbol}")
             except Exception as e:
@@ -219,19 +240,14 @@ class MarketDataManager:
                         # 2. Update Open Interest
                         oi = await self.exchange.fetch_open_interest(symbol) # Return dict
                         
-                        # 3. Update Long/Short Ratio
-                        clean_sym = symbol.replace('/', '')
-                        lsr = await self.exchange.fapiDataGetTopLongShortAccountRatio({
-                            'symbol': clean_sym,
-                            'period': config.TIMEFRAME_EXEC,
-                            'limit': 1
-                        })
+                        # 3. Update Long/Short Ratio (Using Helper)
+                        lsr_val = await self._fetch_lsr(symbol)
 
                         async with self.data_lock:
                             self.funding_rates[symbol] = fr.get('fundingRate', 0)
                             self.open_interest[symbol] = float(oi.get('openInterestAmount', 0))
-                            if lsr:
-                                self.lsr_data[symbol] = lsr[0]
+                            if lsr_val:
+                                self.lsr_data[symbol] = lsr_val
                             
                     except Exception as e:
                         # logger.debug(f"Slow Data Update Failed {symbol}: {e}") # Silent error agar log tidak penuh
