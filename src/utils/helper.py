@@ -96,7 +96,14 @@ async def kirim_tele(pesan, alert=False, channel='default'):
         
         response = await asyncio.to_thread(send_request)
         if response.status_code != 200:
-            logger.error(f"❌ Telegram Send Failed ({channel}) Status {response.status_code}: {response.text}")
+            error_details = response.text
+            logger.error(f"❌ Telegram Send Failed ({channel}) Status {response.status_code}: {error_details}")
+            
+            # Additional Hint for User
+            if response.status_code == 400 and "chat not found" in error_details:
+                logger.warning(f"💡 HINT: Pastikan Bot Token '{bot_token[:5]}...' sudah di-invite ke Chat ID '{chat_id}'!")
+            elif response.status_code == 401:
+                logger.warning(f"💡 HINT: Token Bot mungkin salah atau expired.")
     except Exception as e:
         logger.error(f"❌ Telegram Exception: {e}")
 

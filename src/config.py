@@ -23,7 +23,7 @@ CMC_API_KEY = os.getenv("CMC_API_KEY")
 # ==============================================================================
 # --- SECTION 2: SYSTEM & APPLICATION CONFIG ---
 # ==============================================================================
-PAKAI_DEMO = False               # Set True untuk menggunakan Binance Testnet
+PAKAI_DEMO = True               # Set True untuk menggunakan Binance Testnet
 LOG_FILENAME = 'bot_trading.log'
 TRACKER_FILENAME = 'safety_tracker.json'
 
@@ -85,14 +85,14 @@ RSS_FEED_URLS = [
 # ==============================================================================
 # --- SECTION 5: GLOBAL TRADING RISK MANAGEMENT ---
 # ==============================================================================
-USE_DYNAMIC_SIZE = False         # Set True untuk aktifkan Compounding
-RISK_PERCENT_PER_TRADE = 10       # % dari saldo per trade jika Dynamic True
+USE_DYNAMIC_SIZE = True         # Set True untuk aktifkan Compounding
+RISK_PERCENT_PER_TRADE = 3       # % dari saldo per trade jika Dynamic True
 DEFAULT_AMOUNT_USDT = 10         # Besar posisi awal (Cadangan jika dynamic False)
 MIN_ORDER_USDT = 5                
 
 DEFAULT_LEVERAGE = 10
 DEFAULT_MARGIN_TYPE = 'isolated' # 'isolated' atau 'cross'
-MAX_POSITIONS_PER_CATEGORY = 1   # Limit posisi per sektor koin
+MAX_POSITIONS_PER_CATEGORY = 5   # Limit posisi per sektor koin
 
 # Cooldown Logic
 COOLDOWN_IF_PROFIT = 3600        # Jeda setelah profit (detik) - ride the trend
@@ -193,10 +193,10 @@ AVAILABLE_STRATEGIES = {
 # CATATAN: Jika leverage/amount tiap koin tidak diisi, akan memakai default dari Section 5
 DAFTAR_KOIN = [
     # --- Kategori: LAYER 1 ---
-    #{"symbol": "XRP/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
-    #{"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
-    #{"symbol": "BTC/USDT", "category": "KING", "leverage": 15, "margin_type": "isolated", "amount": 5},
-    #{"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "XRP/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "BTC/USDT", "category": "KING", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
     
     # --- Kategori: MEMECOIN ---
     {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 15, "margin_type": "isolated", "amount": 5},

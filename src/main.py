@@ -251,6 +251,7 @@ async def main():
                                 prompt = build_sentiment_prompt(s_data, o_data)
                                 
                                 # Ask AI
+                                logger.info(f"📝 SENTIMENT AI PROMPT:\n{prompt}")
                                 result = await ai_brain.analyze_sentiment(prompt)
                                 
                                 if result:
@@ -273,6 +274,8 @@ async def main():
                                         f"<i>Analisa ini digenerate otomatis oleh AI ({config.AI_SENTIMENT_MODEL})</i>"
                                     )
                                     
+                                    
+                                    logger.info(f"📤 SENTIMENT TELEGRAM MESSAGE:\n{msg}")
                                     await kirim_tele(msg, channel='sentiment')
                                     logger.info("✅ Sentiment Report Sent.")
                             except Exception as e:
