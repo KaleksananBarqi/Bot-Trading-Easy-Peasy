@@ -276,7 +276,7 @@ OUTPUT FORMAT (JSON ONLY):
   "sentiment_score": 0-100,
   "summary": "Full summary in Indonesian (max 1 paragraph). Mention key drivers.",
   "key_drivers": ["List of 2-3 main factors driving the sentiment"],
-  "risk_assessment": "Low/Medium/High details"
+  "risk_assessment": "RISK LEVEL (Low/Medium/High) - Short reason why."
 }}
 """
     return prompt

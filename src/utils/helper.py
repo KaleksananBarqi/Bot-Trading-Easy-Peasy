@@ -130,6 +130,23 @@ def kirim_tele_sync(pesan):
 # ==========================================
 # FORMATTING TOOLS
 # ==========================================
+import time
+
+# ... (rest of imports)
+
+def get_next_rounded_time(interval_str):
+    """
+    Calculate the next fixed-time alignment timestamp (Unix Epoch based).
+    Example: interval '1h' -> Returns next X:00:00 timestamp.
+    """
+    interval_seconds = parse_timeframe_to_seconds(interval_str)
+    if interval_seconds <= 0: interval_seconds = 60
+    
+    now = time.time()
+    # Calculate next aligned timestamp
+    next_time = ((int(now) // interval_seconds) + 1) * interval_seconds
+    return next_time
+
 def format_currency(num):
     if num is None: return "0.00"
     return f"{num:,.2f}"

@@ -46,7 +46,7 @@ AI_APP_TITLE = "Bot Trading Easy Peasy"
 
 # Sentiment Analysis Config
 ENABLE_SENTIMENT_ANALYSIS = True
-AI_SENTIMENT_MODEL = 'google/gemini-2.0-flash-exp:free' # Model hemat cost untuk analisa berita
+AI_SENTIMENT_MODEL = 'google/gemini-2.0-flash-lite-001' # Model hemat cost untuk analisa berita
 
 # Vision AI (Chart Pattern)
 USE_PATTERN_RECOGNITION = True
@@ -200,4 +200,6 @@ DAFTAR_KOIN = [
     
     # --- Kategori: MEMECOIN ---
     {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    # ---- Kategori:DEX ----
+    {"symbol": "HYPE/USDT", "category": "DEX", "leverage": 15, "margin_type": "isolated", "amount": 5},
 ]

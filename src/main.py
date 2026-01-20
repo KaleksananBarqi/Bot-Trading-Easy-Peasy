@@ -10,7 +10,7 @@ import time
 import html
 import ccxt.async_support as ccxt
 import config
-from src.utils.helper import logger, kirim_tele, kirim_tele_sync, parse_timeframe_to_seconds
+from src.utils.helper import logger, kirim_tele, kirim_tele_sync, parse_timeframe_to_seconds, get_next_rounded_time
 from src.utils.prompt_builder import build_market_prompt, build_sentiment_prompt
 from src.utils.calc import calculate_trade_scenarios
 
@@ -79,9 +79,12 @@ async def main():
     # Track AI Query Timestamp (Candle ID)
     analyzed_candle_ts = {}
     # Time constants
+    # Time constants
     timeframe_exec_seconds = parse_timeframe_to_seconds(config.TIMEFRAME_EXEC)
-    sentiment_interval_seconds = parse_timeframe_to_seconds(config.SENTIMENT_UPDATE_INTERVAL)
-    last_sentiment_update_time = time.time()
+    
+    # [NEW] Fixed Time Scheduler Logic
+    next_sentiment_update_time = get_next_rounded_time(config.SENTIMENT_UPDATE_INTERVAL)
+    logger.info(f"⏳ Next Sentiment Update scheduled at: {time.ctime(next_sentiment_update_time)}")
 
     # 1. INITIALIZATION
     exchange = ccxt.binance({
@@ -229,16 +232,17 @@ async def main():
             # Round Robin Scan (One coin per loop to save API/AI limit)
             
             # --- STEP 0: PERIODIC SENTIMENT REFRESH ---
-            # Cek apakah sudah waktunya update berita & F&G (custom interval)
-            if time.time() - last_sentiment_update_time >= sentiment_interval_seconds:
+            # Cek apakah sudah waktunya update berita (Fixed Time Schedule)
+            if time.time() >= next_sentiment_update_time:
                 logger.info("🔄 Refreshing Sentiment & On-Chain Data...")
                 try:
                     # Jalankan di background task agar tidak memblokir main loop (Fire & Forget)
                     asyncio.create_task(asyncio.to_thread(sentiment.update_all))
                     asyncio.create_task(asyncio.to_thread(onchain.fetch_stablecoin_inflows))
                     
-                    last_sentiment_update_time = time.time()
-                    logger.info("✅ Sentiment & On-Chain Data Refreshed.")
+                    # Schedule Next Update
+                    next_sentiment_update_time = get_next_rounded_time(config.SENTIMENT_UPDATE_INTERVAL)
+                    logger.info(f"✅ Sentiment & On-Chain Data Refreshed. Next: {time.ctime(next_sentiment_update_time)}")
                     
                     # [NEW] TRIGGER SENTIMENT ANALYSIS AI
                     if config.ENABLE_SENTIMENT_ANALYSIS:
@@ -260,6 +264,7 @@ async def main():
                                     score = result.get('sentiment_score', 0)
                                     summary = result.get('summary', '-')
                                     drivers = result.get('key_drivers', [])
+                                    risk = result.get('risk_assessment', 'N/A')
                                     drivers_str = "\n".join([f"• {d}" for d in drivers])
                                     
                                     icon = "😐"
@@ -271,6 +276,7 @@ async def main():
                                         f"Score: {score}/100\n\n"
                                         f"📝 <b>Ringkasan:</b>\n{summary}\n\n"
                                         f"🔑 <b>Faktor Utama:</b>\n{drivers_str}\n\n"
+                                        f"⚠️ <b>Risk Assessment:</b>\n{risk}\n\n"
                                         f"<i>Analisa ini digenerate otomatis oleh AI ({config.AI_SENTIMENT_MODEL})</i>"
                                     )
                                     
