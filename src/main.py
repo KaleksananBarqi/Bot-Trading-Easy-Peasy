@@ -79,7 +79,6 @@ async def main():
     # Track AI Query Timestamp (Candle ID)
     analyzed_candle_ts = {}
     # Time constants
-    # Time constants
     timeframe_exec_seconds = parse_timeframe_to_seconds(config.TIMEFRAME_EXEC)
     
     # [NEW] Fixed Time Scheduler Logic
@@ -311,7 +310,6 @@ async def main():
             # --- STEP B: CHECK EXCLUSION (Cooldown / Existing Position) ---
             # 1. Active Position Check (Active OR Pending)
             if executor.has_active_or_pending_trade(symbol):
-                # logger.info(f"Skipping {symbol} (Active Position or Pending Order)")
                 await asyncio.sleep(config.LOOP_SLEEP_DELAY)
                 continue
             
@@ -326,7 +324,6 @@ async def main():
             if config.MAX_POSITIONS_PER_CATEGORY > 0:
                 current_cat_count = executor.get_open_positions_count_by_category(category)
                 if current_cat_count >= config.MAX_POSITIONS_PER_CATEGORY:
-                   # logger.info(f"Skip {symbol}: Category {category} Full ({current_cat_count}/{config.MAX_POSITIONS_PER_CATEGORY})")
                    await asyncio.sleep(config.LOOP_SLEEP_DELAY)
                    continue
             
@@ -347,12 +344,10 @@ async def main():
                     elif tech_data['btc_trend'] == "BEARISH" and tech_data['price_vs_ema'] == "Below":
                          is_interesting = True
                     else:
-                        # logger.info(f"msg: {symbol} Skipping. High Corr ({btc_corr:.2f}) but Trend Mismatch (BTC {tech_data['btc_trend']} vs {tech_data['price_vs_ema']})")
                         pass
                 else:
                     # Low Correlation: Independent Movement Allowed
                     # We assume if Independent, we allow AI to see it regardless of BTC
-                    # logger.info(f"✨ {symbol} Low Corr ({btc_corr:.2f}). Independent Trend Allowed.")
                     is_interesting = True
             else:
                 # [BTC CORRELATION OFF]
@@ -369,8 +364,8 @@ async def main():
             if tech_data['rsi'] < config.RSI_OVERSOLD or tech_data['rsi'] > config.RSI_OVERBOUGHT:
                 is_interesting = True
             
+
             if not is_interesting:
-                #logger.info(f"💤 {symbol} Boring (RSI: {tech_data['rsi']:.1f}, Corr: {btc_corr:.2f}). Skip AI.")
                 await asyncio.sleep(2)
                 continue
 
@@ -383,7 +378,6 @@ async def main():
             # ... (Existing filter logic modified to respect strategy) ...
             
             # (Untuk simplifikasi, kita gabung ke existing logic tapi tambah logging)
-            #logger.info(f"📊 Strategy Mode: {strategy_mode} (ADX: {adx_val:.2f})")
 
             # --- STEP D: AI ANALYSIS ---
             # Candle-Based Throttling (Smart Execution)
@@ -395,7 +389,6 @@ async def main():
             
             if current_candle_ts <= last_analyzed_ts:
                 # Candle ID masih sama = Candle belum ganti = Skip Analisa
-                # logger.info(f"⏳ {symbol} Candle {current_candle_ts} already analyzed. Waiting next candle...")
                 await asyncio.sleep(config.LOOP_SLEEP_DELAY)
                 continue
 

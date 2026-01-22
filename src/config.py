@@ -46,12 +46,13 @@ AI_APP_TITLE = "Bot Trading Easy Peasy"
 
 # Sentiment Analysis Config
 ENABLE_SENTIMENT_ANALYSIS = True
-AI_SENTIMENT_MODEL = 'google/gemini-2.0-flash-lite-001' # Model hemat cost untuk analisa berita
+AI_SENTIMENT_MODEL = 'xiaomi/mimo-v2-flash' # Model hemat cost untuk analisa berita
 
 # Vision AI (Chart Pattern)
 USE_PATTERN_RECOGNITION = True
 AI_VISION_MODEL = 'meta-llama/llama-4-maverick' # Model hemat cost namun capable untuk vision
 AI_VISION_TEMPERATURE = 0.0
+AI_VISION_MAX_TOKENS = 150
 
 Sentiment_Provider = 'RSS_Feed'  # Pilihan: 'RSS_Feed'
 OnChain_Provider = 'DefiLlama'   # Pilihan: 'DefiLlama'
@@ -100,7 +101,7 @@ COOLDOWN_IF_PROFIT = 3600        # Jeda setelah profit (detik) - ride the trend
 COOLDOWN_IF_LOSS = 7200          # Jeda setelah loss (detik) - cooling down
 
 # Whale & Money Flow
-WHALE_THRESHOLD_USDT = 100000    # Transaksi > $100k dianggap Whale
+WHALE_THRESHOLD_USDT = 1000000    # Transaksi > $100k dianggap Whale
 WHALE_HISTORY_LIMIT = 10
 STABLECOIN_INFLOW_THRESHOLD_PERCENT = 0.05
 
@@ -122,12 +123,12 @@ SENTIMENT_UPDATE_INTERVAL = '1h'
 
 # BTC Global Trend Filter
 BTC_SYMBOL = 'BTC/USDT'
-BTC_EMA_PERIOD = 21             # EMA 200 sebagai trend king filter
+BTC_EMA_PERIOD = 50             # EMA 200 sebagai trend king filter
 
 # Indicator Parameters
-EMA_TREND_MAJOR = 200
-EMA_FAST = 14           
-EMA_SLOW = 50          
+EMA_TREND_MAJOR = 21
+EMA_FAST = 7           
+EMA_SLOW = 21          
 RSI_PERIOD = 14
 RSI_OVERSOLD = 35
 RSI_OVERBOUGHT = 65
@@ -140,7 +141,7 @@ STOCHRSI_K = 3
 STOCHRSI_D = 3
 
 # Correlation Rules
-USE_BTC_CORRELATION = False       # Set False untuk menonaktifkan fitur/logika korelasi BTC
+USE_BTC_CORRELATION = True       # Set False untuk menonaktifkan fitur/logika korelasi BTC
 CORRELATION_THRESHOLD_BTC = 0.7  # Jika < 0.5, koin dianggap "jalan sendiri"
 CORRELATION_PERIOD = 30          # Jumlah candle untuk cek korelasi
 DEFAULT_CORRELATION_HIGH = 0.99
@@ -154,8 +155,8 @@ DEFAULT_TP_PERCENT = 0.025       # 2.5%
 
 # ATR Based SL/TP Multipliers (Primary)
 ATR_PERIOD = 14             
-ATR_MULTIPLIER_SL = 1.5
-ATR_MULTIPLIER_TP1 = 2.2
+ATR_MULTIPLIER_SL = 2.0
+ATR_MULTIPLIER_TP1 = 3.0
 
 # Order Management
 ORDER_SLTP_RETRIES = 3           # Re-try pasang SL/TP jika gagal
@@ -167,7 +168,7 @@ LIMIT_ORDER_EXPIRY_SECONDS = 147600 # ~41 Jam
 # ==============================================================================
 # Liquidity Hunt
 # USE_LIQUIDITY_HUNT Removed (Obsolete)
-TRAP_SAFETY_SL = 1.2             # Jarak Safety SL Dari Entry Baru (ATR)           
+TRAP_SAFETY_SL = 2.0             # Jarak Safety SL Dari Entry Baru (ATR)           
 
 AVAILABLE_STRATEGIES = {
     # 1. Fokus pada Pattern + Trend (The Conservative)
@@ -183,7 +184,7 @@ AVAILABLE_STRATEGIES = {
     'SMART_MONEY_FLOW': "Mengikuti jejak uang besar (Whale/Institutional). Jika data on-chain bullish kuat tapi harga masih dipahamin 'murah' (konsolidasi), gunakan [LIQUIDITY_HUNT]. Jika harga sudah mulai lari, gunakan [MARKET].",
 
     # 5. Fallback/Standard
-    #'STANDARD_MULTI_CONFIRMATION': "Analisa teknikal seimbang. Evaluasi Risk:Reward (R:R) dari opsi MARKET vs LIQUIDITY_HUNT. Pilih yang memberikan R:R terbaik dan probabilitas sukses tertinggi.",
+    'STANDARD_MULTI_CONFIRMATION': "Analisa teknikal seimbang. Evaluasi Risk:Reward (R:R) dari opsi MARKET vs LIQUIDITY_HUNT. Pilih yang memberikan R:R terbaik dan probabilitas sukses tertinggi.",
 
     # 6. Fokus pada Sideways & Reversal (The Ranger)
     'BB_BOUNCE': "Jika ADX sedang lemah/sideways (< 20), fokus pada setup Reversal di area BB Top (Upper Band) atau BB Bottom (Lower Band). Sangat disarankan menggunakan [LIQUIDITY_HUNT] untuk mendapatkan harga entry terbaik saat terjadi pantulan."
@@ -195,16 +196,16 @@ AVAILABLE_STRATEGIES = {
 # CATATAN: Jika leverage/amount tiap koin tidak diisi, akan memakai default dari Section 5
 DAFTAR_KOIN = [
     # --- Kategori: LAYER 1 ---
-    {"symbol": "XRP/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
-    {"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
-    {"symbol": "BTC/USDT", "category": "KING", "leverage": 15, "margin_type": "isolated", "amount": 5},
-    {"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
-    {"symbol": "SUI/USDT", "category": "LAYER_1", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "XRP/USDT", "category": "LAYER_1", "leverage": 25, "margin_type": "isolated", "amount": 5},
+    {"symbol": "SOL/USDT", "category": "LAYER_1", "leverage": 25, "margin_type": "isolated", "amount": 5},
+    {"symbol": "BTC/USDT", "category": "KING", "leverage": 25, "margin_type": "isolated", "amount": 5},
+    {"symbol": "ETH/USDT", "category": "LAYER_1", "leverage": 25, "margin_type": "isolated", "amount": 5},
+    {"symbol": "SUI/USDT", "category": "LAYER_1", "leverage": 25, "margin_type": "isolated", "amount": 5},
     
     # --- Kategori: MEMECOIN ---
-    {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "DOGE/USDT", "category": "MEME", "leverage": 25, "margin_type": "isolated", "amount": 5},
     # ---- Kategori:DEX ----
-    {"symbol": "HYPE/USDT", "category": "DEX", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "HYPE/USDT", "category": "DEX", "leverage": 25, "margin_type": "isolated", "amount": 5},
     # --- Kategori : STABLECOIN ---
-    {"symbol": "XPL/USDT", "category": "STABLECOIN", "leverage": 15, "margin_type": "isolated", "amount": 5},
+    {"symbol": "XPL/USDT", "category": "STABLECOIN", "leverage": 25, "margin_type": "isolated", "amount": 5},
 ]

@@ -201,8 +201,8 @@ class OrderExecutor:
         
         if atr_val > 0:
             # --- DYNAMIC ATR LOGIC (LIQUIDITY HUNT / TREND TRAP) ---
-            # SL = 1.0 ATR (TRAP_SAFETY_SL)
-            # TP = 2.2 ATR (ATR_MULTIPLIER_TP1)
+            # SL = Configured ATR (TRAP_SAFETY_SL)
+            # TP = Configured ATR (ATR_MULTIPLIER_TP1)
             dist_sl = atr_val * config.TRAP_SAFETY_SL
             dist_tp = atr_val * config.ATR_MULTIPLIER_TP1
             
@@ -313,7 +313,6 @@ class OrderExecutor:
                     # Case A: Filled? (Check Position Cache)
                     base = symbol.split('/')[0]
                     if base in self.position_cache:
-                        # It is filled! Update tracker.
                         # It is filled! Update tracker.
                         logger.info(f"✅ Order {symbol} found filled during sync. Queuing for Safety Orders (PENDING).")
                         self.safety_orders_tracker[symbol]['status'] = 'PENDING'

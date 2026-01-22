@@ -20,7 +20,7 @@ class OnChainAnalyzer:
             if len(self.whale_transactions) > config.WHALE_HISTORY_LIMIT:
                self.whale_transactions.pop(0)
             
-            # logger.info(f"Detect Whale: {msg}")
+
 
     def fetch_stablecoin_inflows(self):
         try:

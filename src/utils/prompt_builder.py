@@ -103,7 +103,7 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern
     
     # Additional Context
     # strategies.append("\nADDITIONAL RULES:")
-    # (Obsolete Rule Removed)
+    # Additional Context
     
     strat_str = "\n".join(strategies)
 
@@ -309,3 +309,16 @@ OUTPUT FORMAT (JSON ONLY):
 }}
 """
     return prompt
+
+def build_pattern_recognition_prompt(symbol, timeframe):
+    """
+    Menyusun prompt untuk Vision AI Pattern Recognition.
+    """
+    prompt_text = (
+        f"Analyze this {timeframe} chart for {symbol}. "
+        "Identify any specific chart patterns (e.g. Head & Shoulders, Flags, Wedges, Double Top/Bottom). "
+        "Determine the bias (BULLISH/BEARISH/NEUTRAL) and strength. "
+        "Keep it concise (max 2-3 sentences)."
+    )
+    return prompt_text
+

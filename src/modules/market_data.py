@@ -70,7 +70,8 @@ class MarketDataManager:
                 return lsr[0]
             return None
         except Exception as e:
-            # logger.warning(f"⚠️ LSR Fetch Failed {symbol}: {e}")
+
+            # Fallback silently or log if critical
             return None
 
     async def initialize_data(self):
@@ -250,10 +251,9 @@ class MarketDataManager:
                                 self.lsr_data[symbol] = lsr_val
                             
                     except Exception as e:
-                        # logger.debug(f"Slow Data Update Failed {symbol}: {e}") # Silent error agar log tidak penuh
-                        pass
-                        
-                # logger.info("🐢 Slow Data Updated")
+
+                        pass # Silent error
+
                 
             except Exception as e:
                 logger.error(f"Slow Data Loop Error: {e}")

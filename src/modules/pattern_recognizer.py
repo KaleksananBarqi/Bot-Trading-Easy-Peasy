@@ -10,6 +10,7 @@ import config
 import matplotlib
 matplotlib.use('Agg') # Force non-interactive backend
 from src.utils.helper import logger
+from src.utils.prompt_builder import build_pattern_recognition_prompt
 
 class PatternRecognizer:
     def __init__(self, market_data_manager):
@@ -116,12 +117,7 @@ class PatternRecognizer:
 
         # Call AI
         try:
-            prompt_text = (
-                f"Analyze this {config.TIMEFRAME_SETUP} chart for {symbol}. "
-                "Identify any specific chart patterns (e.g. Head & Shoulders, Flags, Wedges, Double Top/Bottom). "
-                "Determine the bias (BULLISH/BEARISH/NEUTRAL) and strength. "
-                "Keep it concise (max 2-3 sentences)."
-            )
+            prompt_text = build_pattern_recognition_prompt(symbol, config.TIMEFRAME_SETUP)
             
             logger.info(f"📤 Sending chart image to Vision AI for {symbol}...")
             
@@ -142,7 +138,7 @@ class PatternRecognizer:
                         ]
                     }
                 ],
-                max_tokens=150,
+                max_tokens=config.AI_VISION_MAX_TOKENS,
                 temperature=config.AI_VISION_TEMPERATURE
             )
             
