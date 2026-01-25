@@ -287,7 +287,7 @@ OUTPUT FORMAT (JSON ONLY):
     "execution_trigger": "Valid/Invalid based on indicators"
   }},
   "selected_strategy": "NAME OF STRATEGY",
-  "execution_mode": "MARKET" | "LIQUIDITY_HUNT",
+  "execution_mode": { '"MARKET" | "LIQUIDITY_HUNT"' if config.ENABLE_MARKET_ORDERS else '"LIQUIDITY_HUNT"' },
   "decision": "BUY" | "SELL" | "WAIT",
   "reason": "Explain your logic in INDONESIAN language, referencing specific macro and micro factors.",
   "confidence": 0-100,
