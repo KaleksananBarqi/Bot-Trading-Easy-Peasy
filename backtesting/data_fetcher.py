@@ -485,7 +485,7 @@ def fetch_and_save_data():
     
     # Konfigurasi
     START_DATE = "2025-12-01"
-    END_DATE = "2026-01-13"
+    END_DATE = "2026-01-22"
     TIMEFRAMES = ['5m', '1h']  # Timeframe yang dibutuhkan untuk strategi
     
     # Ambil simbol dari config bot (hanya beberapa untuk testing)

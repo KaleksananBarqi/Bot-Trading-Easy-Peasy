@@ -21,13 +21,13 @@ DEFAULT_AMOUNT_USDT = 10
 # --- 3. FILTER BTC (GLOBAL TREND) ---
 BTC_SYMBOL = 'BTC/USDT'
 BTC_TIMEFRAME = '1h'
-BTC_EMA_PERIOD = 200             
+BTC_EMA_PERIOD = 50             
 BTC_CHECK_INTERVAL = 300        
 
 # --- 4. STRATEGI INDIKATOR ---
 EMA_TREND_MAJOR = 200   
-EMA_FAST = 14           
-EMA_SLOW = 50          
+EMA_FAST = 7           
+EMA_SLOW = 21          
 
 # ADX FILTER
 ADX_PERIOD = 14
@@ -56,8 +56,8 @@ LIMIT_EXEC = 300
 
 # SETTING RR 1:2 (FIXED)
 ATR_PERIOD = 14             
-ATR_MULTIPLIER_SL = 1.5
-ATR_MULTIPLIER_TP1 = 2.0
+ATR_MULTIPLIER_SL = 2.0
+ATR_MULTIPLIER_TP1 = 2.5
 
 MIN_ORDER_USDT = 5           
 ORDER_TYPE = 'market'     # Ini akan otomatis di-override jadi 'limit' jika Liquidity Hunt aktif
