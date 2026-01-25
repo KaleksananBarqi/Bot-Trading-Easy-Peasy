@@ -9,21 +9,23 @@
   ![Binance](https://img.shields.io/badge/Binance-Futures-yellow?style=for-the-badge&logo=binance)
   ![DeepSeek](https://img.shields.io/badge/Brain-DeepSeek%20V3-blueviolet?style=for-the-badge)
   ![Vision AI](https://img.shields.io/badge/Vision-Llama%20Vision-ff69b4?style=for-the-badge)
+  ![Sentiment AI](https://img.shields.io/badge/Sentiment-Xiaomi%20Mimo-orange?style=for-the-badge)
   ![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
   ![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial-5D6D7E?style=for-the-badge)
 </div>
 
 ---
 
-## 📖 Tentang Easy Peasy Bot (Dual AI Edition)
+## 📖 Tentang Easy Peasy Bot (Multi AI Edition)
 
-**Easy Peasy Trading Bot** bukan lagi sekadar bot algoritma biasa. Ini adalah sistem trading **Hybrid AI** yang menggabungkan analisis logika tekstual dengan kemampuan visual (computer vision).
+**Easy Peasy Trading Bot** bukan lagi sekadar bot algoritma biasa. Ini adalah sistem trading **Hybrid Multi-AI** yang menggabungkan analisis logika, tekstual, dan kemampuan visual (computer vision).
 
-Dibangun di atas arsitektur **Dual AI Core**, bot ini bisa "membaca" berita dan sentimen pasar, sekaligus "melihat" pola chart secara harfiah layaknya trader manusia profesional.
+Dibangun di atas arsitektur **Triple AI Core**, bot ini bisa "membaca" berita dan sentimen pasar, sekaligus "melihat" pola chart secara harfiah layaknya trader manusia profesional.
 
-### 🧠 The Dual AI Core
-1.  **Strategic Brain (Logic AI)**: Ditenagai oleh **DeepSeek V3**. Menganalisis **Market Structure** (Fractals HH/LL), **Triple Timeframe Confluence** (1H/30m/15m), sentimen berita, dan indikator teknikal untuk menentukan bias pasar yang akurat.
-2.  **Visual Cortex (Vision AI)**: Ditenagai oleh **Llama-4-Maverick**. Modul ini menghasilkan chart candlestick real-time (via `mplfinance`) dan mengirimkannya ke AI untuk mendeteksi pola visual murni (Flags, Pennants, Head & Shoulders) yang sering terlewat oleh indikator matematis biasa.
+### 🧠 The Triple AI Core
+1.  **Strategic Brain (Logic AI)**: Ditenagai oleh **DeepSeek V3**. Menganalisis **Market Structure** (Fractals HH/LL), **Triple Timeframe Confluence** (1H/30m/15m), dan indikator teknikal untuk menentukan bias pasar yang akurat.
+2.  **Visual Cortex (Vision AI)**: Ditenagai oleh **Llama-4-Maverick**. Modul ini menghasilkan chart candlestick real-time (via `mplfinance`) dan mengirimkannya ke AI untuk mendeteksi pola visual murni (Flags, Pennants, Head & Shoulders).
+3.  **Sentiment Analyst (Text AI)**: Ditenagai oleh **Xiaomi Mimo V2 Flash**. Secara khusus bertugas membaca ratusan headline berita dan RSS feed setiap jam untuk menyimpulkan sentimen pasar global (Bullish/Bearish/Neutral) dan mengirimkan laporannya ke channel Telegram khusus.
 
 ---
 
@@ -35,12 +37,11 @@ Bot tidak buta. Sebelum mengeksekusi trade, bot akan:
 *   Mengirim gambar chart tersebut ke AI Vision.
 *   Mendapatkan analisis visual: *"Terlihat Bullish Pennant valid, potensi breakout tinggi."*
 
-### 2. 🛡️ 5-Mode Adaptive Strategy Engine
-Bot ini memiliki 5 kepribadian strategi yang beradaptasi dengan kondisi pasar (dikonfigurasi di `config.py`):
-*   **PATTERN_CONFLUENCE_TREND (Conservative)**: Hanya masuk jika Trend Besar, Indikator, dan Pola Visual (Vision AI) semua berkata "YA". Winrate tinggi, frekuensi rendah.
+### 2. 🛡️ Adaptive Strategy Engine
+Bot ini memiliki beberapa kepribadian strategi yang beradaptasi dengan kondisi pasar (dikonfigurasi di `config.py`):
 *   **VOLATILITY_BREAKOUT_ADVANCED (Aggressive)**: Memburu ledakan harga dari fase konsolidasi. Mengandalkan ADX tinggi dan lonjakan Volume.
-*   **LIQUIDITY_REVERSAL_MASTER (Contrarian)**: Mencari titik balik di area Extreme RSI dan Pivot Points. Melawan arus untuk profit maksimal.
-*   **SMART_MONEY_FLOW (Whale Hunter)**: "Follow the Money". Hanya trading jika terdeteksi transaksi paus besar (> $100k) dan arus masuk Stablecoin positif.
+*   **LIQUIDITY_REVERSAL_MASTER (Contrarian)**: Mencari titik balik di area Extreme RSI dan Pivot Points. Melawan arus untuk profit maksimal (Buy Low, Sell High).
+*   **BB_BOUNCE (Ranger)**: Strategi spesialis pasar Sideways. Mengambil posisi saat harga memantul di Bollinger Bands Top/Bottom ketika ADX rendah (<20).
 *   **STANDARD_MULTI_CONFIRMATION (Balanced)**: Penyeimbang default yang menggunakan konfirmasi indikator standar.
 
 ### 3. 🐋 Whale & Flow Radar
@@ -49,13 +50,15 @@ Terintegrasi dengan **DefiLlama** dan **Whale Alert**:
 *   **Whale Transactions**: Mendeteksi jika ada pembelian/penjualan masif di detik terakhir.
 *   **Smart Money Positioning**: Memantau **Top Trader Long/Short Ratio** untuk membaca posisi pemain besar vs ritel (Contrarian Signal).
 
-### 4. 📰 Global Sentiment Analysis
-Mengambil data dari **Fear & Greed Index** dan **RSS Feed Berita Kripto**. Jika sentimen pasar "Extreme Fear", bot akan lebih berhati-hati mengambil posisi Long.
+### 4. 📰 Enhanced Global Sentiment Analysis
+*   **Dedicated Channel**: Bot sekarang mengirimkan analisa sentimen detail ke channel Telegram terpisah (opsional).
+*   **Dual Source**: Menggabungkan data **Fear & Greed Index** dan **RSS Feed Berita** terupdate.
+*   **Risk Assessment**: AI secara otomatis menilai tingkat risiko global (Extreme Fear = Hati-hati Long).
 
 ### 5. ⚡ Safety & Sniper Execution
 *   **Liquidity Hunt (ATR Traps)**: Memasang Limit Order di area "jebakan" likuiditas retail (dihitung menggunakan ATR) untuk mendapatkan harga diskon terbaik.
 *   **Ghost Order Protection**: Tracker lokal (`safety_tracker.json`) memastikan tidak ada order yang "nyangkut" atau terlupakan di exchange.
-*   **Auto-Decoupling**: Fitur cerdas yang memisahkan Altcoin dari BTC jika korelasinya melemah (< 0.5), memungkinkan Altcoin pump saat BTC sideways.
+*   **Auto-Decoupling**: Fitur cerdas yang memisahkan Altcoin dari BTC jika korelasinya melemah (< 0.7, adjustable). Jika `USE_BTC_CORRELATION = False`, fitur ini dimatikan.
 *   **Smart Resource Architecture**: Menggunakan *Smart Data Throttling* untuk memisahkan data real-time (Price) dan slow data (Funding Rate/OI) demi efisiensi CPU dan API yang maksimal.
 
 ### 6. 🔬 Micro-Structure & Depth Analysis
@@ -106,6 +109,13 @@ BINANCE_TESTNET_SECRET=
 # --- NOTIFICATIONS (WAJIB) ---
 TELEGRAM_TOKEN=
 TELEGRAM_CHAT_ID=
+TELEGRAM_MESSAGE_THREAD_ID=
+
+# --- SENTIMENT NOTIFICATIONS (OPSIONAL) ---
+# Jika ingin laporan sentimen dipisah ke channel/topic berbeda
+TELEGRAM_TOKEN_SENTIMENT=
+TELEGRAM_CHAT_ID_SENTIMENT=
+TELEGRAM_MESSAGE_THREAD_ID_SENTIMENT=
 
 # --- AI & EXTERNAL DATA (WAJIB) ---
 AI_API_KEY=
