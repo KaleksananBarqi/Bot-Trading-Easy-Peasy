@@ -195,8 +195,6 @@ AVAILABLE_STRATEGIES = {
 # ==============================================================================
 # Format: {"symbol": "KOIN/USDT", "category": "KATEGORI", "leverage": X, "amount": Y}
 DAFTAR_KOIN = [
-    # --- Kategori: LAYER 1 ---
-    {"symbol": "XRP/USDT", "category": "LAYER_1", "leverage": 20, "margin_type": "isolated", "amount": 3, "btc_corr": True},
-    
-    # Tambahkan koin lain di sini...
+    {"symbol": "BTC/USDT", "category": "KING", "leverage": 15, "margin_type": "isolated", "amount": 25, "btc_corr": False},
+    {"symbol": "SOL/USDT", "category": "LAYER1", "leverage": 15, "margin_type": "isolated", "amount": 25, "btc_corr": True},
 ]

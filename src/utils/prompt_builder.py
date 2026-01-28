@@ -140,8 +140,8 @@ OPTION B: PASSIVE (LIQUIDITY HUNT)
         else:
             # Market Order DISABLED
             execution_options_str = f"""
-[EXECUTION OPTIONS]
-OPTION: PASSIVE (LIQUIDITY HUNT)
+[EXECUTION PLAN]
+- Mode: PASSIVE (LIQUIDITY HUNT)
 - Entry: Limit Order at {format_price(h.get('entry', 0))} (Sweeping Standard SLs)
 - Stop Loss: {format_price(h.get('sl', 0))}
 - Take Profit: {format_price(h.get('tp', 0))}
@@ -213,6 +213,21 @@ OPTION: PASSIVE (LIQUIDITY HUNT)
 1. CHECK MACRO BIAS: Is the {config.TIMEFRAME_TREND} Market Structure supportive?
 """
 
+    # [LOGIC: STRATEGY INSTRUCTION]
+    if config.ENABLE_MARKET_ORDERS:
+        strategy_instruction = (
+            "4. SELECT STRATEGY & EXECUTION:\n"
+            "   - Choose the Strategy that aligns with the Bias.\n"
+            "   - Select OPTION A (Aggressive) for clear momentum, or OPTION B (Passive) if a Stop Run/Liquidity Sweep is detected."
+        )
+    else:
+        # Market Order Disabled -> Force Passive
+        strategy_instruction = (
+            "4. EXECUTION PLAN VALIDATION:\n"
+            "   - Choose the Strategy that aligns with the Bias.\n"
+            "   - VALIDATE the [EXECUTION PLAN] above. If the Liquidity Sweep level is reachable and valid, proceed.\n"
+        )
+
     prompt = f"""
 ROLE: {config.AI_SYSTEM_ROLE}
 
@@ -272,11 +287,7 @@ FINAL INSTRUCTIONS:
 {btc_instruction_prompt}
 2. VERIFY SETUP: Does the {config.TIMEFRAME_SETUP} Pattern align with the Bias?
 3. CHECK TRIGGER: Are {config.TIMEFRAME_EXEC} Momentum indicators (RSI/Stoch/ADX) giving a clear signal?
-4. SELECT STRATEGY & EXECUTION: 
-   - Choose the Strategy that aligns with the Bias.
-4. SELECT STRATEGY & EXECUTION: 
-   - Choose the Strategy that aligns with the Bias.
-   - Select OPTION A (Aggressive - IF AVAILABLE) for clear momentum, or OPTION B (Passive) if a Stop Run/Liquidity Sweep is detected. { "If Market Orders are DISABLED, YOU MUST CHOOSE LIQUIDITY_HUNT." if not config.ENABLE_MARKET_ORDERS else "" }
+{strategy_instruction}
 5. DECISION: Return WAIT if signals are conflicting.
 
 OUTPUT FORMAT (JSON ONLY):
