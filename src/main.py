@@ -154,13 +154,32 @@ async def main():
                 qty_closed = float(order_info.get('q', 0))
                 size_closed_usdt = qty_closed * price
                 
+                # --- ROI CALCULATION ---
+                # 1. Get Leverage from Config
+                leverage = config.DEFAULT_LEVERAGE
+                for c in config.DAFTAR_KOIN:
+                    if c['symbol'] == symbol:
+                        leverage = c.get('leverage', config.DEFAULT_LEVERAGE)
+                        break
+                
+                # 2. Calculate Margin & ROI
+                # Margin = Size / Leverage
+                margin_used = size_closed_usdt / leverage if leverage > 0 else size_closed_usdt
+                
+                roi_percent = 0
+                if margin_used > 0:
+                    roi_percent = (pnl / margin_used) * 100
+                    
+                roi_icon = "🔥" if roi_percent > 0 else "🩸"
+                
                 msg = (
                         f"{emoji} <b>{title}</b>\n"
                         f"✨ <b>{symbol}</b>\n"
                         f"🏷️ Type: {order_type}\n"
-                        f"📏 <b>Size:</b> ${size_closed_usdt:.2f}\n" 
+                        f"📏 Size: ${size_closed_usdt:.2f}\n" 
                         f"💵 Price: {price}\n"
-                        f"💸 PnL: <b>{pnl_str}</b>"
+                        f"💸 PnL: <b>{pnl_str}</b>\n"
+                        f"{roi_icon} ROI: <b>{roi_percent:+.2f}%</b>"
                     )
                 await kirim_tele(msg)
                 
