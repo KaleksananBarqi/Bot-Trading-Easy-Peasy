@@ -14,3 +14,8 @@ __pycache__/
 ./bot_trading_easy_peasy.egg-info
 bot_trading_easy_peasy.egg-info/PKG-INFO
 bot_trading_easy_peasy.egg-info/SOURCES.txt
+./home/aji_admin/Bot-Trading-Easy-Peasy/bot_trading_easy_peasy.egg-info
+bot_trading_easy_peasy.egg-info/dependency_links.txt
+.gitignore
+bot_trading_easy_peasy.egg-info/top_level.txt
+bot_trading_easy_peasy.egg-info/requires.txt
