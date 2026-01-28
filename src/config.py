@@ -178,7 +178,7 @@ WS_KEEP_ALIVE_INTERVAL = 1800
 NEWS_MAX_PER_SOURCE = 3          # Ambil 3 berita terbaru per web
 NEWS_MAX_TOTAL = 30              # Total berita mentah yang disimpan (sebelum filter)
 NEWS_RETENTION_LIMIT = 10        # Max berita relevan yang dikirim ke prompt per koin
-NEWS_MAX_AGE_HOURS = 6           # Jangan ambil berita yg > 6 jam lalu
+NEWS_MAX_AGE_HOURS = 24           # Jangan ambil berita yg > N jam lalu
 RSS_FEED_URLS = [
     "https://www.theblock.co/rss.xml",
     "https://cryptoslate.com/feed/",

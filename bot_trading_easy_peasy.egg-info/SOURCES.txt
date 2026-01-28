@@ -20,9 +20,11 @@ src/utils/helper.py
 src/utils/prompt_builder.py
 tests/test_chart_generation.py
 tests/test_limit_market_config.py
+tests/test_news_filtering.py
 tests/test_news_retrieval.py
 tests/test_notification_logic.py
 tests/test_notification_safety.py
 tests/test_onchain_inflow.py
+tests/test_pattern_validation.py
 tests/test_tpsl_fix.py
 tests/test_vision_real.py

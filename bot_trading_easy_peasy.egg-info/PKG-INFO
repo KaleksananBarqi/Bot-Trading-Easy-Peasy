@@ -112,9 +112,27 @@ python -m venv venv
 ```
 
 ### Langkah 3: Install Dependencies
-Pastikan menginstall library untuk visualisasi chart (`mplfinance`).
+
+Proyek ini menggunakan `pyproject.toml` untuk manajemen dependensi modern.
+
+**Opsi A: Instalasi via pyproject.toml (Rekomendasi)**
+```bash
+# Install dalam mode editable (untuk development)
+pip install -e .
+
+# ATAU install biasa
+pip install .
+```
+
+**Opsi B: Instalasi via requirements.txt (Alternatif)**
 ```bash
 pip install -r requirements.txt
+```
+
+**Optional: Install Development Dependencies**
+```bash
+# Untuk running tests (pytest, dll)
+pip install -e ".[dev]"
 ```
 
 ### Langkah 4: Konfigurasi `.env`
@@ -176,7 +194,8 @@ python main.py
  │    └── 📜 .env                      # konfigurasi environment
  ├── 📂 strategies/              # 📚 Dokumentasi & Blueprint Strategi
  ├── 📂 tests/                   # 🧪 Automated Testing (Unit & Integration)
- └── 📦 requirements.txt         # Daftar dependensi Python
+ ├── 📦 pyproject.toml           # Konfigurasi proyek & dependensi (Modern)
+ └── 📦 requirements.txt         # Daftar dependensi Python (Legacy)
 ```
 
 ---

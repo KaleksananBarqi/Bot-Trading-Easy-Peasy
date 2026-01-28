@@ -11,3 +11,6 @@ __pycache__/
 .log
 *.log
 ./bot_trading.log
+./bot_trading_easy_peasy.egg-info
+bot_trading_easy_peasy.egg-info/PKG-INFO
+bot_trading_easy_peasy.egg-info/SOURCES.txt
