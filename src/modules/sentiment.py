@@ -6,56 +6,13 @@ from datetime import datetime
 from typing import Optional
 from src.utils.helper import logger
 
-# Mapping nama alternatif koin populer untuk filtering berita
-COIN_ALIASES = {
-    'BTC': ['bitcoin', 'btc'],
-    'ETH': ['ethereum', 'eth', 'ether'],
-    'SOL': ['solana', 'sol'],
-    'XRP': ['ripple', 'xrp'],
-    'DOGE': ['dogecoin', 'doge'],
-    'ADA': ['cardano', 'ada'],
-    'BNB': ['binance coin', 'bnb'],
-    'AVAX': ['avalanche', 'avax'],
-    'DOT': ['polkadot', 'dot'],
-    'MATIC': ['polygon', 'matic'],
-    'LINK': ['chainlink', 'link'],
-    'SHIB': ['shiba', 'shib'],
-    'PEPE': ['pepe'],
-    'ARB': ['arbitrum', 'arb'],
-    'OP': ['optimism'],
-    'SUI': ['sui'],
-    'APT': ['aptos', 'apt'],
-    'INJ': ['injective', 'inj'],
-    'TIA': ['celestia', 'tia'],
-    'SEI': ['sei'],
-    'NEAR': ['near protocol', 'near'],
-    'FTM': ['fantom', 'ftm'],
-    'ATOM': ['cosmos', 'atom'],
-    'LTC': ['litecoin', 'ltc'],
-    'UNI': ['uniswap', 'uni'],
-    'AAVE': ['aave'],
-    'MKR': ['maker', 'mkr'],
-    'CRV': ['curve', 'crv'],
-    'LDO': ['lido', 'ldo'],
-    'PENDLE': ['pendle'],
-    'WIF': ['dogwifhat', 'wif'],
-    'BONK': ['bonk'],
-    'FLOKI': ['floki'],
-    'RENDER': ['render', 'rndr'],
-    'FET': ['fetch.ai', 'fet', 'artificial superintelligence'],
-    'AGIX': ['singularitynet', 'agix'],
-    'TAO': ['bittensor', 'tao'],
-    'WLD': ['worldcoin', 'wld'],
-    'AI': ['ai token'],
-}
-
-
 class SentimentAnalyzer:
     def __init__(self):
         self.fng_url = config.CMC_FNG_URL
         self.last_fng = {"value": 50, "classification": "Neutral"}
-        self.last_news = []       # Backward compat
-        self.raw_news = []        # Berita mentah (unfiltered) untuk filtering per koin
+        self.last_news = []       # Backward compat: mixed news
+        self.raw_news = []        # Berita mentah (unfiltered)
+        self.macro_news_cache = [] # Cache khusus berita makro
 
     def fetch_fng(self):
         """Fetch Fear & Greed Index from CoinMarketCap"""
@@ -95,7 +52,7 @@ class SentimentAnalyzer:
             logger.warning(f"⚠️ Failed to fetch F&G: {e}")
 
     def fetch_news(self):
-        """Fetch Top News from RSS Feeds dan simpan ke raw_news untuk filtering"""
+        """Fetch Top News from RSS Feeds dan simpan ke raw_news"""
         rss_urls = getattr(config, 'RSS_FEED_URLS', [])
         if not rss_urls:
             logger.warning("⚠️ No RSS URLs configured in config.")
@@ -103,18 +60,15 @@ class SentimentAnalyzer:
 
         all_news = []
         max_per_source = config.NEWS_MAX_PER_SOURCE
-        max_age_hours = getattr(config, 'NEWS_MAX_AGE_HOURS', 6) 
-        max_total = getattr(config, 'NEWS_MAX_TOTAL', 30)
+        max_age_hours = getattr(config, 'NEWS_MAX_AGE_HOURS', 24) 
+        max_total = getattr(config, 'NEWS_MAX_TOTAL', 50)
         
         for url in rss_urls:
             try:
-                logger.info(f"🌐 Fetching RSS: {url}")
+                # logger.info(f"🌐 Fetching RSS: {url}") # Reduced log spam
                 response = requests.get(url, timeout=config.API_REQUEST_TIMEOUT)
                 feed = feedparser.parse(response.content)
                 
-                if feed.bozo and hasattr(feed, 'bozo_exception'):
-                     pass
-                     
                 if not feed.entries:
                     continue
 
@@ -137,95 +91,136 @@ class SentimentAnalyzer:
                     
                     if is_recent:
                         title = entry.title
+                        # Clean title
+                        title = title.replace('\n', ' ').strip()
                         all_news.append(f"{title} ({source_name})")
                         count += 1
                     
             except Exception as e:
                 logger.warning(f"⚠️ Failed to fetch RSS {url}: {e}")
 
+        # Shuffle biar variatif sumbernya
         random.shuffle(all_news)
         
-        # Simpan ke raw_news (lebih banyak untuk filtering per koin)
+        # Simpan ke raw_news 
         self.raw_news = all_news[:max_total]
         
-        # Backward compatibility - fallback untuk legacy call tanpa symbol
-        self.last_news = self.raw_news[:config.NEWS_RETENTION_LIMIT]
+        # Update Macro Cache juga saat fetch
+        self._update_macro_cache()
         
-        logger.info(f"📰 News Fetched: {len(self.raw_news)} headlines aggregated from RSS.")
+        logger.info(f"📰 News Fetched: {len(self.raw_news)} headlines. (Macro: {len(self.macro_news_cache)})")
+
+    def _update_macro_cache(self):
+        """Filter dan simpan berita makro terbaru ke cache."""
+        macro_keywords = getattr(config, 'MACRO_KEYWORDS', [])
+        found = []
+        for news in self.raw_news:
+            news_lower = news.lower()
+            if any(kw in news_lower for kw in macro_keywords):
+                found.append(f"[MACRO] {news}")
+        
+        # Ambil Top N Macro News
+        self.macro_news_cache = found[:getattr(config, 'MACRO_NEWS_COUNT', 2)]
+
+    def _get_coin_keywords(self, symbol: str) -> list:
+        """Dapatkan keywords dari config.DAFTAR_KOIN."""
+        base_coin = symbol.split('/')[0].upper()
+        
+        # 1. Cari di DAFTAR_KOIN
+        for koin in config.DAFTAR_KOIN:
+            if koin['symbol'] == symbol or (koin['symbol'].startswith(base_coin + "/")):
+                return koin.get('keywords', [base_coin.lower()])
+        
+        # 2. Fallback default
+        return [base_coin.lower()]
 
     def filter_news_by_relevance(self, symbol: str) -> list:
         """
-        Filter berita berdasarkan relevansi dengan koin.
-        
-        BTC news SELALU disertakan untuk semua koin karena BTC adalah market leader.
-        
-        Args:
-            symbol: Trading pair (e.g. "SOL/USDT", "BTC/USDT")
-        
-        Returns:
-            List berita yang relevan (max NEWS_RETENTION_LIMIT)
+        Filter berita:
+        1. Berita Makro (Wajib, dari cache)
+        2. Berita Koin Spesifik
+        3. Berita BTC (jika koin bukan BTC, karena BTC king effect)
         """
         if not self.raw_news:
             return []
         
-        # Ekstrak base coin (SOL dari SOL/USDT)
+        relevant_news = []
+        
+        # 1. Masukkan Macro News (Wajib)
+        # Clone list agar tidak merubah cache master
+        relevant_news.extend(self.macro_news_cache)
+        
+        # 2. Cari Berita Koin Target & BTC
         base_coin = symbol.split('/')[0].upper()
-        
-        # Keywords untuk koin target
-        target_keywords = COIN_ALIASES.get(base_coin, [base_coin.lower()])
-        
-        # BTC keywords (SELALU include karena BTC king effect)
-        btc_keywords = COIN_ALIASES.get('BTC', ['bitcoin', 'btc'])
-        
-        # Jika koin adalah BTC sendiri, hanya cari BTC news
         is_btc = base_coin == 'BTC'
         
-        relevant = []
+        target_keywords = self._get_coin_keywords(symbol)
+        
+        # Cari keywords BTC manual jika koin bukan BTC
+        btc_keywords = []
+        if not is_btc:
+            # Cari config BTC
+            for koin in config.DAFTAR_KOIN:
+                if 'BTC' in koin['symbol']:
+                    btc_keywords = koin.get('keywords', ['bitcoin', 'btc'])
+                    break
+            if not btc_keywords: btc_keywords = ['bitcoin', 'btc']
+
+        coin_specific_news = []
+        
         for news in self.raw_news:
+            # Skip jika berita sudah ada di macro (cek string exact match)
+            # Karena macro news di-prepend prefix [MACRO], kita cek original textnya
+            # Tapi raw_news tidak punya prefix.
+            # Jadi kita cek logicnya: news ini macro atau bukan?
+            
+            # Agar simple: kita kumpulkan dulu candidate news, nanti di deduplikasi via set akhir
+            # Atau: biarkan duplikat kalau memang overlap (jarang terjadi karena macro keywords beda context)
+            
             news_lower = news.lower()
             
-            # Match: Target Coin OR BTC (BTC selalu masuk)
-            is_target_match = any(kw in news_lower for kw in target_keywords)
-            is_btc_match = any(kw in news_lower for kw in btc_keywords)
+            # Match Target
+            is_target = any(kw in news_lower for kw in target_keywords)
             
-            if is_btc:
-                # Untuk BTC, hanya ambil berita BTC
-                if is_btc_match:
-                    relevant.append(news)
-            else:
-                # Untuk altcoin, ambil berita koin tsb + BTC
-                if is_target_match or is_btc_match:
-                    relevant.append(news)
+            # Match BTC (hanya jika koin bukan BTC, kalau BTC logicnya masuk is_target)
+            is_btc_rel = False
+            if not is_btc:
+                is_btc_rel = any(kw in news_lower for kw in btc_keywords)
+                
+            if is_target:
+                coin_specific_news.append(news)
+            elif is_btc_rel:
+                # Berita BTC prioritas kedua
+                coin_specific_news.append(f"[BTC-CORR] {news}")
+                
+        # Batasi jumlah spesifik news agar prompt tidak penuh
+        # Sisa slot = TOTAL_LIMIT - Len(Macro)
+        limit = config.NEWS_RETENTION_LIMIT
+        available_slots = max(0, limit - len(relevant_news))
         
-        return relevant[:config.NEWS_RETENTION_LIMIT]
+        relevant_news.extend(coin_specific_news[:available_slots])
+        
+        return relevant_news
 
     def get_latest(self, symbol: Optional[str] = None) -> dict:
         """
         Get latest sentiment data.
-        
-        Args:
-            symbol: Optional. Jika diberikan, filter berita berdasarkan relevansi koin.
-                    Contoh: "SOL/USDT" akan mendapat berita SOL + BTC.
-        
-        Returns:
-            Dict dengan fng_value, fng_text, dan news (terfilter jika symbol diberikan)
         """
-        # Default ke last_news (backward compat)
-        news = self.last_news
+        news_to_display = []
         
-        # Jika symbol diberikan dan ada raw_news, filter berdasarkan relevansi
         if symbol and self.raw_news:
-            news = self.filter_news_by_relevance(symbol)
-            
-            # Jika tidak ada berita relevan, fallback ke berita BTC saja
-            if not news:
-                btc_keywords = COIN_ALIASES.get('BTC', ['bitcoin', 'btc'])
-                news = [n for n in self.raw_news if any(kw in n.lower() for kw in btc_keywords)][:config.NEWS_RETENTION_LIMIT]
-        
+             news_to_display = self.filter_news_by_relevance(symbol)
+        else:
+             # Jika tidak ada simbol (Global), tampilkan Macro + Random Top
+             news_to_display.extend(self.macro_news_cache)
+             remaining = max(0, config.NEWS_RETENTION_LIMIT - len(news_to_display))
+             if remaining > 0:
+                 news_to_display.extend(self.raw_news[:remaining])
+
         return {
             "fng_value": self.last_fng['value'],
             "fng_text": self.last_fng['classification'],
-            "news": news
+            "news": news_to_display
         }
 
     def update_all(self):

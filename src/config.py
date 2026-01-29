@@ -191,6 +191,10 @@ RSS_FEED_URLS = [
     "https://news.google.com/rss/search?q=federal+reserve+rates+OR+us+inflation+cpi+OR+global+recession+when:24h&hl=en-US&gl=US&ceid=US:en",
 ]
 
+# Keyword Berita Makro (Wajib masuk prompt)
+MACRO_KEYWORDS = ["federal reserve", "fed", "fomc", "inflation", "cpi", "recession", "interest rate", "powell", "sec", "crypto regulation"] 
+MACRO_NEWS_COUNT = 2             # Jumlah berita makro yang dipaksa masuk ke prompt
+
 # ==============================================================================
 # 📋 DAFTAR STRATEGI
 # ==============================================================================
@@ -203,8 +207,24 @@ AVAILABLE_STRATEGIES = {
 # ==============================================================================
 # 🪙 DAFTAR KOIN (MARKET WATCH)
 # ==============================================================================
-# Format: {"symbol": "KOIN/USDT", "category": "KATEGORI", "leverage": X, "amount": Y}
+# Format: {"symbol": "KOIN/USDT", "category": "KATEGORI", "leverage": X, "amount": Y, "keywords": ["..."]}
 DAFTAR_KOIN = [
-    {"symbol": "BTC/USDT", "category": "KING", "leverage": 15, "margin_type": "isolated", "amount": 25, "btc_corr": False},
-    {"symbol": "SOL/USDT", "category": "LAYER1", "leverage": 15, "margin_type": "isolated", "amount": 25, "btc_corr": True},
+    {
+        "symbol": "BTC/USDT", 
+        "category": "KING", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 25, 
+        "btc_corr": False,
+        "keywords": ["bitcoin", "btc"]
+    },
+    {
+        "symbol": "SOL/USDT", 
+        "category": "LAYER1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 25, 
+        "btc_corr": True,
+        "keywords": ["solana", "sol"]
+    },
 ]
