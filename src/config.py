@@ -30,7 +30,7 @@ CMC_API_KEY = os.getenv("CMC_API_KEY")     # CoinMarketCap
 # ==============================================================================
 # ⚙️ PENGATURAN SISTEM & APLIKASI
 # ==============================================================================
-PAKAI_DEMO = True               # False = Real Money, True = Testnet (Uang Monopoly)
+PAKAI_DEMO = False               # False = Real Money, True = Testnet (Uang Monopoly)
 LOG_FILENAME = 'bot_trading.log'
 TRACKER_FILENAME = 'safety_tracker.json'
 
@@ -49,7 +49,7 @@ LOOP_SKIP_DELAY = 2              # Delay saat skip coin karena data tidak lengka
 AI_MODEL_NAME = 'deepseek/deepseek-v3.2'
 AI_TEMPERATURE = 0.0             # 0.0 = Logis & Konsisten, 1.0 = Kreatif & Halusinasi
 AI_CONFIDENCE_THRESHOLD = 75     # Minimal keyakinan (%) untuk berani eksekusi
-AI_SYSTEM_ROLE = "You are an elite Crypto Trading AI capable of Look for a reversal in the Pivot area (S1/R1) or Liquidity Sweep."
+AI_SYSTEM_ROLE = "You are an elite Crypto Trading AI specialized in detecting high-probability reversal setups at Pivot zones (S1/R1) and Liquidity Sweep patterns."
 AI_BASE_URL = "https://openrouter.ai/api/v1"
 
 # Identitas Bot
@@ -57,7 +57,7 @@ AI_APP_URL = "https://github.com/KaleksananBarqi/Bot-Trading-Easy-Peasy"
 AI_APP_TITLE = "Bot Trading Easy Peasy"
 
 # Analisa Berita & Sentimen
-ENABLE_SENTIMENT_ANALYSIS = True          # Aktifkan analisa sentimen berita?
+ENABLE_SENTIMENT_ANALYSIS = False          # Aktifkan analisa sentimen berita?
 AI_SENTIMENT_MODEL = 'xiaomi/mimo-v2-flash' # Model ekonomis untuk baca berita
 SENTIMENT_ANALYSIS_INTERVAL = '3h'         # Seberapa sering cek sentimen (misal: tiap 2 jam)
 SENTIMENT_UPDATE_INTERVAL = '1h'           # Interval update data raw sentimen
@@ -71,7 +71,7 @@ AI_VISION_MAX_TOKENS = 300            # Naikkan untuk mencegah output terpotong
 
 # Validasi Pattern Recognition
 PATTERN_MAX_RETRIES = 2               # Berapa kali retry jika output tidak valid
-PATTERN_MIN_ANALYSIS_LENGTH = 80      # Minimal panjang karakter output yang dianggap valid
+PATTERN_MIN_ANALYSIS_LENGTH = 50      # Minimal panjang karakter output yang dianggap valid
 PATTERN_REQUIRED_KEYWORDS = ['BULLISH', 'BEARISH', 'NEUTRAL']  # Minimal satu harus ada
 
 # Data OnChain
@@ -81,7 +81,7 @@ ONCHAIN_PROVIDER = 'DefiLlama'   # Sumber data OnChain
 # 💰 MANAJEMEN RISIKO & MONEY MANAGEMENT
 # ==============================================================================
 # Pengaturan Ukuran Posisi
-USE_DYNAMIC_SIZE = True         # True = Compounding (% saldo), False = Fix USDT
+USE_DYNAMIC_SIZE = False         # True = Compounding (% saldo), False = Fix USDT
 RISK_PERCENT_PER_TRADE = 3       # Jika Dynamic: Gunakan 3% dari total wallet
 DEFAULT_AMOUNT_USDT = 10         # Jika Static: Gunakan $10 per trade
 MIN_ORDER_USDT = 5               # Minimal order yang diizinkan Binance
@@ -237,14 +237,5 @@ DAFTAR_KOIN = [
         "amount": 25, 
         "btc_corr": True,
         "keywords": ["solana", "sol"]
-    },
-    {
-        "symbol": "ETH/USDT", 
-        "category": "LAYER1", 
-        "leverage": 30, 
-        "margin_type": "isolated", 
-        "amount": 25, 
-        "btc_corr": True,
-        "keywords": ["ethereum", "eth"]
     },
 ]
