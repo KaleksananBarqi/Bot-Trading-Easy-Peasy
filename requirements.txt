@@ -2,7 +2,7 @@ ccxt==4.5.28
 matplotlib==3.10.8
 numpy==2.4.0
 pandas==2.3.3
-pandas_ta==0.4.19b0
+pandas_ta==0.4.71b0
 python-dotenv==1.2.1
 Requests==2.32.5
 seaborn==0.13.2
