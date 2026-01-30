@@ -6,7 +6,7 @@ mplfinance==0.12.10b0
 numpy==2.4.1
 openai==2.16.0
 pandas==3.0.0
-pandas_ta==0.4.19b0
+pandas_ta==0.4.71b0
 python-dotenv==1.2.1
 python-telegram-bot==22.6
 Requests==2.32.5
