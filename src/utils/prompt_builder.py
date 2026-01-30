@@ -215,7 +215,7 @@ SCENARIO B: IF BEARISH (SHORT)
     if raw_stats_str:
         pattern_section_content += f"{raw_stats_str}\n"
     
-    pattern_section_content += "*INSTRUCTION: Use this pattern & raw data to confirm the Macro Bias.*"
+
 
     # ==========================================
     # 3. PROMPT CONSTRUCTION
@@ -232,7 +232,6 @@ SCENARIO B: IF BEARISH (SHORT)
         macro_section = f"""
 --------------------------------------------------
 1. MACRO VIEW (TIMEFRAME: {config.TIMEFRAME_TREND})
-> OBJECTIVE: Determine the Major Trend Bias.
 - Global BTC Trend: {btc_trend} (EMA {config.BTC_EMA_PERIOD})
 - BTC Correlation: {btc_corr:.2f}
 - Market Structure: {market_struct} (Swing High/Low Analysis)
@@ -248,7 +247,6 @@ SCENARIO B: IF BEARISH (SHORT)
         macro_section = f"""
 --------------------------------------------------
 1. MACRO VIEW (TIMEFRAME: {config.TIMEFRAME_TREND})
-> OBJECTIVE: Determine the Major Trend Bias.
 - Market Structure: {market_struct} (Swing High/Low Analysis)
 - Pivot Points: {pivot_str}
 --------------------------------------------------
@@ -267,9 +265,9 @@ SCENARIO B: IF BEARISH (SHORT)
     else:
         # Market Order Disabled -> Force Passive
         strategy_instruction = (
-            "4. EXECUTION PLAN VALIDATION:\n"
+            "4. EXECUTION SCENARIOS VALIDATION:\n"
             "   - Choose the Strategy that aligns with the Bias.\n"
-            "   - VALIDATE the [EXECUTION PLAN] above. If the Liquidity Sweep level is reachable and valid, proceed.\n"
+            "   - VALIDATE the [EXECUTION SCENARIOS] above. If the Liquidity Sweep level is reachable and valid, proceed.\n"
         )
 
     prompt = f"""
@@ -286,7 +284,6 @@ TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. De
 
 --------------------------------------------------
 3. EXECUTION TRIGGER (TIMEFRAME: {config.TIMEFRAME_EXEC})
-> OBJECTIVE: Pinpoint Entry Timing.
 [MOMENTUM]
 - RSI ({config.RSI_PERIOD}): {rsi:.2f}
 - StochRSI: K={stoch_k:.2f}, D={stoch_d:.2f}
