@@ -3,7 +3,7 @@ feedparser==6.0.11
 httpx==0.28.1
 matplotlib==3.10.8
 mplfinance==0.12.10b0
-numpy==2.4.1
+numpy
 openai==2.16.0
 pandas==3.0.0
 pandas_ta==0.4.71b0
