@@ -49,7 +49,7 @@ LOOP_SKIP_DELAY = 2              # Delay saat skip coin karena data tidak lengka
 AI_MODEL_NAME = 'deepseek/deepseek-v3.2'
 AI_TEMPERATURE = 0.0             # 0.0 = Logis & Konsisten, 1.0 = Kreatif & Halusinasi
 AI_CONFIDENCE_THRESHOLD = 75     # Minimal keyakinan (%) untuk berani eksekusi
-AI_SYSTEM_ROLE = "You are an elite Crypto Trading AI specialized in detecting high-probability reversal setups at Pivot zones (S1/R1) and Liquidity Sweep patterns."
+AI_SYSTEM_ROLE = "You are an elite Crypto Trading AI capable of analyzing market conditions across multiple timeframes and selecting the optimal strategy from available methods."
 AI_BASE_URL = "https://openrouter.ai/api/v1"
 
 # Identitas Bot
@@ -184,11 +184,23 @@ WS_URL_FUTURES_TESTNET = "wss://stream.binancefuture.com/stream?streams="
 WS_KEEP_ALIVE_INTERVAL = 1800
 
 # Sumber Berita (RSS Feeds)
-NEWS_MAX_PER_SOURCE = 3          # Ambil 3 berita terbaru per web
-NEWS_MAX_TOTAL = 30              # Total berita mentah yang disimpan (sebelum filter)
+NEWS_MAX_PER_SOURCE = 10          # Ambil N berita terbaru per web
+NEWS_MAX_TOTAL = 180              # Total berita mentah yang disimpan (sebelum filter)
 NEWS_RETENTION_LIMIT = 10        # Max berita relevan yang dikirim ke prompt per koin
 NEWS_MAX_AGE_HOURS = 24           # Jangan ambil berita yg > N jam lalu
+
+# News Filtering Rules (Per Category)
+NEWS_COIN_SPECIFIC_MIN = 4       # Minimal berita koin yang bersangkutan
+NEWS_BTC_MAX = 3                 # Maksimal berita BTC (untuk non-BTC coins)
+NEWS_MACRO_MAX = 3               # Maksimal berita makro
+
 RSS_FEED_URLS = [
+    # --- International Sources ---
+    "https://www.coindesk.com/arc/outboundfeeds/rss/",  # CoinDesk (Pasar)
+    "https://cointelegraph.com/rss",                    # CoinTelegraph
+    "https://cryptonews.com/news/feed/",                # CryptoNews
+    "https://ambcrypto.com/feed",                       # AMBCrypto
+    "https://decrypt.co/feed",                          # Decrypt
     "https://www.theblock.co/rss.xml",
     "https://cryptoslate.com/feed/",
     "https://blockworks.co/feed/",
@@ -197,22 +209,31 @@ RSS_FEED_URLS = [
     "https://www.newsbtc.com/feed/",
     "https://dailyhodl.com/feed/",
     "https://beincrypto.com/feed/",
+    
+    # --- Indonesian Sources ---
+    "https://www.portalkripto.com/feed/",               # PortalKripto
+    "https://jelajahcoin.com/feed/",                    # JelajahCoin
+    "https://blockchainmedia.id/feed/",                 # BlockchainMedia.id
+
+    # --- Specific Topics ---
+    "https://cryptopotato.com/tag/solana/feed/",
+    # Google News (Macro)
     "https://news.google.com/rss/search?q=federal+reserve+rates+OR+us+inflation+cpi+OR+global+recession+when:24h&hl=en-US&gl=US&ceid=US:en",
 ]
 
 # Keyword Berita Makro (Wajib masuk prompt)
 MACRO_KEYWORDS = ["federal reserve", "fed", "fomc", "inflation", "cpi", "recession", "interest rate", "powell", "sec", "crypto regulation"] 
-MACRO_NEWS_COUNT = 2             # Jumlah berita makro yang dipaksa masuk ke prompt
+
 
 # ==============================================================================
 # 📋 DAFTAR STRATEGI
 # ==============================================================================
 AVAILABLE_STRATEGIES = {
     'LIQUIDITY_REVERSAL_MASTER': "Mencari pembalikan arah di area Pivot (S1/R1) atau Liquidity Sweep. ",
-    #'STANDARD_MULTI_CONFIRMATION': "Analisa teknikal seimbang. ",
-    #'BB_BOUNCE': "Jika ADX lemah/sideways (< 20), fokus pada setup Reversal di area BB Top (Upper Band) atau BB Bottom (Lower Band). ",
-    #'COUNTER_TREND': "Fade ekstrem RSI/Stoch di zona Overbought (RSI > {config.RSI_OVERBOUGHT}) untuk SELL atau Oversold (RSI < {config.RSI_OVERSOLD}) untuk BUY. Cocok saat trend melemah.",
-    #'MEAN_REVERSION': "Entry saat harga kembali ke EMA setelah deviasi besar dari Bollinger Mid. Ideal untuk kondisi sideways/ranging market."
+    'STANDARD_MULTI_CONFIRMATION': "Analisa teknikal seimbang. ",
+    'BB_BOUNCE': "Jika ADX lemah/sideways (< 20), fokus pada setup Reversal di area BB Top (Upper Band) atau BB Bottom (Lower Band). ",
+    'COUNTER_TREND': "Fade ekstrem RSI/Stoch di zona Overbought (RSI > {config.RSI_OVERBOUGHT}) untuk SELL atau Oversold (RSI < {config.RSI_OVERSOLD}) untuk BUY. Cocok saat trend melemah.",
+    'MEAN_REVERSION': "Entry saat harga kembali ke EMA setelah deviasi besar dari Bollinger Mid. Ideal untuk kondisi sideways/ranging market."
 }
 
 # ==============================================================================

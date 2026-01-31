@@ -331,7 +331,7 @@ async def main():
                 continue
 
             sentiment_data = sentiment.get_latest(symbol=symbol)
-            onchain_data = onchain.get_latest()
+            onchain_data = onchain.get_latest(symbol=symbol)
 
             # --- STEP B: CHECK EXCLUSION (Cooldown / Existing Position) ---
             # 1. Active Position Check (Active OR Pending)

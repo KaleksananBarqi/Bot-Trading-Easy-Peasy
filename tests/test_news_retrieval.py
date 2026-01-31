@@ -33,7 +33,9 @@ class TestNewsRetrieval(unittest.TestCase):
         print("Fetching news... (this might take a few seconds)")
         analyzer.fetch_news()
         
-        news_list = analyzer.last_news
+        # Versi terbaru menggunakan get_latest() untuk mengambil berita yang sudah terfilter/diformalisasi
+        sentiment_data = analyzer.get_latest()
+        news_list = sentiment_data.get('news', [])
         
         print(f"\n[RESULT] Retrieved {len(news_list)} headlines:\n")
         

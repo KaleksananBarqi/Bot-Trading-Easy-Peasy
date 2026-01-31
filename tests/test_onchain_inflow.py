@@ -120,5 +120,73 @@ class TestOnChainInflow(unittest.TestCase):
         except Exception as e:
             self.fail(f"Real connection failed: {e}")
 
+
+class TestWhaleActivityPerSymbol(unittest.TestCase):
+    """Test untuk whale activity filtering per-symbol"""
+    
+    def setUp(self):
+        self.analyzer = OnChainAnalyzer()
+    
+    def test_whale_stored_per_symbol(self):
+        """Whale activity harus disimpan per-symbol dalam dict"""
+        # Simulasi whale BTC
+        self.analyzer.detect_whale("BTC/USDT", 1500000, "BUY")
+        # Simulasi whale SOL
+        self.analyzer.detect_whale("SOL/USDT", 2000000, "SELL")
+        
+        # Assert structure is dict per-symbol
+        self.assertIsInstance(self.analyzer.whale_transactions, dict)
+        self.assertIn("BTC/USDT", self.analyzer.whale_transactions)
+        self.assertIn("SOL/USDT", self.analyzer.whale_transactions)
+    
+    def test_get_latest_returns_filtered_by_symbol(self):
+        """get_latest(symbol) harus return whale hanya untuk symbol tsb"""
+        # Simulasi whale BTC
+        self.analyzer.detect_whale("BTC/USDT", 1500000, "BUY")
+        # Simulasi whale SOL
+        self.analyzer.detect_whale("SOL/USDT", 2000000, "SELL")
+        
+        # Get BTC data
+        btc_data = self.analyzer.get_latest(symbol="BTC/USDT")
+        self.assertEqual(len(btc_data['whale_activity']), 1)
+        self.assertIn("BTC/USDT", btc_data['whale_activity'][0])
+        
+        # Get SOL data
+        sol_data = self.analyzer.get_latest(symbol="SOL/USDT")
+        self.assertEqual(len(sol_data['whale_activity']), 1)
+        self.assertIn("SOL/USDT", sol_data['whale_activity'][0])
+        
+        # SOL data tidak boleh ada BTC
+        self.assertFalse(any("BTC" in w for w in sol_data['whale_activity']))
+    
+    def test_get_latest_without_symbol_returns_empty(self):
+        """get_latest() tanpa symbol harus return empty list (untuk global sentiment)"""
+        self.analyzer.detect_whale("BTC/USDT", 1500000, "BUY")
+        
+        data = self.analyzer.get_latest()  # No symbol
+        self.assertEqual(data['whale_activity'], [])
+    
+    def test_get_latest_unknown_symbol_returns_empty(self):
+        """get_latest(unknown_symbol) harus return empty list"""
+        self.analyzer.detect_whale("BTC/USDT", 1500000, "BUY")
+        
+        data = self.analyzer.get_latest(symbol="ETH/USDT")  # Unknown symbol
+        self.assertEqual(data['whale_activity'], [])
+    
+    def test_deduplication_per_symbol(self):
+        """De-duplication harus bekerja per-symbol"""
+        import time
+        
+        # Whale BTC (akan di-skip karena identik)
+        self.analyzer.detect_whale("BTC/USDT", 1500000, "BUY")
+        time.sleep(0.1)  # Less than dedup window
+        self.analyzer.detect_whale("BTC/USDT", 1500000, "BUY")  # Duplicate
+        
+        btc_data = self.analyzer.get_latest(symbol="BTC/USDT")
+        self.assertEqual(len(btc_data['whale_activity']), 1, 
+                        "Duplicate whale harus di-skip")
+
+
 if __name__ == '__main__':
     unittest.main()
+

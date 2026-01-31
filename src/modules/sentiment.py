@@ -119,8 +119,8 @@ class SentimentAnalyzer:
             if any(kw in news_lower for kw in macro_keywords):
                 found.append(f"[MACRO] {news}")
         
-        # Ambil Top N Macro News
-        self.macro_news_cache = found[:getattr(config, 'MACRO_NEWS_COUNT', 2)]
+        # Ambil Top N Macro News (max limit)
+        self.macro_news_cache = found[:getattr(config, 'NEWS_MACRO_MAX', 3)]
 
     def _get_coin_keywords(self, symbol: str) -> list:
         """Dapatkan keywords dari config.DAFTAR_KOIN."""
@@ -136,71 +136,87 @@ class SentimentAnalyzer:
 
     def filter_news_by_relevance(self, symbol: str) -> list:
         """
-        Filter berita:
-        1. Berita Makro (Wajib, dari cache)
-        2. Berita Koin Spesifik
-        3. Berita BTC (jika koin bukan BTC, karena BTC king effect)
+        Filter berita dengan enforcement per kategori:
+        1. Berita Makro (max NEWS_MACRO_MAX) → Priority 1
+        2. Berita Koin Spesifik (min NEWS_COIN_SPECIFIC_MIN) → Priority 2  
+        3. Berita BTC (max NEWS_BTC_MAX, hanya jika koin bukan BTC) → Priority 3
+        
+        Returns:
+            list: Berita terfilter dengan label kategori
         """
         if not self.raw_news:
             return []
         
-        relevant_news = []
-        
-        # 1. Masukkan Macro News (Wajib)
-        # Clone list agar tidak merubah cache master
-        relevant_news.extend(self.macro_news_cache)
-        
-        # 2. Cari Berita Koin Target & BTC
         base_coin = symbol.split('/')[0].upper()
         is_btc = base_coin == 'BTC'
         
-        target_keywords = self._get_coin_keywords(symbol)
+        # Get config limits
+        macro_max = getattr(config, 'NEWS_MACRO_MAX', 3)
+        coin_min = getattr(config, 'NEWS_COIN_SPECIFIC_MIN', 4)
+        btc_max = getattr(config, 'NEWS_BTC_MAX', 3)
+        total_limit = getattr(config, 'NEWS_RETENTION_LIMIT', 10)
         
-        # Cari keywords BTC manual jika koin bukan BTC
+        # Get keywords
+        target_keywords = self._get_coin_keywords(symbol)
+        macro_keywords = getattr(config, 'MACRO_KEYWORDS', [])
+        
         btc_keywords = []
         if not is_btc:
-            # Cari config BTC
             for koin in config.DAFTAR_KOIN:
                 if 'BTC' in koin['symbol']:
                     btc_keywords = koin.get('keywords', ['bitcoin', 'btc'])
                     break
-            if not btc_keywords: btc_keywords = ['bitcoin', 'btc']
-
-        coin_specific_news = []
+            if not btc_keywords:
+                btc_keywords = ['bitcoin', 'btc']
+        
+        # Kategorisasi berita
+        macro_news = []
+        coin_news = []
+        btc_news = []
         
         for news in self.raw_news:
-            # Skip jika berita sudah ada di macro (cek string exact match)
-            # Karena macro news di-prepend prefix [MACRO], kita cek original textnya
-            # Tapi raw_news tidak punya prefix.
-            # Jadi kita cek logicnya: news ini macro atau bukan?
-            
-            # Agar simple: kita kumpulkan dulu candidate news, nanti di deduplikasi via set akhir
-            # Atau: biarkan duplikat kalau memang overlap (jarang terjadi karena macro keywords beda context)
-            
             news_lower = news.lower()
             
-            # Match Target
-            is_target = any(kw in news_lower for kw in target_keywords)
+            # Check macro first (priority)
+            is_macro = any(kw in news_lower for kw in macro_keywords)
+            is_coin = any(kw in news_lower for kw in target_keywords)
+            is_btc_rel = any(kw in news_lower for kw in btc_keywords) if not is_btc else False
             
-            # Match BTC (hanya jika koin bukan BTC, kalau BTC logicnya masuk is_target)
-            is_btc_rel = False
-            if not is_btc:
-                is_btc_rel = any(kw in news_lower for kw in btc_keywords)
-                
-            if is_target:
-                coin_specific_news.append(news)
-            elif is_btc_rel:
-                # Berita BTC prioritas kedua
-                coin_specific_news.append(f"[BTC-CORR] {news}")
-                
-        # Batasi jumlah spesifik news agar prompt tidak penuh
-        # Sisa slot = TOTAL_LIMIT - Len(Macro)
-        limit = config.NEWS_RETENTION_LIMIT
-        available_slots = max(0, limit - len(relevant_news))
+            # Categorize (allow overlap for coin-specific)
+            if is_macro and len(macro_news) < macro_max:
+                macro_news.append(f"[MACRO] {news}")
+            
+            if is_coin:
+                coin_news.append(news)
+            elif is_btc_rel and len(btc_news) < btc_max:
+                btc_news.append(f"[BTC-CORR] {news}")
         
-        relevant_news.extend(coin_specific_news[:available_slots])
+        # Warning jika berita koin spesifik kurang dari minimum
+        if len(coin_news) < coin_min:
+            from src.utils.helper import logger
+            logger.warning(
+                f"⚠️ Insufficient coin-specific news for {symbol} "
+                f"(found: {len(coin_news)}, required: {coin_min})"
+            )
         
-        return relevant_news
+        # Gabungkan dengan urutan prioritas: Macro → Coin → BTC
+        result = []
+        result.extend(macro_news[:macro_max])
+        
+        # Sisa slot untuk coin + BTC
+        remaining_slots = total_limit - len(result)
+        
+        # Prioritaskan coin news
+        coin_to_add = coin_news[:remaining_slots]
+        result.extend(coin_to_add)
+        
+        # Sisa slot untuk BTC (jika ada)
+        remaining_slots = total_limit - len(result)
+        if remaining_slots > 0 and not is_btc:
+            btc_to_add = btc_news[:min(remaining_slots, btc_max)]
+            result.extend(btc_to_add)
+        
+        return result
 
     def get_latest(self, symbol: Optional[str] = None) -> dict:
         """

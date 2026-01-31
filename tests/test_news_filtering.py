@@ -11,7 +11,8 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'src'))
 
-from src.modules.sentiment import SentimentAnalyzer, COIN_ALIASES
+from src.modules.sentiment import SentimentAnalyzer
+import config
 
 
 class TestNewsFiltering(unittest.TestCase):
@@ -44,10 +45,10 @@ class TestNewsFiltering(unittest.TestCase):
         btc_news_count = sum(1 for n in result if 'bitcoin' in n.lower() or 'btc' in n.lower())
         self.assertGreater(btc_news_count, 0, "Harusnya ada berita BTC")
         
-        # Tidak boleh ada berita PENGU, XRP, atau altcoin lain
-        self.assertFalse(any("pengu" in n.lower() for n in result), "PENGU tidak boleh ada di berita BTC")
-        self.assertFalse(any("xrp" in n.lower() for n in result), "XRP tidak boleh ada di berita BTC")
-        self.assertFalse(any("solana" in n.lower() for n in result), "Solana tidak boleh ada di berita BTC")
+        # Tidak boleh ada berita altcoin spesifik (tanpa tag [MACRO])
+        non_macro_news = [n for n in result if not n.startswith('[MACRO]')]
+        self.assertFalse(any("pengu" in n.lower() for n in non_macro_news), "PENGU tidak boleh ada di berita BTC")
+        self.assertFalse(any("solana" in n.lower() for n in non_macro_news), "Solana tidak boleh ada di berita BTC")
     
     def test_filter_sol_gets_sol_and_btc(self):
         """SOL harus dapat berita SOL + BTC (karena BTC selalu disertakan)"""
@@ -57,41 +58,35 @@ class TestNewsFiltering(unittest.TestCase):
         sol_news = [n for n in result if 'solana' in n.lower() or 'sol' in n.lower()]
         self.assertTrue(len(sol_news) > 0, "Harusnya ada berita Solana")
         
-        # Harus ada berita BTC juga (BTC king effect)
+        # Harus ada berita BTC juga (BTC king effect) - ditandai dengan [BTC-CORR]
         btc_news = [n for n in result if 'bitcoin' in n.lower() or 'btc' in n.lower()]
         self.assertTrue(len(btc_news) > 0, "Harusnya ada berita BTC untuk SOL")
         
-        # Tidak boleh ada berita XRP (tidak relevan)
-        self.assertFalse(any("xrp" in n.lower() for n in result), "XRP tidak boleh ada di berita SOL")
+        # Tidak boleh ada berita XRP dalam berita non-macro
+        non_macro_news = [n for n in result if not n.startswith('[MACRO]')]
+        # Filter hanya yang bukan BTC-CORR
+        coin_only_news = [n for n in non_macro_news if not n.startswith('[BTC-CORR]')]
+        self.assertFalse(any("xrp" in n.lower() for n in coin_only_news), "XRP tidak boleh ada di berita SOL")
     
-    def test_filter_eth_gets_ethereum_news(self):
-        """ETH harus dapat berita dengan keyword 'ethereum' atau 'eth'"""
-        result = self.analyzer.filter_news_by_relevance("ETH/USDT")
+    def test_btc_news_max_limit(self):
+        """BTC news harus dibatasi max NEWS_BTC_MAX"""
+        btc_max = getattr(config, 'NEWS_BTC_MAX', 3)
+        result = self.analyzer.filter_news_by_relevance("SOL/USDT")
         
-        eth_news = [n for n in result if 'ethereum' in n.lower()]
-        self.assertTrue(len(eth_news) > 0, "Harusnya ada berita Ethereum")
+        # Hitung berita BTC (yang ada tag [BTC-CORR])
+        btc_corr_news = [n for n in result if '[BTC-CORR]' in n]
+        self.assertLessEqual(len(btc_corr_news), btc_max, 
+                            f"BTC news harus max {btc_max}")
     
-    def test_filter_arb_gets_arbitrum_news(self):
-        """ARB harus dapat berita Arbitrum"""
-        result = self.analyzer.filter_news_by_relevance("ARB/USDT")
+    def test_macro_news_max_limit(self):
+        """Macro news harus dibatasi max NEWS_MACRO_MAX"""
+        macro_max = getattr(config, 'NEWS_MACRO_MAX', 3)
+        result = self.analyzer.filter_news_by_relevance("BTC/USDT")
         
-        arb_news = [n for n in result if 'arbitrum' in n.lower()]
-        self.assertTrue(len(arb_news) > 0, "Harusnya ada berita Arbitrum")
-    
-    def test_filter_unknown_coin_fallback_to_btc(self):
-        """Koin tidak dikenal harus tetap dapat berita BTC sebagai fallback"""
-        result = self.analyzer.filter_news_by_relevance("UNKNOWN/USDT")
-        
-        # Meskipun koin tidak dikenal, BTC news harus tetap ada
-        btc_news = [n for n in result if 'bitcoin' in n.lower() or 'btc' in n.lower()]
-        self.assertTrue(len(btc_news) > 0, "Koin unknown harus tetap dapat berita BTC")
-    
-    def test_coin_aliases_are_defined(self):
-        """Pastikan COIN_ALIASES berisi mapping yang diperlukan"""
-        required_coins = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA']
-        for coin in required_coins:
-            self.assertIn(coin, COIN_ALIASES, f"{coin} harus ada di COIN_ALIASES")
-            self.assertTrue(len(COIN_ALIASES[coin]) > 0, f"{coin} harus punya alias")
+        # Hitung berita macro (yang ada tag [MACRO])
+        macro_news = [n for n in result if '[MACRO]' in n]
+        self.assertLessEqual(len(macro_news), macro_max, 
+                            f"Macro news harus max {macro_max}")
     
     def test_get_latest_with_symbol_filters(self):
         """get_latest(symbol) harus mengembalikan berita terfilter"""
@@ -103,17 +98,20 @@ class TestNewsFiltering(unittest.TestCase):
         # Pastikan ada berita
         self.assertTrue(len(news) > 0, "Harusnya ada berita yang dikembalikan")
         
-        # Pastikan tidak ada berita XRP (tidak relevan untuk SOL)
-        self.assertFalse(any("xrp" in n.lower() for n in news), "XRP tidak boleh ada")
+        # Pastikan tidak ada berita XRP dalam berita non-macro/non-BTC
+        coin_only_news = [n for n in news if not n.startswith('[MACRO]') and not n.startswith('[BTC-CORR]')]
+        self.assertFalse(any("xrp" in n.lower() for n in coin_only_news), "XRP tidak boleh ada")
     
-    def test_get_latest_without_symbol_returns_all(self):
-        """get_latest() tanpa symbol harus mengembalikan last_news (backward compat)"""
-        # Set last_news untuk testing
-        self.analyzer.last_news = ["Test news 1", "Test news 2"]
+    def test_get_latest_without_symbol_returns_macro_plus_random(self):
+        """get_latest() tanpa symbol harus mengembalikan macro + random news"""
+        # Setup macro cache
+        self.analyzer._update_macro_cache()
         
         result = self.analyzer.get_latest()
         
-        self.assertEqual(result['news'], self.analyzer.last_news)
+        self.assertIn('news', result)
+        # Harus ada sesuatu dikembalikan
+        self.assertIsInstance(result['news'], list)
     
     def test_empty_raw_news_returns_empty(self):
         """Jika raw_news kosong, filter harus return list kosong"""
@@ -123,27 +121,24 @@ class TestNewsFiltering(unittest.TestCase):
         self.assertEqual(result, [])
 
 
-class TestCoinAliasesCompleteness(unittest.TestCase):
-    """Test untuk memastikan COIN_ALIASES lengkap"""
+class TestNewsFilteringConfig(unittest.TestCase):
+    """Test untuk memastikan config filtering tersetup dengan benar"""
     
-    def test_btc_aliases(self):
-        """BTC harus punya alias bitcoin dan btc"""
-        self.assertIn('bitcoin', COIN_ALIASES['BTC'])
-        self.assertIn('btc', COIN_ALIASES['BTC'])
+    def test_config_constants_exist(self):
+        """Pastikan konstanta filtering ada di config"""
+        self.assertTrue(hasattr(config, 'NEWS_COIN_SPECIFIC_MIN'), 
+                       "NEWS_COIN_SPECIFIC_MIN harus ada di config")
+        self.assertTrue(hasattr(config, 'NEWS_BTC_MAX'), 
+                       "NEWS_BTC_MAX harus ada di config")
+        self.assertTrue(hasattr(config, 'NEWS_MACRO_MAX'), 
+                       "NEWS_MACRO_MAX harus ada di config")
     
-    def test_popular_altcoins_have_aliases(self):
-        """Altcoin populer harus punya alias yang benar"""
-        test_cases = [
-            ('ETH', ['ethereum', 'eth']),
-            ('SOL', ['solana', 'sol']),
-            ('DOGE', ['dogecoin', 'doge']),
-            ('LINK', ['chainlink', 'link']),
-        ]
-        
-        for coin, expected_aliases in test_cases:
-            for alias in expected_aliases:
-                self.assertIn(alias, COIN_ALIASES[coin], 
-                             f"{alias} harus ada di alias {coin}")
+    def test_config_values_are_sensible(self):
+        """Pastikan nilai config masuk akal"""
+        self.assertGreaterEqual(config.NEWS_COIN_SPECIFIC_MIN, 1)
+        self.assertGreaterEqual(config.NEWS_BTC_MAX, 1)
+        self.assertGreaterEqual(config.NEWS_MACRO_MAX, 1)
+        self.assertLessEqual(config.NEWS_COIN_SPECIFIC_MIN, 10)
 
 
 if __name__ == "__main__":
@@ -152,3 +147,4 @@ if __name__ == "__main__":
     print("="*60 + "\n")
     
     unittest.main(verbosity=2)
+

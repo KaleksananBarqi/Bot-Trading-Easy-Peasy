@@ -173,11 +173,11 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern
             # Full Mode: Show both Aggressive (Market) and Passive (Limit) for each direction
             execution_options_str = f"""
 [EXECUTION SCENARIOS]
-SCENARIO A: IF BULLISH (LONG)
+SCENARIO A: Buy/Long Setup
   > Option A1 (Aggressive/Market): Entry={format_price(long_m.get('entry', 0))}, SL={format_price(long_m.get('sl', 0))}, TP={format_price(long_m.get('tp', 0))}, R:R=1:{long_m.get('rr', 0)}
   > Option A2 (Passive/Limit): Entry={format_price(long_h.get('entry', 0))}, SL={format_price(long_h.get('sl', 0))}, TP={format_price(long_h.get('tp', 0))}, R:R=1:{long_h.get('rr', 0)}
 
-SCENARIO B: IF BEARISH (SHORT)
+SCENARIO B: Sell/Short Setup
   > Option B1 (Aggressive/Market): Entry={format_price(short_m.get('entry', 0))}, SL={format_price(short_m.get('sl', 0))}, TP={format_price(short_m.get('tp', 0))}, R:R=1:{short_m.get('rr', 0)}
   > Option B2 (Passive/Limit): Entry={format_price(short_h.get('entry', 0))}, SL={format_price(short_h.get('sl', 0))}, TP={format_price(short_h.get('tp', 0))}, R:R=1:{short_h.get('rr', 0)}
 """
@@ -185,10 +185,10 @@ SCENARIO B: IF BEARISH (SHORT)
             # Passive Only Mode: Show only Liquidity Hunt for each direction
             execution_options_str = f"""
 [EXECUTION SCENARIOS]
-SCENARIO A: IF BULLISH (LONG)
+SCENARIO A: Buy/Long Setup
   > Entry={format_price(long_h.get('entry', 0))}, SL={format_price(long_h.get('sl', 0))}, TP={format_price(long_h.get('tp', 0))}, R:R=1:{long_h.get('rr', 0)}
 
-SCENARIO B: IF BEARISH (SHORT)
+SCENARIO B: Sell/Short Setup
   > Entry={format_price(short_h.get('entry', 0))}, SL={format_price(short_h.get('sl', 0))}, TP={format_price(short_h.get('tp', 0))}, R:R=1:{short_h.get('rr', 0)}
 """
 
