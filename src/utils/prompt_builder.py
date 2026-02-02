@@ -262,19 +262,21 @@ SCENARIO B: Sell/Short Setup
 1. CHECK MACRO BIAS: Is the {config.TIMEFRAME_TREND} Market Structure supportive?
 """
 
-    # [LOGIC: STRATEGY INSTRUCTION]
+    # [LOGIC: STRATEGY INSTRUCTION - LIQUIDITY HUNT PROTOCOL]
     if config.ENABLE_MARKET_ORDERS:
         strategy_instruction = (
-            "4. SELECT STRATEGY & EXECUTION:\n"
-            "   - Choose the Strategy that aligns with the Bias.\n"
-            "   - Select OPTION A (Aggressive) for clear momentum, or OPTION B (Passive) if a Stop Run/Liquidity Sweep is detected."
+            "5. SCENARIO & EXECUTION DECISION:\n"
+            "   - SCENARIO A (Long) or B (Short): Choose based on active sweep zone.\n"
+            "   - Aggressive (Market): Use ONLY if sweep is CONFIRMED and reversal is in progress.\n"
+            "   - Passive (Limit): Use if sweep is ANTICIPATED but not yet confirmed.\n"
         )
     else:
         # Market Order Disabled -> Force Passive
         strategy_instruction = (
-            "4. EXECUTION SCENARIOS VALIDATION:\n"
-            "   - Choose the Strategy that aligns with the Bias.\n"
-            "   - VALIDATE the [EXECUTION SCENARIOS] above. If the Liquidity Sweep level is reachable and valid, proceed.\n"
+            "5. SCENARIO DECISION:\n"
+            "   - SCENARIO A (Long): Valid ONLY if price is near/below S1 with sweep rejection.\n"
+            "   - SCENARIO B (Short): Valid ONLY if price is near/above R1 with sweep rejection.\n"
+            "   - REJECT if no clear sweep is forming at either zone.\n"
         )
 
     prompt = f"""
@@ -335,19 +337,26 @@ TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. De
 
 {execution_options_str}
 
-FINAL INSTRUCTIONS:
+FINAL INSTRUCTIONS (LIQUIDITY HUNT PROTOCOL):
+1. LOCATE SWEEP ZONE: Check if price is near Pivot S1 (for SCENARIO A/Long) or R1 (for SCENARIO B/Short).
+2. VALIDATE SWEEP CONFIRMATION:
+   - Wick penetrates S1/R1 level but candle body CLOSES on the opposite side?
+   - Volume spike present (>1.5x average)?
+   - RSI/Stoch at extreme levels (oversold for Long, overbought for Short)?
+3. SCENARIO SELECTION: Choose A or B based on which zone shows ACTIVE sweep with confirmation.
+4. NO-TRADE ZONE: Return WAIT if price is strictly between S1 and R1 (no sweep opportunity).
 {btc_instruction_prompt}
-2. VERIFY SETUP: Does the {config.TIMEFRAME_SETUP} Pattern align with the Bias?
-3. CHECK TRIGGER: Are {config.TIMEFRAME_EXEC} Momentum indicators (RSI/Stoch/ADX) giving a clear signal?
+
 {strategy_instruction}
-5. DECISION: Return WAIT if signals are conflicting.
+
+5. DECISION: Return WAIT if no active sweep confirmed.
 
 OUTPUT FORMAT (JSON ONLY):
 {{
   "analysis": {{
-    "macro_bias": "BULLISH/BEARISH/NEUTRAL",
-    "pattern_signal": "Description of pattern implication",
-    "execution_trigger": "Valid/Invalid based on indicators"
+    "sweep_zone": "S1 (Long Setup) / R1 (Short Setup) / NONE (No Sweep)",
+    "sweep_confirmation": "YES (wick rejection + volume) / NO (waiting for confirmation)",
+    "price_vs_pivot": "Below S1 / Above R1 / Between S1-R1 (No-Mans Land)"
   }},
   "selected_strategy": "NAME OF STRATEGY",
   "execution_mode": { '"MARKET" | "LIQUIDITY_HUNT"' if config.ENABLE_MARKET_ORDERS else '"LIQUIDITY_HUNT"' },
