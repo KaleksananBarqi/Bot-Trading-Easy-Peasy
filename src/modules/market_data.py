@@ -2,11 +2,13 @@
 import asyncio
 import json
 import time
+import numpy as np
 import pandas as pd
 import pandas_ta as ta
 import ccxt.async_support as ccxt
 import websockets
 import config
+from scipy.signal import argrelextrema
 from src.utils.helper import logger, kirim_tele, wib_time, parse_timeframe_to_seconds
 
 class MarketDataManager:
@@ -519,7 +521,7 @@ class MarketDataManager:
     def _calculate_market_structure(self, symbol, lookback=5):
         """
         Mendeteksi Market Structure (Higher High/Lower Low) pada Timeframe Trend.
-        Menggunakan logika Local Extrema (Fractals) sederhana.
+        Menggunakan scipy.signal.argrelextrema untuk vektorisasi (performa optimal).
         """
         try:
             bars = self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, [])
@@ -527,34 +529,23 @@ class MarketDataManager:
             
             df = pd.DataFrame(bars, columns=['timestamp','open','high','low','close','volume'])
             
-            # Cari Swing Highs & Lows
-            # Sebuah candle adalah swing high jika high-nya > N candle kiri & kanan
-            # Kita gunakan rolling window manual atau loop sederhana agar efisien
+            # Vektorisasi menggunakan scipy.signal.argrelextrema
+            high_vals = df['high'].values
+            low_vals = df['low'].values
             
-            swing_highs = []
-            swing_lows = []
+            # Cari indeks swing high/low (order=lookback -> cek N candle kiri & kanan)
+            swing_high_idx = argrelextrema(high_vals, np.greater_equal, order=lookback)[0]
+            swing_low_idx = argrelextrema(low_vals, np.less_equal, order=lookback)[0]
             
-            # Kita scan dari candle ke-lookback sampai 2 candle terakhir (candle aktif jgn dihitung swing dulu)
-            for i in range(lookback, len(df) - lookback - 1):
-                # Check High
-                current_high = df['high'].iloc[i]
-                is_high = True
-                for j in range(1, lookback + 1):
-                    if df['high'].iloc[i-j] >= current_high or df['high'].iloc[i+j] > current_high:
-                        is_high = False
-                        break
-                if is_high:
-                    swing_highs.append(current_high)
-                    
-                # Check Low
-                current_low = df['low'].iloc[i]
-                is_low = True
-                for j in range(1, lookback + 1):
-                    if df['low'].iloc[i-j] <= current_low or df['low'].iloc[i+j] < current_low:
-                        is_low = False
-                        break
-                if is_low:
-                    swing_lows.append(current_low)
+            # Exclude candle terakhir (current open) dari hasil
+            # Dengan menfilter indeks yang >= len(df) - lookback - 1
+            max_valid_idx = len(df) - lookback - 1
+            swing_high_idx = swing_high_idx[swing_high_idx < max_valid_idx]
+            swing_low_idx = swing_low_idx[swing_low_idx < max_valid_idx]
+            
+            # Ambil nilai dari indeks yang valid
+            swing_highs = high_vals[swing_high_idx].tolist() if len(swing_high_idx) > 0 else []
+            swing_lows = low_vals[swing_low_idx].tolist() if len(swing_low_idx) > 0 else []
             
             if len(swing_highs) < 2 or len(swing_lows) < 2:
                 return "UNCLEAR"
