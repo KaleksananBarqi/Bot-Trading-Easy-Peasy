@@ -16,6 +16,26 @@ class SentimentAnalyzer:
         self.raw_news = []        # Berita mentah (unfiltered)
         self.macro_news_cache = [] # Cache khusus berita makro
 
+        # Optimization: Pre-compute keyword lookups for O(1) access
+        self._exact_keywords = {}
+        self._base_keywords = {}
+
+        for i, koin in enumerate(config.DAFTAR_KOIN):
+            sym = koin['symbol']
+            kw = koin.get('keywords', [sym.split('/')[0].lower()])
+
+            # Exact map
+            if sym not in self._exact_keywords:
+                self._exact_keywords[sym] = (i, kw)
+
+            # Base map (startswith logic)
+            parts = sym.split('/')
+            if len(parts) > 1 and parts[0]:
+                base = parts[0].upper()
+                # Store if not already present (first match wins)
+                if base not in self._base_keywords:
+                    self._base_keywords[base] = (i, kw)
+
     def fetch_fng(self):
         """Fetch Fear & Greed Index from CoinMarketCap"""
         try:
@@ -143,16 +163,25 @@ class SentimentAnalyzer:
         self.macro_news_cache = found[:getattr(config, 'NEWS_MACRO_MAX', 3)]
 
     def _get_coin_keywords(self, symbol: str) -> list:
-        """Dapatkan keywords dari config.DAFTAR_KOIN."""
+        """Dapatkan keywords dari config.DAFTAR_KOIN (Optimized O(1))."""
         base_coin = symbol.split('/')[0].upper()
         
-        # 1. Cari di DAFTAR_KOIN
-        for koin in config.DAFTAR_KOIN:
-            if koin['symbol'] == symbol or (koin['symbol'].startswith(base_coin + "/")):
-                return koin.get('keywords', [base_coin.lower()])
+        candidate_exact = self._exact_keywords.get(symbol)
+        candidate_base = self._base_keywords.get(base_coin)
         
-        # 2. Fallback default
-        return [base_coin.lower()]
+        # Compare indices to find the first match in the original list
+        if candidate_exact and candidate_base:
+            # If both match, the one with smaller index appeared earlier
+            if candidate_exact[0] <= candidate_base[0]:
+                return candidate_exact[1]
+            else:
+                return candidate_base[1]
+        elif candidate_exact:
+            return candidate_exact[1]
+        elif candidate_base:
+            return candidate_base[1]
+        else:
+            return [base_coin.lower()]
 
     def filter_news_by_relevance(self, symbol: str) -> list:
         """
