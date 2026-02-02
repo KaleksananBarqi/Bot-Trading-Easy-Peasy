@@ -2,6 +2,7 @@
 import ccxt
 import pandas as pd
 import numpy as np
+import requests
 from datetime import datetime, timedelta
 import time
 import os
@@ -354,6 +355,48 @@ class HistoricalDataFetcher:
             self.data_cache[cache_key] = btc_df
         
         return btc_df
+
+    def fetch_fear_and_greed_history(self, limit: int = 0) -> pd.DataFrame:
+        """
+        Mengambil data historis Fear & Greed Index
+
+        Args:
+            limit: Jumlah hari (0 = semua data)
+
+        Returns:
+            DataFrame dengan index tanggal dan kolom 'value', 'classification'
+        """
+        print(f"\n🧠 Mengambil Data Fear & Greed Index (Source: alternative.me)...")
+        url = f"https://api.alternative.me/fng/?limit={limit}&format=json"
+
+        try:
+            response = requests.get(url)
+            data = response.json()
+
+            if data['metadata']['error']:
+                print(f"❌ API Error: {data['metadata']['error']}")
+                return pd.DataFrame()
+
+            records = []
+            for item in data['data']:
+                dt = datetime.fromtimestamp(int(item['timestamp']))
+                records.append({
+                    'timestamp': dt.strftime('%Y-%m-%d'),
+                    'fng_value': int(item['value']),
+                    'fng_class': item['value_classification']
+                })
+
+            df = pd.DataFrame(records)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df.set_index('timestamp', inplace=True)
+            df.sort_index(inplace=True)
+
+            print(f"✅ Berhasil mengambil {len(df)} hari data Sentimen.")
+            return df
+
+        except Exception as e:
+            print(f"❌ Gagal mengambil Fear & Greed: {e}")
+            return pd.DataFrame()
     
     def validate_data(self, data_dict: Dict) -> Dict:
         """
@@ -484,8 +527,8 @@ def fetch_and_save_data():
     print("="*60)
     
     # Konfigurasi
-    START_DATE = "2025-12-01"
-    END_DATE = "2026-01-22"
+    START_DATE = "2024-01-01"
+    END_DATE = "2024-04-01"
     TIMEFRAMES = ['5m', '1h']  # Timeframe yang dibutuhkan untuk strategi
     
     # Ambil simbol dari config bot (hanya beberapa untuk testing)
@@ -524,10 +567,18 @@ def fetch_and_save_data():
         
         if btc_data is not None:
             print(f"\n🎯 Data BTC/USDT: {len(btc_data.get('1h', pd.DataFrame()))} bar")
-        
+
+        # Cek F&G data
+        fng_file = os.path.join('historical_data', 'fear_greed.csv')
+        if os.path.exists(fng_file):
+            print(f"🧠 Data Fear & Greed ditemukan.")
+        else:
+            print(f"⚠️ Data Fear & Greed TIDAK ditemukan di cache.")
+
         # Tanya user apakah perlu update data
-        update = input("\n🔄 Update data terbaru? (y/n): ").lower().strip()
-        
+        # update = input("\n🔄 Update data terbaru? (y/n): ").lower().strip()
+        update = 'n' # Force no update for automation, change to input() if interactive
+
         if update == 'y':
             print("\n2. Memperbarui data...")
             # Ambil data terbaru
@@ -535,12 +586,20 @@ def fetch_and_save_data():
                 SYMBOLS, START_DATE, END_DATE, TIMEFRAMES
             )
             
+            # Ambil F&G
+            fng_df = fetcher.fetch_fear_and_greed_history()
+            if not fng_df.empty:
+                fng_df.to_csv(os.path.join('historical_data', 'fear_greed.csv'))
+
             # Simpan data yang diperbarui
             print("\n3. Menyimpan data ke CSV...")
             fetcher.save_data_to_csv(new_data)
             
             return new_data
         else:
+            # Load F&G if exists to return struct
+            if os.path.exists(fng_file):
+                cached_data['sentiment'] = pd.read_csv(fng_file, index_col='timestamp', parse_dates=True)
             return cached_data
     else:
         # Opsi 2: Fetch data baru dari exchange
@@ -551,19 +610,34 @@ def fetch_and_save_data():
             SYMBOLS, START_DATE, END_DATE, TIMEFRAMES
         )
         
+        # Ambil F&G
+        fng_df = fetcher.fetch_fear_and_greed_history()
+        if not fng_df.empty:
+            fng_df.to_csv(os.path.join('historical_data', 'fear_greed.csv'))
+            all_data['sentiment'] = fng_df
+
         # Validasi data
-        all_data = fetcher.validate_data(all_data)
+        # Note: validate_data expects dict of dicts, but sentiment is just a DF.
+        # We should exclude it from validation loop or handle it inside.
+        # For simplicity, let's keep it separate in logic, but here we just pass symbols.
+        symbol_data_only = {k:v for k,v in all_data.items() if k != 'sentiment'}
+        validated_sym_data = fetcher.validate_data(symbol_data_only)
         
+        # Merge back
+        final_data = validated_sym_data
+        if 'sentiment' in all_data:
+            final_data['sentiment'] = all_data['sentiment']
+
         # Tampilkan summary
-        summary = fetcher.get_data_summary(all_data)
+        summary = fetcher.get_data_summary(final_data)
         print("\n📈 Data Summary:")
         print(summary.to_string())
         
         # Simpan ke CSV untuk penggunaan berikutnya
         print("\n3. Menyimpan data ke CSV...")
-        fetcher.save_data_to_csv(all_data)
+        fetcher.save_data_to_csv(final_data)
         
-        return all_data
+        return final_data
 
 if __name__ == "__main__":
     # Jalankan fetcher
