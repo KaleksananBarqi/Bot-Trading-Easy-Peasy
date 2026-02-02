@@ -63,6 +63,22 @@ class AIBrain:
                 ],
                 temperature=config.AI_TEMPERATURE
             )
+
+            # [LOGGING REASONING]
+            if getattr(config, 'AI_LOG_REASONING', False):
+                try:
+                    msg_obj = completion.choices[0].message
+                    # Coba berbagai kemungkinan field reasoning (tergantung SDK & Provider)
+                    r_content = getattr(msg_obj, 'reasoning', None)
+                    if not r_content: r_content = getattr(msg_obj, 'reasoning_content', None) 
+                    if not r_content: # Cek di model_dump/extra jika pakai pydantic model underlying
+                        model_extra = getattr(msg_obj, 'model_extra', {}) or {}
+                        r_content = model_extra.get('reasoning') or model_extra.get('reasoning_content')
+                    
+                    if r_content:
+                        logger.info(f"🧠💭 [AI REASONING START]\n{r_content}\n🧠💭 [AI REASONING END]")
+                except Exception as e_reason:
+                    logger.warning(f"⚠️ Failed to extract/log reasoning: {e_reason}")
             
             # Text Cleaning (Robust Regex)
             raw_text = completion.choices[0].message.content

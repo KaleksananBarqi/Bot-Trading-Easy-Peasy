@@ -56,6 +56,7 @@ AI_BASE_URL = "https://openrouter.ai/api/v1"
 AI_REASONING_ENABLED = True       # Aktifkan fitur reasoning? (True/False)
 AI_REASONING_EFFORT = 'medium'    # Level effort: 'xhigh', 'high', 'medium', 'low', 'minimal', 'none'
 AI_REASONING_EXCLUDE = False      # True = reasoning tidak ditampilkan di response
+AI_LOG_REASONING = True           # Catat proses reasoning ke log? (True/False)
 
 # Identitas Bot
 AI_APP_URL = "https://github.com/KaleksananBarqi/Bot-Trading-Easy-Peasy"
@@ -251,7 +252,7 @@ DAFTAR_KOIN = [
         "category": "KING", 
         "leverage": 15, 
         "margin_type": "isolated", 
-        "amount": 25, 
+        "amount": 20, 
         "btc_corr": False,
         "keywords": ["bitcoin", "btc"]
     },
@@ -260,7 +261,7 @@ DAFTAR_KOIN = [
         "category": "LAYER1", 
         "leverage": 15, 
         "margin_type": "isolated", 
-        "amount": 25, 
+        "amount": 20, 
         "btc_corr": True,
         "keywords": ["solana", "sol"]
     },
