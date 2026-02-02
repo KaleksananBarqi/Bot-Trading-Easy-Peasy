@@ -521,41 +521,58 @@ class OrderExecutor:
         if not symbols_to_check:
             return
 
-        # 2. Check each symbol
-        for symbol in symbols_to_check:
-            try:
-                # Fetch Open Orders from Binance
-                open_orders = await self.exchange.fetch_open_orders(symbol)
-                open_order_ids = [str(o['id']) for o in open_orders]
-                
-                # Check if our tracked order exists
-                tracker_data = self.safety_orders_tracker[symbol]
-                tracked_id = str(tracker_data.get('entry_id', ''))
-                
-                if tracked_id not in open_order_ids:
-                    # Order is missing! Either Filled or Cancelled.
+        # 2. Check symbols in parallel
+        sem = asyncio.Semaphore(getattr(config, 'CONCURRENCY_LIMIT', 10))
+        changes_made = False
+
+        async def check_symbol(symbol):
+            nonlocal changes_made
+            async with sem:
+                try:
+                    # Fetch Open Orders from Binance
+                    open_orders = await self.exchange.fetch_open_orders(symbol)
+                    open_order_ids = [str(o['id']) for o in open_orders]
                     
-                    # Case A: Filled? (Check Position Cache)
-                    base = symbol.split('/')[0]
-                    if base in self.position_cache:
-                        # It is filled! Update tracker.
-                        logger.info(f"✅ Order {symbol} found filled during sync. Queuing for Safety Orders (PENDING).")
-                        self.safety_orders_tracker[symbol]['status'] = 'PENDING'
-                        self.safety_orders_tracker[symbol]['last_check'] = time.time()
-                        await self.save_tracker()
+                    # Check if our tracked order exists
+                    # (Re-check existence in case it was modified concurrently - rare but safe)
+                    if symbol not in self.safety_orders_tracker:
+                        return
+
+                    tracker_data = self.safety_orders_tracker[symbol]
+                    tracked_id = str(tracker_data.get('entry_id', ''))
                     
-                    # Case B: Cancelled/Expired?
-                    else:
-                        # Not active, not in open orders -> Cancelled manually
-                        logger.info(f"🗑️ Found Stale/Cancelled Order for {symbol}. Removing from tracker.")
-                        del self.safety_orders_tracker[symbol]
-                        await self.save_tracker()
+                    if tracked_id not in open_order_ids:
+                        # Order is missing! Either Filled or Cancelled.
                         
-                        await kirim_tele(
-                            f"🗑️ <b>ORDER SYNC</b>\n"
-                            f"Order for {symbol} was cancelled manually/expired.\n"
-                            f"Tracker cleaned."
-                        )
+                        # Case A: Filled? (Check Position Cache)
+                        base = symbol.split('/')[0]
+                        if base in self.position_cache:
+                            # It is filled! Update tracker.
+                            logger.info(f"✅ Order {symbol} found filled during sync. Queuing for Safety Orders (PENDING).")
+                            self.safety_orders_tracker[symbol]['status'] = 'PENDING'
+                            self.safety_orders_tracker[symbol]['last_check'] = time.time()
+                            changes_made = True
                         
-            except Exception as e:
-                logger.error(f"⚠️ Sync Pending Error for {symbol}: {e}")
+                        # Case B: Cancelled/Expired?
+                        else:
+                            # Not active, not in open orders -> Cancelled manually
+                            logger.info(f"🗑️ Found Stale/Cancelled Order for {symbol}. Removing from tracker.")
+                            if symbol in self.safety_orders_tracker:
+                                del self.safety_orders_tracker[symbol]
+                                changes_made = True
+
+                            await kirim_tele(
+                                f"🗑️ <b>ORDER SYNC</b>\n"
+                                f"Order for {symbol} was cancelled manually/expired.\n"
+                                f"Tracker cleaned."
+                            )
+
+                except Exception as e:
+                    logger.error(f"⚠️ Sync Pending Error for {symbol}: {e}")
+
+        # Run all checks
+        await asyncio.gather(*[check_symbol(sym) for sym in symbols_to_check])
+
+        # 3. Save only if needed
+        if changes_made:
+            await self.save_tracker()
