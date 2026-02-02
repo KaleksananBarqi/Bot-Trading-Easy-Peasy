@@ -10,6 +10,7 @@ import json
 import os
 from typing import Dict, List, Tuple, Optional
 import config
+from ai_logic import AISimulator
 
 warnings.filterwarnings('ignore')
 
@@ -32,6 +33,9 @@ class BacktestEngine:
         # Parameter dari config
         self.config = config
         
+        # Initialize AI Simulator
+        self.ai_simulator = AISimulator()
+
     def calculate_indicators(self, df: pd.DataFrame, 
                            timeframe: str = '5m') -> pd.DataFrame:
         """
@@ -110,9 +114,10 @@ class BacktestEngine:
                           df_1h: pd.DataFrame,
                           btc_trend: str,
                           symbol: str,
-                          current_idx: int) -> Dict:
+                          current_idx: int,
+                          sentiment_val: int = 50) -> Dict:
         """
-        Mengecek sinyal entry berdasarkan strategi
+        Mengecek sinyal entry berdasarkan SIMULASI AI
         
         Returns:
             Dictionary dengan informasi sinyal atau None
@@ -123,107 +128,74 @@ class BacktestEngine:
         
         # Data untuk analisis
         current = df_5m.iloc[current_idx]
-        prev = df_5m.iloc[current_idx - 1]
         
         # Filter cooldown (dalam bar)
         if hasattr(self, 'last_entry_bar'):
             if current_idx - self.last_entry_bar < 24:  # 12 Bar = 1 jam
                 return None
         
-        # Filter trend BTC
-        allowed_signal = "BOTH"
-        if symbol != config.BTC_SYMBOL:
-            if btc_trend == "BULLISH":
-                allowed_signal = "LONG_ONLY"
-            elif btc_trend == "BEARISH":
-                allowed_signal = "SHORT_ONLY"
+        # 1. Prepare Data for AI Simulator
+        tech_data = {
+            'symbol': symbol,
+            'price': current['close'],
+            'rsi': current['RSI'],
+            'adx': current['ADX'],
+            'stoch_k': current['STOCH_K'],
+            'ema_fast': current['EMA_FAST'],
+            'ema_slow': current['EMA_SLOW'],
+            'bb_upper': current['BBU'],
+            'bb_lower': current['BBL'],
+            'btc_trend': btc_trend,
+            'btc_correlation': 0.8 # Simulated High Correlation
+        }
         
-        # Filter trend major (1h)
-        current_1h = df_1h.iloc[-1]
-        is_coin_uptrend_h1 = current_1h['close'] > current_1h.get('EMA_MAJOR', current_1h['close'])
+        sentiment_data = {
+            'fng_value': sentiment_val
+        }
         
-        # Variabel indikator
-        adx_val = current['ADX']
-        current_price = current['close']
-        current_rsi = current['RSI']
-        ema_fast = current['EMA_FAST']
-        is_volume_valid = current['HIGH_VOLUME']
+        # 2. Ask AI Simulator
+        ai_decision = self.ai_simulator.analyze_market_simulation(tech_data, sentiment_data)
         
-        signal = None
-        strategy_type = "NONE"
+        decision = ai_decision['decision']
         
-        # 1. TREND TRAP STRATEGY
-        if config.USE_TREND_TRAP_STRATEGY and adx_val > config.TREND_TRAP_ADX_MIN:
-            
-            # LONG: Trend H1 naik + M5 pullback
-            if allowed_signal in ["LONG_ONLY", "BOTH"] and is_coin_uptrend_h1:
-                is_pullback_zone = (current_price < ema_fast) and (current_price > current['BBL'])
-                rsi_pass = (current_rsi >= config.TREND_TRAP_RSI_LONG_MIN) and \
-                          (current_rsi <= config.TREND_TRAP_RSI_LONG_MAX)
-                
-                if is_pullback_zone and rsi_pass:
-                    signal = "LONG"
-                    strategy_type = f"TREND_PULLBACK (RSI {current_rsi:.1f})"
-            
-            # SHORT: Trend H1 turun + M5 pullback naik
-            elif allowed_signal in ["SHORT_ONLY", "BOTH"] and not is_coin_uptrend_h1:
-                is_pullback_zone = (current_price > ema_fast) and (current_price < current['BBU'])
-                rsi_pass = (current_rsi >= config.TREND_TRAP_RSI_SHORT_MIN) and \
-                          (current_rsi <= config.TREND_TRAP_RSI_SHORT_MAX)
-                
-                if is_pullback_zone and rsi_pass:
-                    signal = "SHORT"
-                    strategy_type = f"TREND_PULLBACK (RSI {current_rsi:.1f})"
-        
-        # 2. SIDEWAYS STRATEGY (BB BOUNCE)
-        if not signal and config.USE_SIDEWAYS_SCALP and adx_val < config.SIDEWAYS_ADX_MAX:
-            # Buy di BB bawah
-            if current_price <= current['BBL'] and current['STOCH_K'] < 20:
-                if allowed_signal in ["LONG_ONLY", "BOTH"]:
-                    signal = "LONG"
-                    strategy_type = "BB_BOUNCE_BOTTOM"
-            
-            # Sell di BB atas
-            elif current_price >= current['BBU'] and current['STOCH_K'] > 80:
-                if allowed_signal in ["SHORT_ONLY", "BOTH"]:
-                    signal = "SHORT"
-                    strategy_type = "BB_BOUNCE_TOP"
-        
-        if signal:
+        if decision in ['BUY', 'SELL']:
             # Hitung parameter trade
             atr = current['ATR']
-            entry_price = current_price
+            entry_price = current['close']
+            signal = "LONG" if decision == "BUY" else "SHORT"
+            side_api = 'buy' if decision == "BUY" else 'sell'
             
+            # Logic Entry Type (Market vs Limit)
             if config.USE_LIQUIDITY_HUNT:
                 # Mode Liquidity Hunt: entry di level SL retail
                 retail_sl_dist = atr * config.ATR_MULTIPLIER_SL
                 if signal == "LONG":
-                    entry_price = current_price - retail_sl_dist
+                    entry_price = current['close'] - retail_sl_dist
                 else:
-                    entry_price = current_price + retail_sl_dist
+                    entry_price = current['close'] + retail_sl_dist
             
             # Hitung SL dan TP
             if signal == "LONG":
                 sl_price = entry_price - (atr * config.ATR_MULTIPLIER_SL)
                 tp_price = entry_price + (atr * config.ATR_MULTIPLIER_TP1)
-                side_api = 'buy'
             else:
                 sl_price = entry_price + (atr * config.ATR_MULTIPLIER_SL)
                 tp_price = entry_price - (atr * config.ATR_MULTIPLIER_TP1)
-                side_api = 'sell'
             
             return {
                 'signal': signal,
-                'strategy': strategy_type,
+                'strategy': ai_decision['selected_strategy'],
                 'entry_price': entry_price,
                 'sl_price': sl_price,
                 'tp_price': tp_price,
                 'side': side_api,
                 'timestamp': df_5m.index[current_idx],
-                'adx': adx_val,
-                'rsi': current_rsi,
-                'volume_valid': is_volume_valid,
-                'atr': atr
+                'adx': current['ADX'],
+                'rsi': current['RSI'],
+                'volume_valid': current['HIGH_VOLUME'],
+                'atr': atr,
+                'confidence': ai_decision['confidence'],
+                'reason': ai_decision['reason']
             }
         
         return None
@@ -272,7 +244,8 @@ class BacktestEngine:
                     symbol_data: Dict[str, pd.DataFrame],
                     btc_data: pd.DataFrame,
                     start_date: str,
-                    end_date: str):
+                    end_date: str,
+                    sentiment_data: pd.DataFrame = None):
         """
         Menjalankan backtest untuk semua simbol
         
@@ -281,8 +254,9 @@ class BacktestEngine:
             btc_data: Data BTC untuk filter trend
             start_date: Tanggal mulai backtest
             end_date: Tanggal akhir backtest
+            sentiment_data: DataFrame F&G Index
         """
-        print("🚀 Memulai Backtest...")
+        print("🚀 Memulai Backtest (AI Simulation Mode)...")
         print(f"📅 Periode: {start_date} hingga {end_date}")
         print(f"💰 Modal Awal: ${self.initial_capital:,.2f}")
         print("=" * 50)
@@ -342,9 +316,20 @@ class BacktestEngine:
                 if current_time in btc_trend_series.index:
                     btc_trend = btc_trend_series.loc[current_time]
                 
-                # Cek sinyal entry
+                # Dapatkan Sentiment Hari Ini (F&G)
+                current_fng = 50
+                if sentiment_data is not None:
+                    # Cari nilai F&G pada tanggal tersebut
+                    try:
+                        date_key = current_time.strftime('%Y-%m-%d')
+                        if date_key in sentiment_data.index:
+                            current_fng = sentiment_data.loc[date_key]['fng_value']
+                    except Exception:
+                        pass # Use default 50
+
+                # Cek sinyal entry via AI Simulator
                 signal_info = self.check_entry_signal(
-                    df_5m, df_1h_aligned, btc_trend, symbol, i
+                    df_5m, df_1h_aligned, btc_trend, symbol, i, sentiment_val=current_fng
                 )
                 
                 if signal_info:

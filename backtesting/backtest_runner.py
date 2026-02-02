@@ -27,9 +27,9 @@ def run_complete_backtest():
     print("="*60)
     
     # 1. Konfigurasi Backtest
-    START_DATE = "2025-12-01"
-    END_DATE = "2026-01-20"
-    INITIAL_CAPITAL = 50
+    START_DATE = "2024-01-01"
+    END_DATE = "2024-04-01"
+    INITIAL_CAPITAL = 1000
     
     print(f"\n1. KONFIGURASI BACKTEST")
     print(f"   📅 Periode: {START_DATE} hingga {END_DATE}")
@@ -66,10 +66,14 @@ def run_complete_backtest():
         btc_data = btc_data_dict.get('1h', None)
     else:
         btc_data = None
+
+    # Ekstrak Sentiment Data
+    sentiment_data = all_data.get('sentiment', None)
     
     # PERBAIKAN: JANGAN hapus BTC dari symbol_data agar tetap di-trade
     # Kita gunakan shallow copy agar aman
-    symbol_data = all_data.copy()
+    # exclude sentiment from symbol processing
+    symbol_data = {k:v for k,v in all_data.items() if k != 'sentiment'}
     
     # Validasi data
     symbol_data = fetcher.validate_data(symbol_data)
@@ -109,10 +113,13 @@ def run_complete_backtest():
             symbol_data=symbol_data,
             btc_data=btc_data,
             start_date=START_DATE,
-            end_date=END_DATE
+            end_date=END_DATE,
+            sentiment_data=sentiment_data
         )
     except Exception as e:
         print(f"❌ Error saat menjalankan backtest: {e}")
+        import traceback
+        traceback.print_exc()
         # Restore original config
         config.DAFTAR_KOIN = original_daftar_koin
         return None
