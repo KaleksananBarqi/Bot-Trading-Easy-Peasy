@@ -48,12 +48,12 @@ LOOP_SKIP_DELAY = 2              # Delay saat skip coin karena data tidak lengka
 # Otak Utama (Decision Maker)
 AI_MODEL_NAME = 'deepseek/deepseek-v3.2'
 AI_TEMPERATURE = 0.0             # 0.0 = Logis & Konsisten, 1.0 = Kreatif & Halusinasi
-AI_CONFIDENCE_THRESHOLD = 75     # Minimal keyakinan (%) untuk berani eksekusi
+AI_CONFIDENCE_THRESHOLD = 70     # Minimal keyakinan (%) untuk berani eksekusi
 AI_SYSTEM_ROLE = "You are an elite Crypto Trading AI capable of analyzing market conditions across multiple timeframes and selecting the optimal strategy from available methods."
 AI_BASE_URL = "https://openrouter.ai/api/v1"
 
 # Reasoning (Untuk Model yang Support Reasoning Tokens)
-AI_REASONING_ENABLED = True       # Aktifkan fitur reasoning? (True/False)
+AI_REASONING_ENABLED = False       # Aktifkan fitur reasoning? (True/False)
 AI_REASONING_EFFORT = 'medium'    # Level effort: 'xhigh', 'high', 'medium', 'low', 'minimal', 'none'
 AI_REASONING_EXCLUDE = False      # True = reasoning tidak ditampilkan di response
 AI_LOG_REASONING = True           # Catat proses reasoning ke log? (True/False)

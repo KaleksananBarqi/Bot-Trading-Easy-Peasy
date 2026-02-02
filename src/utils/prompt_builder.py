@@ -113,7 +113,14 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern
     volume = tech_data.get('volume', 0)
     vol_ma = tech_data.get('vol_ma', 0)
     funding_rate = tech_data.get('funding_rate', 0)
+    funding_rate = tech_data.get('funding_rate', 0)
     open_interest = tech_data.get('open_interest', 'N/A')
+
+    # Wick Rejection
+    wick_data = tech_data.get('wick_rejection', {})
+    wick_signal = wick_data.get('recent_rejection', 'NONE')
+    wick_strength = wick_data.get('rejection_strength', 0)
+    wick_str = f"{wick_signal} (Strength: {wick_strength:.1f}x)" if wick_signal != "NONE" else "No Rejection"
     
     # LSD (Long/Short Ratio)
     lsr_data = tech_data.get('lsr', {}) or {}
@@ -293,6 +300,10 @@ TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. De
 - Current Price: {format_price(price)}
 - Trend Signal: {trend_narrative}
 - EMA Details: Fast({config.EMA_FAST})={format_price(ema_fast)} | Slow({config.EMA_SLOW})={format_price(ema_slow)} | {ema_alignment}
+
+[PRICE ACTION]
+- Wick Rejection (Last 5 Candles): {wick_str}
+- NOTE: Strong rejection (>2x body) near S1/R1 suggests potential reversal.
 
 [VOLATILITY & VOLUME]
 - Bollinger Bands: Upper={format_price(bb_upper)}, Lower={format_price(bb_lower)}

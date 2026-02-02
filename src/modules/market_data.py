@@ -399,12 +399,95 @@ class MarketDataManager:
                 "lsr": self.lsr_data.get(symbol),
                 "pivots": pivots,
                 "market_structure": structure,
+                 # 10. Wick Rejection Analysis
+                "wick_rejection": self._calculate_wick_rejection(symbol),
                 # [NEW] Candle Timestamp for Smart Throttling
                 "candle_timestamp": int(cur['timestamp'])
             }
         except Exception as e:
             logger.error(f"Get Tech Data Error {symbol}: {e}")
             return None
+
+    def _calculate_wick_rejection(self, symbol, lookback=5):
+        """
+        Mendeteksi candle dengan wick besar sebagai tanda rejection.
+        Lookback: Cek N candle terakhir untuk pattern rejection.
+        
+        Returns: dict with:
+          - recent_rejection: "BULLISH_REJECTION" | "BEARISH_REJECTION" | "NONE"
+          - rejection_strength: float (rasio wick/body, semakin besar semakin kuat)
+          - rejection_candles: int (berapa candle rejection dalam lookback)
+        """
+        try:
+            bars = self.market_store.get(symbol, {}).get(config.TIMEFRAME_EXEC, [])
+            if not bars or len(bars) < lookback:
+                return {"recent_rejection": "NONE", "rejection_strength": 0.0}
+            
+            # Analyze last N candles (excluding current open candle if possible, but bars usually includes it if not careful)
+            # Assuming bars[-1] is current open candle, we look at confirmed candles mostly?
+            # logic in get_technical_data uses cur = df.iloc[-2] which is confirmed.
+            # Let's use the same logic: look at confirmed candles.
+            # bars is a list, so bars[-2] is last closed candle.
+            
+            # Let's take slice of last 'lookback' closed candles
+            # if we have [..., c-5, c-4, c-3, c-2, c-1(open)]
+            # we want c-5 to c-2.
+            
+            start_idx = -1 - lookback
+            end_idx = -1
+            
+            # Check length again to be safe
+            if len(bars) < lookback + 2:
+                candidates = bars[:-1] # take all available closed
+            else:
+                candidates = bars[start_idx:end_idx]
+                
+            rejection_type = "NONE"
+            max_strength = 0.0
+            rejection_count = 0
+            
+            for candle in candidates:
+                # [timestamp, open, high, low, close, volume]
+                op, hi, lo, cl = candle[1], candle[2], candle[3], candle[4]
+                
+                body = abs(cl - op)
+                upper_wick = hi - max(op, cl)
+                lower_wick = min(op, cl) - lo
+                
+                # Avoid division by zero if body is super thin (doji)
+                # If body is 0, we treat it as 1 satoshi/small unit or just compare wicks directly
+                body_ref = body if body > 0 else (hi - lo) * 0.01 
+                if body_ref == 0: body_ref = 0.00000001
+                
+                # Logic: Wick must be > 2x Body
+                is_bullish = lower_wick > (body * 2.0)
+                is_bearish = upper_wick > (body * 2.0)
+                
+                # Determine strength
+                current_strength_bull = lower_wick / body_ref
+                current_strength_bear = upper_wick / body_ref
+                
+                if is_bullish:
+                    rejection_count += 1
+                    if current_strength_bull > max_strength:
+                        max_strength = current_strength_bull
+                        rejection_type = "BULLISH_REJECTION"
+                        
+                elif is_bearish:
+                    rejection_count += 1
+                    if current_strength_bear > max_strength:
+                        max_strength = current_strength_bear
+                        rejection_type = "BEARISH_REJECTION"
+            
+            return {
+                "recent_rejection": rejection_type,
+                "rejection_strength": round(max_strength, 2),
+                "rejection_candles": rejection_count
+            }
+            
+        except Exception as e:
+            logger.error(f"Wick Rejection Calc Error {symbol}: {e}")
+            return {"recent_rejection": "ERROR", "rejection_strength": 0.0}
 
     def _calculate_market_structure(self, symbol, lookback=5):
         """
