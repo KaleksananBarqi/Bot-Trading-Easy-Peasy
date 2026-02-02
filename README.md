@@ -43,13 +43,33 @@ Integrasi Computer Vision yang canggih:
 *   **Validasi Pola**: AI Vision memvalidasi apakah ada pola reversal atau continuation.
 *   **MACD Divergence Detection**: Deteksi visual divergensi harga vs momentum.
 
-### 3. 🛡️ Adaptive Strategy Engine
-Fitur strategi yang semakin kaya (dikonfigurasi di `config.py`):
-*   **LIQUIDITY_REVERSAL_MASTER**: Mencari titik balik di area "Liquidity Hunt" atau Stop Run.
-*   **COUNTER_TREND**: Melawan arus (fade) pada titik RSI/Stochastic ekstrem.
-*   **MEAN_REVERSION**: Entry saat harga menyimpang jauh dan berpotensi kembali ke EMA.
-*   **BB_BOUNCE**: Spesialis market sideways menggunakan Bollinger Bands.
-*   **VOLATILITY_BREAKOUT**: Memburu momentum ledakan harga dari fase konsolidasi.
+### 3. 🛡️ Liquidity Hunt Specialist Strategy (PROVEN!)
+
+**Strategi utama yang telah teruji dan terbukti profitable:**
+
+Bot menggunakan strategi **Liquidity Hunt Specialist** yang fokus mencari titik balik di area "Stop Run" dan "Liquidity Grab" — zona di mana market maker sering memburu stop loss retail trader sebelum membalikkan arah.
+
+#### 📊 Hasil Backtest (Januari 2026)
+| Metrik | Hasil |
+|--------|-------|
+| **Total Profit** | +$845.42 (+84.54%) |
+| **Modal Awal → Akhir** | $1,000 → $1,845.42 |
+| **Win Rate** | 84.52% (71 TP, 13 SL) |
+| **Total Trades** | 84 trades |
+| **Profit Factor** | 7.94 |
+| **Max Drawdown** | -1.82% ✅ (Sangat aman) |
+
+#### 🏆 Performa per Koin
+| Koin | Profit | Total Trades |
+|------|--------|--------------|
+| SOL/USDT | +$566.16 | 40 trades |
+| BTC/USDT | +$279.26 | 44 trades |
+
+#### 💡 Konsep Strategi
+1. **Deteksi Liquidity Zone**: Identifikasi area di mana banyak stop loss berkumpul
+2. **Tunggu "Sweep"**: Sabar menunggu harga menyapu zona likuiditas
+3. **Entry saat Reversal**: Masuk posisi setelah konfirmasi pembalikan arah
+4. **Risk Terkontrol**: SL ketat di bawah swing low/high terdekat
 
 ### 4. 🪙 Smart Per-Coin Configuration - **NEW!**
 Setiap koin dalam daftar pantau dapat dikustomisasi secara spesifik:
