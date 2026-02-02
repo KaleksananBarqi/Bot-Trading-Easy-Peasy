@@ -1,6 +1,6 @@
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 import sys
 import os
 import asyncio
@@ -35,12 +35,15 @@ class TestReasoningConfig(unittest.TestCase):
         with patch.object(config, 'AI_REASONING_ENABLED', True), \
              patch.object(config, 'AI_REASONING_EFFORT', 'high'), \
              patch.object(config, 'AI_REASONING_EXCLUDE', False), \
-             patch('src.modules.ai_brain.OpenAI') as MockClient:
+             patch('src.modules.ai_brain.AsyncOpenAI') as MockClient:
             
             mock_instance = MockClient.return_value
-            mock_instance.chat.completions.create.return_value = MagicMock(
+            # Make create async
+            mock_create = AsyncMock()
+            mock_create.return_value = MagicMock(
                 choices=[MagicMock(message=MagicMock(content='{"decision": "BUY", "confidence": 90}'))]
             )
+            mock_instance.chat.completions.create = mock_create
             
             brain = AIBrain()
             
@@ -58,12 +61,15 @@ class TestReasoningConfig(unittest.TestCase):
     def test_reasoning_disabled(self):
         """Test jika reasoning disabled, parameter TIDAK dikirim"""
         with patch.object(config, 'AI_REASONING_ENABLED', False), \
-             patch('src.modules.ai_brain.OpenAI') as MockClient:
+             patch('src.modules.ai_brain.AsyncOpenAI') as MockClient:
             
             mock_instance = MockClient.return_value
-            mock_instance.chat.completions.create.return_value = MagicMock(
+            # Make create async
+            mock_create = AsyncMock()
+            mock_create.return_value = MagicMock(
                 choices=[MagicMock(message=MagicMock(content='{"decision": "BUY", "confidence": 90}'))]
             )
+            mock_instance.chat.completions.create = mock_create
             
             brain = AIBrain()
             

@@ -1,6 +1,6 @@
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 import sys
 import os
 import asyncio
@@ -26,7 +26,7 @@ class TestReasoningLogging(unittest.TestCase):
         """Test reasoning content logged when AI_LOG_REASONING is True"""
         with patch.object(config, 'AI_REASONING_ENABLED', True), \
              patch.object(config, 'AI_LOG_REASONING', True), \
-             patch('src.modules.ai_brain.OpenAI') as MockClient, \
+             patch('src.modules.ai_brain.AsyncOpenAI') as MockClient, \
              patch('src.modules.ai_brain.logger') as MockLogger:
             
             # Setup mock response with reasoning
@@ -38,7 +38,10 @@ class TestReasoningLogging(unittest.TestCase):
             mock_choice.message = mock_message
             
             mock_instance = MockClient.return_value
-            mock_instance.chat.completions.create.return_value = MagicMock(choices=[mock_choice])
+            # Make create async
+            mock_create = AsyncMock()
+            mock_create.return_value = MagicMock(choices=[mock_choice])
+            mock_instance.chat.completions.create = mock_create
             
             brain = AIBrain()
             asyncio.run(brain.analyze_market("prompt"))
@@ -58,7 +61,7 @@ class TestReasoningLogging(unittest.TestCase):
         """Test reasoning content logged via fallback attribute (deepseek style)"""
         with patch.object(config, 'AI_REASONING_ENABLED', True), \
              patch.object(config, 'AI_LOG_REASONING', True), \
-             patch('src.modules.ai_brain.OpenAI') as MockClient, \
+             patch('src.modules.ai_brain.AsyncOpenAI') as MockClient, \
              patch('src.modules.ai_brain.logger') as MockLogger:
             
             # Setup mock response with reasoning_content (native)
@@ -78,7 +81,10 @@ class TestReasoningLogging(unittest.TestCase):
             mock_choice.message = mock_message
             
             mock_instance = MockClient.return_value
-            mock_instance.chat.completions.create.return_value = MagicMock(choices=[mock_choice])
+            # Make create async
+            mock_create = AsyncMock()
+            mock_create.return_value = MagicMock(choices=[mock_choice])
+            mock_instance.chat.completions.create = mock_create
             
             brain = AIBrain()
             asyncio.run(brain.analyze_market("prompt"))

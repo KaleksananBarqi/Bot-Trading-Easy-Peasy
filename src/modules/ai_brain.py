@@ -1,5 +1,5 @@
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 import json
 import config
 from src.utils.helper import logger
@@ -9,10 +9,10 @@ class AIBrain:
     def __init__(self):
         if config.AI_API_KEY:
             import httpx
-            self.client = OpenAI(
+            self.client = AsyncOpenAI(
                 base_url=config.AI_BASE_URL,
                 api_key=config.AI_API_KEY,
-                http_client=httpx.Client()
+                http_client=httpx.AsyncClient()
             )
             self.model_name = config.AI_MODEL_NAME
             logger.info(f"🧠 AI Brain Initialized: {self.model_name} via OpenRouter")
@@ -48,7 +48,7 @@ class AIBrain:
 
         try:
             # Generate Content
-            completion = self.client.chat.completions.create(
+            completion = await self.client.chat.completions.create(
                 extra_headers={
                     "HTTP-Referer": config.AI_APP_URL, 
                     "X-Title": config.AI_APP_TITLE, 
@@ -120,7 +120,7 @@ class AIBrain:
         target_model = getattr(config, 'AI_SENTIMENT_MODEL', self.model_name)
         
         try:
-            completion = self.client.chat.completions.create(
+            completion = await self.client.chat.completions.create(
                 extra_headers={
                     "HTTP-Referer": config.AI_APP_URL, 
                     "X-Title": config.AI_APP_TITLE, 
