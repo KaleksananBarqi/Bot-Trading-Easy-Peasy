@@ -23,7 +23,7 @@ dependencies = [
     "numpy",
     "openai>=2.16.0",
     "pandas>=2.3.3",
-    "pandas_ta>=0.4.71b0",
+    "pandas_ta>=0.4.19b0",
     "Pillow>=10.0.0",
     "python-dotenv>=1.2.1",
     "python-telegram-bot>=22.6",
