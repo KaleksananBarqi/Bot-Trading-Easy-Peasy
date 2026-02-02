@@ -3,15 +3,16 @@ import sys
 import os
 import asyncio
 
-# Add src to path
+# Add root to path so src.xxx imports work
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 # Mock Config before importing modules
-import config
+import src.config as config
 config.TIMEFRAME_EXEC = '15m'
 config.PAKAI_DEMO = False # Avoid creating CCXT instance
 
-from modules.market_data import MarketDataManager
+from src.modules.market_data import MarketDataManager
 
 class TestWickRejection(unittest.TestCase):
     def setUp(self):

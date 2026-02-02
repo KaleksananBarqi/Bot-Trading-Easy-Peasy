@@ -49,6 +49,9 @@ class MarketDataManager:
                 config.TIMEFRAME_SETUP: []
             }
         
+        # Cache for Technical Data to avoid redundant recalculation
+        self.tech_cache = {} # {symbol: {ts, data}}
+
         # Cache for Order Book Analysis to avoid spamming API if managed differently
         self.ob_cache = {} # {symbol: {ts, data}}
 
@@ -333,77 +336,101 @@ class MarketDataManager:
             bars = self.market_store.get(symbol, {}).get(config.TIMEFRAME_EXEC, [])
             if len(bars) < config.EMA_SLOW + 5: return None
             
-            df = pd.DataFrame(bars, columns=['timestamp','open','high','low','close','volume'])
-            # 1. EMAs
-            df['EMA_FAST'] = df.ta.ema(length=config.EMA_FAST)
-            df['EMA_SLOW'] = df.ta.ema(length=config.EMA_SLOW) # EMA Trend Major
+            # Determine last closed candle timestamp (bars[-2])
+            # bars[-1] is current open candle, bars[-2] is last closed
+            last_closed_ts = bars[-2][0]
             
-            # 2. RSI & ADX
-            df['RSI'] = df.ta.rsi(length=config.RSI_PERIOD)
-            df['ADX'] = df.ta.adx(length=config.ADX_PERIOD)[f"ADX_{config.ADX_PERIOD}"]
+            # Check Cache
+            cached = self.tech_cache.get(symbol)
             
-            # 3. Volume MA
-            df['VOL_MA'] = df.ta.sma(close='volume', length=config.VOL_MA_PERIOD)
-            
-            # 4. Bollinger Bands
-            bb = df.ta.bbands(length=config.BB_LENGTH, std=config.BB_STD)
-            if bb is not None:
-                df['BB_LOWER'] = bb.iloc[:, 0]
-                df['BB_UPPER'] = bb.iloc[:, 2]
-            
-            # 5. Stochastic RSI
-            stoch_rsi = df.ta.stochrsi(length=config.STOCHRSI_LEN, rsi_length=config.RSI_PERIOD, k=config.STOCHRSI_K, d=config.STOCHRSI_D)
-            # keys example: STOCHRSIk_14_14_3_3, STOCHRSId_14_14_3_3
-            k_key = f"STOCHRSIk_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
-            d_key = f"STOCHRSId_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
-            df['STOCH_K'] = stoch_rsi[k_key]
-            df['STOCH_D'] = stoch_rsi[d_key]
+            if cached and cached.get('timestamp') == last_closed_ts:
+                # Cache Hit - Use static data
+                tech_data = cached['data']
+            else:
+                # Cache Miss - Recalculate
+                df = pd.DataFrame(bars, columns=['timestamp','open','high','low','close','volume'])
+                # 1. EMAs
+                df['EMA_FAST'] = df.ta.ema(length=config.EMA_FAST)
+                df['EMA_SLOW'] = df.ta.ema(length=config.EMA_SLOW) # EMA Trend Major
 
-            # 6. ATR (Untuk Liquidity Hunt)
-            df['ATR'] = df.ta.atr(length=config.ATR_PERIOD)
+                # 2. RSI & ADX
+                df['RSI'] = df.ta.rsi(length=config.RSI_PERIOD)
+                df['ADX'] = df.ta.adx(length=config.ADX_PERIOD)[f"ADX_{config.ADX_PERIOD}"]
 
-            cur = df.iloc[-2] # Confirmed Candle (Close)
-            
-            # Simple Trend Check
-            ema_pos = "Above" if cur['close'] > cur['EMA_FAST'] else "Below"
-            trend_major = "Bullish" if cur['close'] > cur['EMA_SLOW'] else "Bearish"
-            
-            # 7. Pivot Points (Support/Resistance) from Trend Timeframe (1H)
-            pivots = self._calculate_pivot_points(symbol)
-            
-            # 8. Market Structure (Swing High/Low)
-            structure = self._calculate_market_structure(symbol)
+                # 3. Volume MA
+                df['VOL_MA'] = df.ta.sma(close='volume', length=config.VOL_MA_PERIOD)
 
-            # 9. Order Book Imbalance (Calculated externally or here? Better external to keep this generic technical data)
-            # But prompt requires it inside tech_data. Let's return a placeholder or allow main to inject it.
-            # We will return the dict, and main can update it.
+                # 4. Bollinger Bands
+                bb = df.ta.bbands(length=config.BB_LENGTH, std=config.BB_STD)
+                if bb is not None:
+                    df['BB_LOWER'] = bb.iloc[:, 0]
+                    df['BB_UPPER'] = bb.iloc[:, 2]
 
-            return {
-                "price": cur['close'],
-                "rsi": cur['RSI'],
-                "adx": cur['ADX'],
-                "ema_fast": cur['EMA_FAST'],
-                "ema_slow": cur['EMA_SLOW'], # EMA Trend Major
-                "vol_ma": cur['VOL_MA'],
-                "volume": cur['volume'],
-                "bb_upper": cur['BB_UPPER'],
-                "bb_lower": cur['BB_LOWER'],
-                "stoch_k": cur['STOCH_K'],
-                "stoch_d": cur['STOCH_D'],
-                "atr": cur['ATR'],
-                "price_vs_ema": ema_pos,
-                "trend_major": trend_major,
+                # 5. Stochastic RSI
+                stoch_rsi = df.ta.stochrsi(length=config.STOCHRSI_LEN, rsi_length=config.RSI_PERIOD, k=config.STOCHRSI_K, d=config.STOCHRSI_D)
+                # keys example: STOCHRSIk_14_14_3_3, STOCHRSId_14_14_3_3
+                k_key = f"STOCHRSIk_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
+                d_key = f"STOCHRSId_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
+                df['STOCH_K'] = stoch_rsi[k_key]
+                df['STOCH_D'] = stoch_rsi[d_key]
+
+                # 6. ATR (Untuk Liquidity Hunt)
+                df['ATR'] = df.ta.atr(length=config.ATR_PERIOD)
+
+                cur = df.iloc[-2] # Confirmed Candle (Close)
+
+                # Simple Trend Check
+                ema_pos = "Above" if cur['close'] > cur['EMA_FAST'] else "Below"
+                trend_major = "Bullish" if cur['close'] > cur['EMA_SLOW'] else "Bearish"
+
+                # 7. Pivot Points (Support/Resistance) from Trend Timeframe (1H)
+                pivots = self._calculate_pivot_points(symbol)
+
+                # 8. Market Structure (Swing High/Low)
+                structure = self._calculate_market_structure(symbol)
+
+                # 10. Wick Rejection Analysis
+                wick_rejection = self._calculate_wick_rejection(symbol)
+
+                tech_data = {
+                    "price": cur['close'],
+                    "rsi": cur['RSI'],
+                    "adx": cur['ADX'],
+                    "ema_fast": cur['EMA_FAST'],
+                    "ema_slow": cur['EMA_SLOW'], # EMA Trend Major
+                    "vol_ma": cur['VOL_MA'],
+                    "volume": cur['volume'],
+                    "bb_upper": cur['BB_UPPER'],
+                    "bb_lower": cur['BB_LOWER'],
+                    "stoch_k": cur['STOCH_K'],
+                    "stoch_d": cur['STOCH_D'],
+                    "atr": cur['ATR'],
+                    "price_vs_ema": ema_pos,
+                    "trend_major": trend_major,
+                    "pivots": pivots,
+                    "market_structure": structure,
+                    "wick_rejection": wick_rejection,
+                    "candle_timestamp": int(cur['timestamp'])
+                }
+
+                # Update Cache
+                self.tech_cache[symbol] = {
+                    'timestamp': last_closed_ts,
+                    'data': tech_data
+                }
+
+            # 9. Return Combined Data (Static + Dynamic)
+            # Dynamic fields: btc_trend, funding_rate, open_interest, lsr
+
+            result = tech_data.copy()
+            result.update({
                 "btc_trend": self.btc_trend,
                 "funding_rate": self.funding_rates.get(symbol, 0),
                 "open_interest": self.open_interest.get(symbol, 0.0),
-                "lsr": self.lsr_data.get(symbol),
-                "pivots": pivots,
-                "market_structure": structure,
-                 # 10. Wick Rejection Analysis
-                "wick_rejection": self._calculate_wick_rejection(symbol),
-                # [NEW] Candle Timestamp for Smart Throttling
-                "candle_timestamp": int(cur['timestamp'])
-            }
+                "lsr": self.lsr_data.get(symbol)
+            })
+
+            return result
         except Exception as e:
             logger.error(f"Get Tech Data Error {symbol}: {e}")
             return None
