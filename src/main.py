@@ -324,7 +324,7 @@ async def main():
             ticker_idx = (ticker_idx + 1) % len(config.DAFTAR_KOIN)
             
             # --- STEP A: COLLECT DATA ---
-            tech_data = market_data.get_technical_data(symbol)
+            tech_data = await market_data.get_technical_data(symbol)
             if not tech_data:
                 logger.warning(f"⚠️ No tech data or insufficient history for {symbol}")
                 await asyncio.sleep(config.LOOP_SKIP_DELAY)

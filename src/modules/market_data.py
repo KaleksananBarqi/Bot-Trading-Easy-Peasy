@@ -12,6 +12,239 @@ from collections import deque
 from scipy.signal import argrelextrema
 from src.utils.helper import logger, kirim_tele, wib_time, parse_timeframe_to_seconds
 
+# --- STATIC CALCULATION FUNCTIONS (Thread-Safe) ---
+
+def _calculate_pivot_points_static(bars):
+    """Calculate Classic Pivot Points based on provided bars list"""
+    try:
+        if len(bars) < 2: return None
+
+        # Gunakan candle terakhir yang COMPLETE (Completed Period)
+        # [-1] adalah candle berjalan (unconfirmed), [-2] adalah candle terakhir yang close
+        prev_candle = bars[-2]
+        # Format: [timestamp, open, high, low, close, volume]
+        high = prev_candle[2]
+        low = prev_candle[3]
+        close = prev_candle[4]
+
+        # Classic Pivot Formula
+        pivot = (high + low + close) / 3
+        r1 = (2 * pivot) - low
+        s1 = (2 * pivot) - high
+        r2 = pivot + (high - low)
+        s2 = pivot - (high - low)
+
+        return {
+            "P": pivot,
+            "R1": r1,
+            "S1": s1,
+            "R2": r2,
+            "S2": s2
+        }
+    except Exception as e:
+        logger.error(f"Pivot calc error: {e}")
+        return None
+
+def _calculate_market_structure_static(bars, lookback=5):
+    """
+    Mendeteksi Market Structure (Higher High/Lower Low).
+    Menggunakan scipy.signal.argrelextrema.
+    """
+    try:
+        if len(bars) < 50: return "INSUFFICIENT_DATA"
+
+        df = pd.DataFrame(bars, columns=['timestamp','open','high','low','close','volume'])
+
+        # Vektorisasi menggunakan scipy.signal.argrelextrema
+        high_vals = df['high'].values
+        low_vals = df['low'].values
+
+        # Cari indeks swing high/low (order=lookback -> cek N candle kiri & kanan)
+        swing_high_idx = argrelextrema(high_vals, np.greater_equal, order=lookback)[0]
+        swing_low_idx = argrelextrema(low_vals, np.less_equal, order=lookback)[0]
+
+        # Exclude candle terakhir (current open) dari hasil
+        # Dengan menfilter indeks yang >= len(df) - lookback - 1
+        max_valid_idx = len(df) - lookback - 1
+        swing_high_idx = swing_high_idx[swing_high_idx < max_valid_idx]
+        swing_low_idx = swing_low_idx[swing_low_idx < max_valid_idx]
+
+        # Ambil nilai dari indeks yang valid
+        swing_highs = high_vals[swing_high_idx].tolist() if len(swing_high_idx) > 0 else []
+        swing_lows = low_vals[swing_low_idx].tolist() if len(swing_low_idx) > 0 else []
+
+        if len(swing_highs) < 2 or len(swing_lows) < 2:
+            return "UNCLEAR"
+
+        # Analisa 2 Swing Terakhir
+        last_h = swing_highs[-1]
+        prev_h = swing_highs[-2]
+        last_l = swing_lows[-1]
+        prev_l = swing_lows[-2]
+
+        structure = "SIDEWAYS"
+
+        if last_h > prev_h and last_l > prev_l:
+            structure = "BULLISH (HH + HL)"
+        elif last_h < prev_h and last_l < prev_l:
+            structure = "BEARISH (LH + LL)"
+        elif last_h > prev_h and last_l < prev_l:
+            structure = "EXPANDING (Megaphone)"
+        elif last_h < prev_h and last_l > prev_l:
+            structure = "CONSOLIDATION (Triangle)"
+
+        return structure
+
+    except Exception as e:
+        logger.error(f"Market Structure Error: {e}")
+        return "ERROR"
+
+def _calculate_wick_rejection_static(bars, lookback=5):
+    """
+    Mendeteksi candle dengan wick besar sebagai tanda rejection.
+    """
+    try:
+        if not bars or len(bars) < lookback:
+            return {"recent_rejection": "NONE", "rejection_strength": 0.0}
+
+        # Analyze last N candles
+        start_idx = -1 - lookback
+        end_idx = -1
+
+        # Check length again to be safe
+        if len(bars) < lookback + 2:
+            candidates = bars[:-1] # take all available closed
+        else:
+            candidates = bars[start_idx:end_idx]
+
+        rejection_type = "NONE"
+        max_strength = 0.0
+        rejection_count = 0
+
+        for candle in candidates:
+            # [timestamp, open, high, low, close, volume]
+            op, hi, lo, cl = candle[1], candle[2], candle[3], candle[4]
+
+            body = abs(cl - op)
+            upper_wick = hi - max(op, cl)
+            lower_wick = min(op, cl) - lo
+
+            # Avoid division by zero
+            body_ref = body if body > 0 else (hi - lo) * 0.01
+            if body_ref == 0: body_ref = 0.00000001
+
+            # Logic: Wick must be > 2x Body
+            is_bullish = lower_wick > (body * 2.0)
+            is_bearish = upper_wick > (body * 2.0)
+
+            # Determine strength
+            current_strength_bull = lower_wick / body_ref
+            current_strength_bear = upper_wick / body_ref
+
+            if is_bullish:
+                rejection_count += 1
+                if current_strength_bull > max_strength:
+                    max_strength = current_strength_bull
+                    rejection_type = "BULLISH_REJECTION"
+
+            elif is_bearish:
+                rejection_count += 1
+                if current_strength_bear > max_strength:
+                    max_strength = current_strength_bear
+                    rejection_type = "BEARISH_REJECTION"
+
+        return {
+            "recent_rejection": rejection_type,
+            "rejection_strength": round(max_strength, 2),
+            "rejection_candles": rejection_count
+        }
+
+    except Exception as e:
+        logger.error(f"Wick Rejection Calc Error: {e}")
+        return {"recent_rejection": "ERROR", "rejection_strength": 0.0}
+
+def _calculate_tech_data_threaded(bars_exec, bars_trend, symbol):
+    """
+    Heavy Calculation Logic (Pandas/TA) to be run in a separate thread.
+    Takes Lists of bars (snapshots), not Deques.
+    """
+    try:
+        if len(bars_exec) < config.EMA_SLOW + 5: return None
+
+        # 1. Prepare DataFrame
+        df = pd.DataFrame(bars_exec, columns=['timestamp','open','high','low','close','volume'])
+
+        # 2. EMAs
+        df['EMA_FAST'] = df.ta.ema(length=config.EMA_FAST)
+        df['EMA_SLOW'] = df.ta.ema(length=config.EMA_SLOW) # EMA Trend Major
+
+        # 3. RSI & ADX
+        df['RSI'] = df.ta.rsi(length=config.RSI_PERIOD)
+        df['ADX'] = df.ta.adx(length=config.ADX_PERIOD)[f"ADX_{config.ADX_PERIOD}"]
+
+        # 4. Volume MA
+        df['VOL_MA'] = df.ta.sma(close='volume', length=config.VOL_MA_PERIOD)
+
+        # 5. Bollinger Bands
+        bb = df.ta.bbands(length=config.BB_LENGTH, std=config.BB_STD)
+        if bb is not None:
+            df['BB_LOWER'] = bb.iloc[:, 0]
+            df['BB_UPPER'] = bb.iloc[:, 2]
+
+        # 6. Stochastic RSI
+        stoch_rsi = df.ta.stochrsi(length=config.STOCHRSI_LEN, rsi_length=config.RSI_PERIOD, k=config.STOCHRSI_K, d=config.STOCHRSI_D)
+        # keys example: STOCHRSIk_14_14_3_3, STOCHRSId_14_14_3_3
+        k_key = f"STOCHRSIk_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
+        d_key = f"STOCHRSId_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
+        df['STOCH_K'] = stoch_rsi[k_key]
+        df['STOCH_D'] = stoch_rsi[d_key]
+
+        # 7. ATR (Untuk Liquidity Hunt)
+        df['ATR'] = df.ta.atr(length=config.ATR_PERIOD)
+
+        cur = df.iloc[-2] # Confirmed Candle (Close)
+
+        # Simple Trend Check
+        ema_pos = "Above" if cur['close'] > cur['EMA_FAST'] else "Below"
+        trend_major = "Bullish" if cur['close'] > cur['EMA_SLOW'] else "Bearish"
+
+        # 8. Pivot Points (Support/Resistance) from Trend Timeframe (1H)
+        pivots = _calculate_pivot_points_static(bars_trend)
+
+        # 9. Market Structure (Swing High/Low)
+        structure = _calculate_market_structure_static(bars_trend)
+
+        # 10. Wick Rejection Analysis
+        wick_rejection = _calculate_wick_rejection_static(bars_exec)
+
+        tech_data = {
+            "price": cur['close'],
+            "rsi": cur['RSI'],
+            "adx": cur['ADX'],
+            "ema_fast": cur['EMA_FAST'],
+            "ema_slow": cur['EMA_SLOW'], # EMA Trend Major
+            "vol_ma": cur['VOL_MA'],
+            "volume": cur['volume'],
+            "bb_upper": cur['BB_UPPER'],
+            "bb_lower": cur['BB_LOWER'],
+            "stoch_k": cur['STOCH_K'],
+            "stoch_d": cur['STOCH_D'],
+            "atr": cur['ATR'],
+            "price_vs_ema": ema_pos,
+            "trend_major": trend_major,
+            "pivots": pivots,
+            "market_structure": structure,
+            "wick_rejection": wick_rejection,
+            "candle_timestamp": int(cur['timestamp'])
+        }
+
+        return tech_data
+
+    except Exception as e:
+        logger.error(f"Threaded Calc Error {symbol}: {e}")
+        return None
+
+
 class MarketDataManager:
     def __init__(self, exchange):
         self.exchange = exchange
@@ -374,98 +607,46 @@ class MarketDataManager:
             logger.error(f"Corr Error {symbol}: {e}")
             return config.DEFAULT_CORRELATION_HIGH # Fallback
 
-    def get_technical_data(self, symbol):
+    async def get_technical_data(self, symbol):
         """Retrieve aggregated technical data for AI Prompt"""
         try:
-            bars = self.market_store.get(symbol, {}).get(config.TIMEFRAME_EXEC, [])
-            if len(bars) < config.EMA_SLOW + 5: return None
+            # 1. Snapshot Data (Thread-Safe Preparation)
+            # Avoid accessing self.market_store inside the thread.
+            # Convert deque to list to ensure we have a static copy.
+            bars_exec = list(self.market_store.get(symbol, {}).get(config.TIMEFRAME_EXEC, []))
+            bars_trend = list(self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, []))
+
+            if len(bars_exec) < config.EMA_SLOW + 5: return None
             
             # Determine last closed candle timestamp (bars[-2])
-            # bars[-1] is current open candle, bars[-2] is last closed
-            last_closed_ts = bars[-2][0]
+            last_closed_ts = bars_exec[-2][0]
             
             # Check Cache
             cached = self.tech_cache.get(symbol)
-            
             if cached and cached.get('timestamp') == last_closed_ts:
                 # Cache Hit - Use static data
                 tech_data = cached['data']
             else:
-                # Cache Miss - Recalculate
-                df = pd.DataFrame(bars, columns=['timestamp','open','high','low','close','volume'])
-                # 1. EMAs
-                df['EMA_FAST'] = df.ta.ema(length=config.EMA_FAST)
-                df['EMA_SLOW'] = df.ta.ema(length=config.EMA_SLOW) # EMA Trend Major
+                # Cache Miss - Offload to Thread
+                # Run the heavy calculation in a separate thread to avoid blocking the event loop
+                tech_data = await asyncio.to_thread(
+                    _calculate_tech_data_threaded,
+                    bars_exec,
+                    bars_trend,
+                    symbol
+                )
 
-                # 2. RSI & ADX
-                df['RSI'] = df.ta.rsi(length=config.RSI_PERIOD)
-                df['ADX'] = df.ta.adx(length=config.ADX_PERIOD)[f"ADX_{config.ADX_PERIOD}"]
-
-                # 3. Volume MA
-                df['VOL_MA'] = df.ta.sma(close='volume', length=config.VOL_MA_PERIOD)
-
-                # 4. Bollinger Bands
-                bb = df.ta.bbands(length=config.BB_LENGTH, std=config.BB_STD)
-                if bb is not None:
-                    df['BB_LOWER'] = bb.iloc[:, 0]
-                    df['BB_UPPER'] = bb.iloc[:, 2]
-
-                # 5. Stochastic RSI
-                stoch_rsi = df.ta.stochrsi(length=config.STOCHRSI_LEN, rsi_length=config.RSI_PERIOD, k=config.STOCHRSI_K, d=config.STOCHRSI_D)
-                # keys example: STOCHRSIk_14_14_3_3, STOCHRSId_14_14_3_3
-                k_key = f"STOCHRSIk_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
-                d_key = f"STOCHRSId_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
-                df['STOCH_K'] = stoch_rsi[k_key]
-                df['STOCH_D'] = stoch_rsi[d_key]
-
-                # 6. ATR (Untuk Liquidity Hunt)
-                df['ATR'] = df.ta.atr(length=config.ATR_PERIOD)
-
-                cur = df.iloc[-2] # Confirmed Candle (Close)
-
-                # Simple Trend Check
-                ema_pos = "Above" if cur['close'] > cur['EMA_FAST'] else "Below"
-                trend_major = "Bullish" if cur['close'] > cur['EMA_SLOW'] else "Bearish"
-
-                # 7. Pivot Points (Support/Resistance) from Trend Timeframe (1H)
-                pivots = self._calculate_pivot_points(symbol)
-
-                # 8. Market Structure (Swing High/Low)
-                structure = self._calculate_market_structure(symbol)
-
-                # 10. Wick Rejection Analysis
-                wick_rejection = self._calculate_wick_rejection(symbol)
-
-                tech_data = {
-                    "price": cur['close'],
-                    "rsi": cur['RSI'],
-                    "adx": cur['ADX'],
-                    "ema_fast": cur['EMA_FAST'],
-                    "ema_slow": cur['EMA_SLOW'], # EMA Trend Major
-                    "vol_ma": cur['VOL_MA'],
-                    "volume": cur['volume'],
-                    "bb_upper": cur['BB_UPPER'],
-                    "bb_lower": cur['BB_LOWER'],
-                    "stoch_k": cur['STOCH_K'],
-                    "stoch_d": cur['STOCH_D'],
-                    "atr": cur['ATR'],
-                    "price_vs_ema": ema_pos,
-                    "trend_major": trend_major,
-                    "pivots": pivots,
-                    "market_structure": structure,
-                    "wick_rejection": wick_rejection,
-                    "candle_timestamp": int(cur['timestamp'])
-                }
-
-                # Update Cache
-                self.tech_cache[symbol] = {
-                    'timestamp': last_closed_ts,
-                    'data': tech_data
-                }
+                if tech_data:
+                    # Update Cache
+                    self.tech_cache[symbol] = {
+                        'timestamp': last_closed_ts,
+                        'data': tech_data
+                    }
+                else:
+                    return None
 
             # 9. Return Combined Data (Static + Dynamic)
             # Dynamic fields: btc_trend, funding_rate, open_interest, lsr
-
             result = tech_data.copy()
             result.update({
                 "btc_trend": self.btc_trend,
@@ -480,176 +661,19 @@ class MarketDataManager:
             return None
 
     def _calculate_wick_rejection(self, symbol, lookback=5):
-        """
-        Mendeteksi candle dengan wick besar sebagai tanda rejection.
-        Lookback: Cek N candle terakhir untuk pattern rejection.
-        
-        Returns: dict with:
-          - recent_rejection: "BULLISH_REJECTION" | "BEARISH_REJECTION" | "NONE"
-          - rejection_strength: float (rasio wick/body, semakin besar semakin kuat)
-          - rejection_candles: int (berapa candle rejection dalam lookback)
-        """
-        try:
-            bars_deque = self.market_store.get(symbol, {}).get(config.TIMEFRAME_EXEC, [])
-            # Convert deque to list for slicing operations
-            bars = list(bars_deque) if bars_deque else []
-
-            if not bars or len(bars) < lookback:
-                return {"recent_rejection": "NONE", "rejection_strength": 0.0}
-            
-            # Analyze last N candles (excluding current open candle if possible, but bars usually includes it if not careful)
-            # Assuming bars[-1] is current open candle, we look at confirmed candles mostly?
-            # logic in get_technical_data uses cur = df.iloc[-2] which is confirmed.
-            # Let's use the same logic: look at confirmed candles.
-            # bars is a list, so bars[-2] is last closed candle.
-            
-            # Let's take slice of last 'lookback' closed candles
-            # if we have [..., c-5, c-4, c-3, c-2, c-1(open)]
-            # we want c-5 to c-2.
-            
-            start_idx = -1 - lookback
-            end_idx = -1
-            
-            # Check length again to be safe
-            if len(bars) < lookback + 2:
-                candidates = bars[:-1] # take all available closed
-            else:
-                candidates = bars[start_idx:end_idx]
-                
-            rejection_type = "NONE"
-            max_strength = 0.0
-            rejection_count = 0
-            
-            for candle in candidates:
-                # [timestamp, open, high, low, close, volume]
-                op, hi, lo, cl = candle[1], candle[2], candle[3], candle[4]
-                
-                body = abs(cl - op)
-                upper_wick = hi - max(op, cl)
-                lower_wick = min(op, cl) - lo
-                
-                # Avoid division by zero if body is super thin (doji)
-                # If body is 0, we treat it as 1 satoshi/small unit or just compare wicks directly
-                body_ref = body if body > 0 else (hi - lo) * 0.01 
-                if body_ref == 0: body_ref = 0.00000001
-                
-                # Logic: Wick must be > 2x Body
-                is_bullish = lower_wick > (body * 2.0)
-                is_bearish = upper_wick > (body * 2.0)
-                
-                # Determine strength
-                current_strength_bull = lower_wick / body_ref
-                current_strength_bear = upper_wick / body_ref
-                
-                if is_bullish:
-                    rejection_count += 1
-                    if current_strength_bull > max_strength:
-                        max_strength = current_strength_bull
-                        rejection_type = "BULLISH_REJECTION"
-                        
-                elif is_bearish:
-                    rejection_count += 1
-                    if current_strength_bear > max_strength:
-                        max_strength = current_strength_bear
-                        rejection_type = "BEARISH_REJECTION"
-            
-            return {
-                "recent_rejection": rejection_type,
-                "rejection_strength": round(max_strength, 2),
-                "rejection_candles": rejection_count
-            }
-            
-        except Exception as e:
-            logger.error(f"Wick Rejection Calc Error {symbol}: {e}")
-            return {"recent_rejection": "ERROR", "rejection_strength": 0.0}
+        """Wrapper for backward compatibility / testing"""
+        bars = list(self.market_store.get(symbol, {}).get(config.TIMEFRAME_EXEC, []))
+        return _calculate_wick_rejection_static(bars, lookback)
 
     def _calculate_market_structure(self, symbol, lookback=5):
-        """
-        Mendeteksi Market Structure (Higher High/Lower Low) pada Timeframe Trend.
-        Menggunakan scipy.signal.argrelextrema untuk vektorisasi (performa optimal).
-        """
-        try:
-            bars = self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, [])
-            if len(bars) < 50: return "INSUFFICIENT_DATA"
-            
-            df = pd.DataFrame(bars, columns=['timestamp','open','high','low','close','volume'])
-            
-            # Vektorisasi menggunakan scipy.signal.argrelextrema
-            high_vals = df['high'].values
-            low_vals = df['low'].values
-            
-            # Cari indeks swing high/low (order=lookback -> cek N candle kiri & kanan)
-            swing_high_idx = argrelextrema(high_vals, np.greater_equal, order=lookback)[0]
-            swing_low_idx = argrelextrema(low_vals, np.less_equal, order=lookback)[0]
-            
-            # Exclude candle terakhir (current open) dari hasil
-            # Dengan menfilter indeks yang >= len(df) - lookback - 1
-            max_valid_idx = len(df) - lookback - 1
-            swing_high_idx = swing_high_idx[swing_high_idx < max_valid_idx]
-            swing_low_idx = swing_low_idx[swing_low_idx < max_valid_idx]
-            
-            # Ambil nilai dari indeks yang valid
-            swing_highs = high_vals[swing_high_idx].tolist() if len(swing_high_idx) > 0 else []
-            swing_lows = low_vals[swing_low_idx].tolist() if len(swing_low_idx) > 0 else []
-            
-            if len(swing_highs) < 2 or len(swing_lows) < 2:
-                return "UNCLEAR"
-                
-            # Analisa 2 Swing Terakhir
-            last_h = swing_highs[-1]
-            prev_h = swing_highs[-2]
-            last_l = swing_lows[-1]
-            prev_l = swing_lows[-2]
-            
-            structure = "SIDEWAYS"
-            
-            if last_h > prev_h and last_l > prev_l:
-                structure = "BULLISH (HH + HL)"
-            elif last_h < prev_h and last_l < prev_l:
-                structure = "BEARISH (LH + LL)"
-            elif last_h > prev_h and last_l < prev_l:
-                structure = "EXPANDING (Megaphone)"
-            elif last_h < prev_h and last_l > prev_l:
-                structure = "CONSOLIDATION (Triangle)"
-                
-            return structure
-            
-        except Exception as e:
-            logger.error(f"Market Structure Error {symbol}: {e}")
-            return "ERROR"
+        """Wrapper for backward compatibility / testing"""
+        bars = list(self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, []))
+        return _calculate_market_structure_static(bars, lookback)
 
     def _calculate_pivot_points(self, symbol):
-        """Calculate Classic Pivot Points based on TAS Timeframe (Trend Timeframe - 1H)"""
-        try:
-            # Ambil data H1
-            bars = self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, [])
-            if len(bars) < 2: return None
-            
-            # Gunakan candle terakhir yang COMPLETE (Completed Period)
-            # [-1] adalah candle berjalan (unconfirmed), [-2] adalah candle terakhir yang close
-            prev_candle = bars[-2]
-            # Format: [timestamp, open, high, low, close, volume]
-            high = prev_candle[2]
-            low = prev_candle[3]
-            close = prev_candle[4]
-            
-            # Classic Pivot Formula
-            pivot = (high + low + close) / 3
-            r1 = (2 * pivot) - low
-            s1 = (2 * pivot) - high
-            r2 = pivot + (high - low)
-            s2 = pivot - (high - low)
-            
-            return {
-                "P": pivot,
-                "R1": r1,
-                "S1": s1,
-                "R2": r2,
-                "S2": s2
-            }
-        except Exception as e:
-            logger.error(f"Pivot calc error {symbol}: {e}")
-            return None
+        """Wrapper for backward compatibility / testing"""
+        bars = list(self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, []))
+        return _calculate_pivot_points_static(bars)
 
     async def get_order_book_depth(self, symbol, limit=20):
         """
