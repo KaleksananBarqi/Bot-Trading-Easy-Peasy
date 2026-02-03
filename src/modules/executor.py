@@ -521,7 +521,6 @@ class OrderExecutor:
         """
         [NEW] Sync open orders to detect manual cancellations.
         Only checks symbols that are in 'WAITING_ENTRY' status.
-        Optimized: Fetches ALL open orders in 1 call instead of N calls.
         """
         # 1. Identify symbols to check
         symbols_to_check = []
@@ -532,68 +531,58 @@ class OrderExecutor:
         if not symbols_to_check:
             return
 
-        # 2. Fetch ALL Open Orders (1 API Call)
-        try:
-            # fetch_open_orders() without symbol returns ALL open orders
-            all_open_orders = await self.exchange.fetch_open_orders()
-        except Exception as e:
-            logger.error(f"⚠️ Sync Pending: Failed to fetch all open orders: {e}")
-            return
-
-        # 3. Group Open Orders by Symbol
-        # Map: Symbol -> List of Order IDs
-        open_orders_map = {}
-        for o in all_open_orders:
-            sym = o['symbol']
-            if sym not in open_orders_map:
-                open_orders_map[sym] = []
-            open_orders_map[sym].append(str(o['id']))
-
+        # 2. Check symbols in parallel
+        sem = asyncio.Semaphore(getattr(config, 'CONCURRENCY_LIMIT', 10))
         changes_made = False
 
-        # 4. Check each tracked symbol against the map
-        for symbol in symbols_to_check:
-            try:
-                # Check if our tracked order exists
-                if symbol not in self.safety_orders_tracker:
-                    continue
-
-                tracker_data = self.safety_orders_tracker[symbol]
-                tracked_id = str(tracker_data.get('entry_id', ''))
-
-                # Get open orders for this specific symbol from our map
-                # Default to empty list if no orders found for this symbol
-                current_open_ids = open_orders_map.get(symbol, [])
-
-                if tracked_id not in current_open_ids:
-                    # Order is missing! Either Filled or Cancelled.
-
-                    # Case A: Filled? (Check Position Cache)
-                    base = symbol.split('/')[0]
-                    if base in self.position_cache:
-                        # It is filled! Update tracker.
-                        logger.info(f"✅ Order {symbol} found filled during sync. Queuing for Safety Orders (PENDING).")
-                        self.safety_orders_tracker[symbol]['status'] = 'PENDING'
-                        self.safety_orders_tracker[symbol]['last_check'] = time.time()
-                        changes_made = True
+        async def check_symbol(symbol):
+            nonlocal changes_made
+            async with sem:
+                try:
+                    # Fetch Open Orders from Binance
+                    open_orders = await self.exchange.fetch_open_orders(symbol)
+                    open_order_ids = [str(o['id']) for o in open_orders]
                     
-                    # Case B: Cancelled/Expired?
-                    else:
-                        # Not active, not in open orders -> Cancelled manually
-                        logger.info(f"🗑️ Found Stale/Cancelled Order for {symbol}. Removing from tracker.")
-                        if symbol in self.safety_orders_tracker:
-                            del self.safety_orders_tracker[symbol]
+                    # Check if our tracked order exists
+                    # (Re-check existence in case it was modified concurrently - rare but safe)
+                    if symbol not in self.safety_orders_tracker:
+                        return
+
+                    tracker_data = self.safety_orders_tracker[symbol]
+                    tracked_id = str(tracker_data.get('entry_id', ''))
+                    
+                    if tracked_id not in open_order_ids:
+                        # Order is missing! Either Filled or Cancelled.
+                        
+                        # Case A: Filled? (Check Position Cache)
+                        base = symbol.split('/')[0]
+                        if base in self.position_cache:
+                            # It is filled! Update tracker.
+                            logger.info(f"✅ Order {symbol} found filled during sync. Queuing for Safety Orders (PENDING).")
+                            self.safety_orders_tracker[symbol]['status'] = 'PENDING'
+                            self.safety_orders_tracker[symbol]['last_check'] = time.time()
                             changes_made = True
+                        
+                        # Case B: Cancelled/Expired?
+                        else:
+                            # Not active, not in open orders -> Cancelled manually
+                            logger.info(f"🗑️ Found Stale/Cancelled Order for {symbol}. Removing from tracker.")
+                            if symbol in self.safety_orders_tracker:
+                                del self.safety_orders_tracker[symbol]
+                                changes_made = True
 
-                        await kirim_tele(
-                            f"🗑️ <b>ORDER SYNC</b>\n"
-                            f"Order for {symbol} was cancelled manually/expired.\n"
-                            f"Tracker cleaned."
-                        )
+                            await kirim_tele(
+                                f"🗑️ <b>ORDER SYNC</b>\n"
+                                f"Order for {symbol} was cancelled manually/expired.\n"
+                                f"Tracker cleaned."
+                            )
 
-            except Exception as e:
-                logger.error(f"⚠️ Sync Pending Error for {symbol}: {e}")
+                except Exception as e:
+                    logger.error(f"⚠️ Sync Pending Error for {symbol}: {e}")
 
-        # 5. Save only if needed
+        # Run all checks
+        await asyncio.gather(*[check_symbol(sym) for sym in symbols_to_check])
+
+        # 3. Save only if needed
         if changes_made:
             await self.save_tracker()
