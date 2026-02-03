@@ -79,7 +79,7 @@ class SentimentAnalyzer:
         try:
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=config.API_REQUEST_TIMEOUT)) as response:
                 content = await response.read()
-                feed = feedparser.parse(content)
+                feed = await asyncio.to_thread(feedparser.parse, content)
                 
                 if not feed.entries:
                     return []
