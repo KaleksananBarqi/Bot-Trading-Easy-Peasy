@@ -125,7 +125,7 @@ def test_update_trailing_sl_long_logic(executor):
     assert tracker['trailing_high'] == 59000
     assert tracker['trailing_sl'] == 58410
     
-    # Verify NO call to exchange
+    # Verify NO call to exchange (Because SL 58410 didn't change, 59000 high still same)
     executor.exchange.create_order.assert_not_called()
 
 def test_throttling_logic(executor):
@@ -142,25 +142,39 @@ def test_throttling_logic(executor):
         "trailing_sl": 57420
     }
     
-    # Mock update_trailing_sl to return True (simulating update needed)
-    executor.update_trailing_sl = AsyncMock(return_value=True)
+    # Mock internal API call to verify throttling
+    executor._amend_sl_order = AsyncMock()
     
     with patch('time.time') as mock_time:
         # Time 100: First Call -> Should Proceed
+        # Price 60000 > 58000. New SL = 59400 > 57420.
         mock_time.return_value = 100
-        asyncio.run(executor.check_trailing_on_price(symbol, 59000))
-        executor.update_trailing_sl.assert_called_with(symbol, 59000)
-        assert executor._trailing_last_update[symbol] == 100
-        
-        executor.update_trailing_sl.reset_mock()
-        
-        # Time 101: Second Call (diff 1s < 3s) -> Should be Throttled (Skipped)
-        mock_time.return_value = 101
-        asyncio.run(executor.check_trailing_on_price(symbol, 59500))
-        executor.update_trailing_sl.assert_not_called() # Throttled!
-        
-        # Time 104: Third Call (diff 4s > 3s) -> Should Proceed
-        mock_time.return_value = 104
         asyncio.run(executor.check_trailing_on_price(symbol, 60000))
-        executor.update_trailing_sl.assert_called_with(symbol, 60000)
+
+        executor._amend_sl_order.assert_called()
+        assert executor._trailing_last_update[symbol] == 100
+        assert executor.safety_orders_tracker[symbol]['trailing_high'] == 60000
+        
+        executor._amend_sl_order.reset_mock()
+        
+        # Time 101: Second Call (diff 1s < 3s)
+        # Price 61000. New High 61000. New SL 60390.
+        # Should be Throttled (API Call Skipped)
+        # But INTERNAL State (High) should be UPDATED!
+        mock_time.return_value = 101
+        asyncio.run(executor.check_trailing_on_price(symbol, 61000))
+        
+        executor._amend_sl_order.assert_not_called() # Throttled!
+        assert executor.safety_orders_tracker[symbol]['trailing_high'] == 61000 # Updated!
+        assert executor._trailing_last_update[symbol] == 100 # Last update unchanged
+
+        # Time 104: Third Call (diff 4s > 3s)
+        # Price 60500. High stays 61000. SL Candidate 60390.
+        # Current SL in tracker is still 59400 (from T=100).
+        # Should Update!
+        mock_time.return_value = 104
+        asyncio.run(executor.check_trailing_on_price(symbol, 60500))
+
+        executor._amend_sl_order.assert_called()
         assert executor._trailing_last_update[symbol] == 104
+        assert executor.safety_orders_tracker[symbol]['trailing_sl'] == 61000 * (1 - config.TRAILING_CALLBACK_RATE)

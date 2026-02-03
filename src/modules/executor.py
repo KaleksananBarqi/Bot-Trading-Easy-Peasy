@@ -46,18 +46,9 @@ class OrderExecutor:
             await self.activate_trailing_mode(symbol, current_price)
             return
 
-        # 2. Logic Throttling (Hanya untuk Update SL ke Exchange)
-        # Kita update internal state setiap saat, tapi push ke exchange pakai cooldown
-        now = time.time()
-        last_update = self._trailing_last_update.get(symbol, 0)
-        
-        if now - last_update < config.TRAILING_SL_UPDATE_COOLDOWN:
-            return 
-            
-        # 3. Update Trailing SL (Jika sudah aktif)
-        updated = await self.update_trailing_sl(symbol, current_price)
-        if updated:
-            self._trailing_last_update[symbol] = now
+        # 2. Update Trailing SL
+        # Logic Throttling dipindah ke dalam update_trailing_sl agar high/low tetap terupdate realtime.
+        await self.update_trailing_sl(symbol, current_price)
 
     async def save_tracker(self):
         """Non-blocking save tracker ke file."""
@@ -386,6 +377,7 @@ class OrderExecutor:
     async def update_trailing_sl(self, symbol, current_price):
         """
         Cek apakah harga membuat High/Low baru, jika ya, geser SL.
+        Optimized: Update Internal High/Low Always -> Throttle API/Save.
         """
         tracker = self.safety_orders_tracker.get(symbol)
         if not tracker or not tracker.get('trailing_active'): return
@@ -396,44 +388,62 @@ class OrderExecutor:
         need_update = False
         new_sl = current_sl
         
+        # 1. Update Internal High/Low & Calculate Candidate SL
         if side == 'LONG':
             trailing_high = tracker.get('trailing_high', 0)
             
-            # A. Check New High
+            # A. Update High (ALWAYS Capture Peak)
             if current_price > trailing_high:
                 tracker['trailing_high'] = current_price
-                
-                # B. Calculate New SL Candidate
-                candidate_sl = current_price * (1 - config.TRAILING_CALLBACK_RATE)
-                
-                # C. Only Update if Candidate is HIGHER than Old SL (Never move SL down)
-                if candidate_sl > current_sl:
-                    new_sl = candidate_sl
-                    need_update = True
+                trailing_high = current_price # Update local var for calc below
+
+            # B. Calculate New SL Candidate based on (possibly new) High
+            candidate_sl = trailing_high * (1 - config.TRAILING_CALLBACK_RATE)
+
+            # C. Check if we need to move SL UP
+            if candidate_sl > current_sl:
+                new_sl = candidate_sl
+                need_update = True
                     
         else: # SHORT
             trailing_low = tracker.get('trailing_low', float('inf'))
             
-            # A. Check New Low
+            # A. Update Low (ALWAYS Capture Bottom)
             if current_price < trailing_low:
                 tracker['trailing_low'] = current_price
+                trailing_low = current_price
                 
-                # B. Calculate New SL Candidate
-                candidate_sl = current_price * (1 + config.TRAILING_CALLBACK_RATE)
-                
-                # C. Only Update if Candidate is LOWER than Old SL (Never move SL up)
-                if candidate_sl < current_sl:
-                    new_sl = candidate_sl
-                    need_update = True
+            # B. Calculate New SL Candidate
+            candidate_sl = trailing_low * (1 + config.TRAILING_CALLBACK_RATE)
 
+            # C. Check if we need to move SL DOWN
+            if candidate_sl < current_sl:
+                new_sl = candidate_sl
+                need_update = True
+
+        # 2. Execute Update (Throttled)
         if need_update:
-            # Save Logic
+            # Check Throttling
+            now = time.time()
+            last_update = self._trailing_last_update.get(symbol, 0)
+
+            if now - last_update < config.TRAILING_SL_UPDATE_COOLDOWN:
+                # Still in cooldown, skip Saving & API call.
+                return False
+
+            # Passed Cooldown -> Execute
             tracker['trailing_sl'] = new_sl
+            self._trailing_last_update[symbol] = now
+
+            # Save Logic (Heavy I/O)
             await self.save_tracker()
             
             logger.info(f"📈 Trailing SL Updated {symbol}: {current_sl:.4f} -> {new_sl:.4f}")
-            # Execute on Exchange
+            # Execute on Exchange (Heavy Network)
             await self._amend_sl_order(symbol, new_sl, side)
+            return True
+
+        return False
 
     async def _amend_sl_order(self, symbol, new_sl_price, side):
         """
