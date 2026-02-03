@@ -8,6 +8,7 @@ import pandas_ta as ta
 import ccxt.async_support as ccxt
 import websockets
 import config
+from collections import deque
 from scipy.signal import argrelextrema
 from src.utils.helper import logger, kirim_tele, wib_time, parse_timeframe_to_seconds
 
@@ -37,19 +38,19 @@ class MarketDataManager:
                 'options': {'defaultType': 'future'}
             })
         
-        # Initialize Store Structure
+        # Initialize Store Structure with Deque
         for coin in config.DAFTAR_KOIN:
             self.market_store[coin['symbol']] = {
-                config.TIMEFRAME_EXEC: [],
-                config.TIMEFRAME_TREND: [],
-                config.TIMEFRAME_SETUP: []
+                config.TIMEFRAME_EXEC: deque(maxlen=config.LIMIT_EXEC),
+                config.TIMEFRAME_TREND: deque(maxlen=config.LIMIT_TREND),
+                config.TIMEFRAME_SETUP: deque(maxlen=config.LIMIT_SETUP)
             }
         # BTC (Wajib ada helper store)
         if config.BTC_SYMBOL not in self.market_store:
             self.market_store[config.BTC_SYMBOL] = {
-                config.TIMEFRAME_EXEC: [],
-                config.TIMEFRAME_TREND: [],
-                config.TIMEFRAME_SETUP: []
+                config.TIMEFRAME_EXEC: deque(maxlen=config.LIMIT_EXEC),
+                config.TIMEFRAME_TREND: deque(maxlen=config.LIMIT_TREND),
+                config.TIMEFRAME_SETUP: deque(maxlen=config.LIMIT_SETUP)
             }
         
         # Cache for Technical Data to avoid redundant recalculation
@@ -88,9 +89,14 @@ class MarketDataManager:
         async def fetch_pair(symbol):
             try:
                 # 1. Fetch OHLCV
-                bars_exec = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_EXEC, limit=config.LIMIT_EXEC)
-                bars_trend = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_TREND, limit=config.LIMIT_TREND)
-                bars_setup = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_SETUP, limit=config.LIMIT_SETUP)
+                bars_exec_raw = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_EXEC, limit=config.LIMIT_EXEC)
+                bars_trend_raw = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_TREND, limit=config.LIMIT_TREND)
+                bars_setup_raw = await self.exchange.fetch_ohlcv(symbol, config.TIMEFRAME_SETUP, limit=config.LIMIT_SETUP)
+
+                # Convert to Deque
+                bars_exec = deque(bars_exec_raw, maxlen=config.LIMIT_EXEC)
+                bars_trend = deque(bars_trend_raw, maxlen=config.LIMIT_TREND)
+                bars_setup = deque(bars_setup_raw, maxlen=config.LIMIT_SETUP)
                 
                 # 2. Fetch Funding Rate & Open Interest (Public Endpoint)
                 # Note: CCXT fetch_funding_rate usually works
@@ -322,13 +328,16 @@ class MarketDataManager:
         
         async with self.data_lock:
             if sym in self.market_store:
-                target = self.market_store[sym].get(interval, [])
-                if target and target[-1][0] == new_candle[0]:
-                    target[-1] = new_candle
+                target = self.market_store[sym].get(interval)
+                if target is not None:
+                    if target and target[-1][0] == new_candle[0]:
+                        target[-1] = new_candle
+                    else:
+                        target.append(new_candle)
+                        # Deque handles popping automatically
                 else:
-                    target.append(new_candle)
-                    if len(target) > config.LIMIT_TREND: target.pop(0)
-                self.market_store[sym][interval] = target
+                    # Fallback for unexpected interval
+                    self.market_store[sym][interval] = deque([new_candle], maxlen=config.LIMIT_TREND)
         
         # Update BTC Trend Realtime
         if sym == config.BTC_SYMBOL and interval == config.TIMEFRAME_TREND:
@@ -481,7 +490,10 @@ class MarketDataManager:
           - rejection_candles: int (berapa candle rejection dalam lookback)
         """
         try:
-            bars = self.market_store.get(symbol, {}).get(config.TIMEFRAME_EXEC, [])
+            bars_deque = self.market_store.get(symbol, {}).get(config.TIMEFRAME_EXEC, [])
+            # Convert deque to list for slicing operations
+            bars = list(bars_deque) if bars_deque else []
+
             if not bars or len(bars) < lookback:
                 return {"recent_rejection": "NONE", "rejection_strength": 0.0}
             
