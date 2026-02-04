@@ -1,4 +1,4 @@
-ccxt==4.5.30
+ccxt==4.5.36
 aiohttp>=3.9.0
 feedparser==6.0.11
 httpx==0.28.1
