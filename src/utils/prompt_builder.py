@@ -246,7 +246,7 @@ SCENARIO B: Sell/Short Setup
 --------------------------------------------------
 """
         btc_instruction_prompt = f"""
-5. CHECK MACRO BIAS: Is the {config.TIMEFRAME_TREND} Structure & BTC Trend supportive?
+1. CHECK MACRO BIAS: Is the {config.TIMEFRAME_TREND} Structure & BTC Trend supportive?
    {btc_instruction}
 """
     else:
@@ -259,13 +259,13 @@ SCENARIO B: Sell/Short Setup
 --------------------------------------------------
 """
         btc_instruction_prompt = f"""
-5. CHECK MACRO BIAS: Is the {config.TIMEFRAME_TREND} Market Structure supportive?
+1. CHECK MACRO BIAS: Is the {config.TIMEFRAME_TREND} Market Structure supportive?
 """
 
     # [LOGIC: STRATEGY INSTRUCTION - LIQUIDITY HUNT PROTOCOL]
     if config.ENABLE_MARKET_ORDERS:
         strategy_instruction = (
-            "6. SCENARIO & EXECUTION DECISION:\n"
+            "7. SCENARIO & EXECUTION DECISION:\n"
             "   - SCENARIO A (Long) or B (Short): Choose based on active sweep zone.\n"
             "   - Aggressive (Market): Use ONLY if sweep is CONFIRMED and reversal is in progress.\n"
             "   - Passive (Limit): Use if sweep is ANTICIPATED but not yet confirmed.\n"
@@ -273,7 +273,7 @@ SCENARIO B: Sell/Short Setup
     else:
         # Market Order Disabled -> Force Passive
         strategy_instruction = (
-            "6. SCENARIO DECISION:\n"
+            "7. SCENARIO DECISION:\n"
             "   - SCENARIO A (Long): Valid ONLY if price is near/below S1 with sweep rejection.\n"
             "   - SCENARIO B (Short): Valid ONLY if price is near/above R1 with sweep rejection.\n"
             "   - REJECT if no clear sweep is forming at either zone.\n"
@@ -338,17 +338,17 @@ TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. De
 {execution_options_str}
 
 FINAL INSTRUCTIONS (LIQUIDITY HUNT PROTOCOL):
-1. LOCATE SWEEP ZONE: Check if price is near Pivot S1 (for SCENARIO A/Long) or R1 (for SCENARIO B/Short).
-2. VALIDATE SWEEP CONFIRMATION:
+{btc_instruction_prompt}
+2. LOCATE SWEEP ZONE: Check if price is near Pivot S1 (for SCENARIO A/Long) or R1 (for SCENARIO B/Short).
+3. VALIDATE SWEEP CONFIRMATION:
    - Wick penetrates S1/R1 level but candle body CLOSES on the opposite side?
    - Volume spike present (>1.5x average)?
    - RSI/Stoch at extreme levels (oversold for Long, overbought for Short)?
-3. TREND FILTER (CRITICAL):
+4. TREND FILTER (CRITICAL):
    - If Trend is STRONG BEARISH → DISQUALIFY Scenario A (Long), UNLESS deep oversold + StochRSI K crosses ABOVE D.
    - If Trend is STRONG BULLISH → DISQUALIFY Scenario B (Short), UNLESS deep overbought + StochRSI K crosses BELOW D.
-4. SCENARIO SELECTION: Choose A or B based on which zone shows ACTIVE sweep with confirmation AND passes Trend Filter.
-5. NO-TRADE ZONE: Return WAIT if price is strictly between S1 and R1 (no sweep opportunity).
-{btc_instruction_prompt}
+5. SCENARIO SELECTION: Choose A or B based on which zone shows ACTIVE sweep with confirmation AND passes Trend Filter.
+6. NO-TRADE ZONE: Return WAIT if price is strictly between S1 and R1 (no sweep opportunity).
 
 {strategy_instruction}
 
