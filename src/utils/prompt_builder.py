@@ -246,8 +246,19 @@ SCENARIO B: Sell/Short Setup
 --------------------------------------------------
 """
         btc_instruction_prompt = f"""
-1. CHECK MACRO BIAS: Is the {config.TIMEFRAME_TREND} Structure & BTC Trend supportive?
+1. 📊 ASSESS MACRO CONTEXT (TIDAK WAJIB FILTER, TAPI KONTEKS PENTING):
+   - Market Structure: {market_struct}
+   - BTC Trend: {btc_trend}
    {btc_instruction}
+   
+   🧠 PANDUAN INTERPRETASI:
+   | Kondisi | Implikasi untuk LONG | Implikasi untuk SHORT |
+   |---------|---------------------|----------------------|
+   | Structure BEARISH + BTC BEARISH | HIGH RISK - butuh sweep S1 + RSI <{config.RSI_OVERSOLD} | Didukung macro, tetap butuh konfirmasi |
+   | Structure BULLISH + BTC BULLISH | Didukung macro, tetap butuh konfirmasi | HIGH RISK - butuh sweep R1 + RSI >{config.RSI_OVERBOUGHT} |
+   | Structure & BTC bertentangan | Ambigu - tunggu konfirmasi lebih kuat | Ambigu - tunggu konfirmasi lebih kuat |
+   
+   → Gunakan konteks ini saat menerapkan TREND FILTER rules dari ROLE instructions.
 """
     else:
         # Jika BTC Hidden (Independent Move), hanya tampilkan Market Structure & Pivot
@@ -259,11 +270,23 @@ SCENARIO B: Sell/Short Setup
 --------------------------------------------------
 """
         btc_instruction_prompt = f"""
-1. ⚠️ CHECK MACRO BIAS FIRST (MANDATORY FILTER - DO NOT SKIP):
+1. 📊 ASSESS MACRO CONTEXT (STRUKTUR PASAR - KONTEKS, BUKAN FILTER WAJIB):
    - Current {config.TIMEFRAME_TREND} Market Structure: {market_struct}
-   - If Structure is BEARISH → REJECT all LONG/BUY signals. Return WAIT.
-   - If Structure is BULLISH → REJECT all SHORT/SELL signals. Return WAIT.
-   - ONLY proceed to step 2 if your signal ALIGNS with structure.
+   
+   🧠 PANDUAN INTERPRETASI:
+   - Jika Structure BEARISH:
+     • LONG/BUY = HIGHER RISK. Hanya valid jika:
+       a) Price di/bawah S1 dengan sweep confirmation, ATAU
+       b) RSI deeply oversold (<{config.RSI_OVERSOLD}) + StochRSI K cross above D
+     • SHORT/SELL punya dukungan macro, tapi tetap butuh konfirmasi di step selanjutnya.
+   
+   - Jika Structure BULLISH:
+     • SHORT/SELL = HIGHER RISK. Hanya valid jika:
+       a) Price di/atas R1 dengan sweep confirmation, ATAU
+       b) RSI deeply overbought (>{config.RSI_OVERBOUGHT}) + StochRSI K cross below D
+     • LONG/BUY punya dukungan macro, tapi tetap butuh konfirmasi di step selanjutnya.
+   
+   → Gunakan konteks ini saat menerapkan TREND FILTER rules dari ROLE instructions.
 """
 
     # [LOGIC: STRATEGY INSTRUCTION - LIQUIDITY HUNT PROTOCOL]
