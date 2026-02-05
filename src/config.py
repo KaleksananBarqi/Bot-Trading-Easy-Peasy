@@ -43,13 +43,71 @@ API_RECV_WINDOW = 10000          # Toleransi waktu server Binance (ms)
 LOOP_SKIP_DELAY = 2              # Delay saat skip coin karena data tidak lengkap (detik)
 
 # ==============================================================================
+# 📊 INDIKATOR TEKNIKAL & ANALISA CHART
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. GROUP 1: TREND (Analisa Tren Besar)
+# ------------------------------------------------------------------------------
+TIMEFRAME_TREND = '1h'           # Timeframe untuk melihat tren besar
+LIMIT_TREND = 500                # Limit candle
+EMA_TREND_MAJOR = 21             # EMA filter tren utama (Trend Direction)
+ADX_PERIOD = 14                  # Kekuatan Tren (Trend Strength)
+
+# ------------------------------------------------------------------------------
+# 2. GROUP 2: SETUP (Pola & Struktur)
+# ------------------------------------------------------------------------------
+TIMEFRAME_SETUP = '30m'          # Timeframe untuk pola chart
+LIMIT_SETUP = 100                # Limit candle
+
+MACD_FAST = 12
+MACD_SLOW = 26
+MACD_SIGNAL = 9
+
+# ------------------------------------------------------------------------------
+# 3. GROUP 3: EXECUTION (Momentum & Entry)
+# ------------------------------------------------------------------------------
+TIMEFRAME_EXEC = '15m'           # Timeframe untuk eksekusi entry
+LIMIT_EXEC = 300                 # Limit candle
+
+# Moving Averages (Crossover)
+EMA_FAST = 7                     # EMA Cepat
+EMA_SLOW = 21                    # EMA Lambat
+
+# Momentum Indicators
+RSI_PERIOD = 14                  # RSI standard
+RSI_OVERSOLD = 35                # Batas bawah RSI (Jenuh Jual)
+RSI_OVERBOUGHT = 65              # Batas atas RSI (Jenuh Beli)
+
+STOCHRSI_LEN = 14                # Stochastic RSI
+STOCHRSI_K = 3
+STOCHRSI_D = 3
+
+# Volatility (Bollinger Bands)
+BB_LENGTH = 20                   # Bollinger Bands Length (Volatilitas)
+BB_STD = 2.0                     # Bollinger Bands Deviasi
+
+# Volume
+VOL_MA_PERIOD = 20               # Rata-rata Volume
+
+# ------------------------------------------------------------------------------
+# 4. GROUP 4: BITCOIN KING EFFECT (Korelasi Tren)
+# ------------------------------------------------------------------------------
+USE_BTC_CORRELATION = True       # Wajib cek gerak-gerik Bitcoin?
+BTC_SYMBOL = 'BTC/USDT'
+BTC_EMA_PERIOD = 50              # EMA Trend Filter Bitcoin
+CORRELATION_THRESHOLD_BTC = 0.7  # Minimal korelasi untuk dianggap ngikut BTC
+CORRELATION_PERIOD = 30          # Periode cek korelasi
+DEFAULT_CORRELATION_HIGH = 0.99  # Nilai default jika data korrelasi belum ada
+
+# ==============================================================================
 # 🧠 KECERDASAN BUATAN (AI) & STRATEGI
 # ==============================================================================
 # Otak Utama (Decision Maker)
 AI_MODEL_NAME = 'deepseek/deepseek-v3.2'
 AI_TEMPERATURE = 0.0             # 0.0 = Logis & Konsisten, 1.0 = Kreatif & Halusinasi
 AI_CONFIDENCE_THRESHOLD = 70     # Minimal keyakinan (%) untuk berani eksekusi
-AI_SYSTEM_ROLE = """You are a Liquidity Hunt Specialist. Your job is to TRAP retail traders, not follow them.
+AI_SYSTEM_ROLE = f"""You are a Liquidity Hunt Specialist. Your job is to TRAP retail traders, not follow them.
 
 CORE CONCEPT:
 - Retail traders place Stop Loss below Support (S1) and above Resistance (R1)
@@ -74,14 +132,14 @@ CHOOSE SCENARIO A (LONG) IF:
 ✓ Price is near/below S1 (approaching retail Long SL zone)
 ✓ Wick penetrates S1 but candle body CLOSES above S1
 ✓ Volume spike on sweep candle (min 1.5x average)
-✓ RSI < 30 (Deep Oversold) AND StochRSI K crosses ABOVE D
+✓ RSI < {RSI_OVERSOLD} (Deep Oversold) AND StochRSI K crosses ABOVE D
 ✓ Trend is not STRONG BEARISH (or if it is, confirmation must be perfect)
 
 CHOOSE SCENARIO B (SHORT) IF:
 ✓ Price is near/above R1 (approaching retail Short SL zone)  
 ✓ Wick penetrates R1 but candle body CLOSES below R1
 ✓ Volume spike on sweep candle (min 1.5x average)
-✓ RSI > 70 (Deep Overbought) AND StochRSI K crosses BELOW D
+✓ RSI > {RSI_OVERBOUGHT} (Deep Overbought) AND StochRSI K crosses BELOW D
 ✓ Trend is not STRONG BULLISH (or if it is, confirmation must be perfect)
 
 REJECT BOTH SCENARIOS IF:
@@ -150,44 +208,7 @@ ORDERBOOK_RANGE_PERCENT = 0.02   # Range depth analysis order book (2%)
 COOLDOWN_IF_PROFIT = 3600        # Jeda trading di koin ini jika PROFIT (detik)
 COOLDOWN_IF_LOSS = 7200          # Jeda trading di koin ini jika LOSS (detik)
 
-# ==============================================================================
-# 📊 INDIKATOR TEKNIKAL & ANALISA CHART
-# ==============================================================================
-# Timeframe
-TIMEFRAME_TREND = '1h'           # Timeframe untuk melihat tren besar
-TIMEFRAME_EXEC = '15m'           # Timeframe untuk eksekusi entry
-TIMEFRAME_SETUP = '30m'          # Timeframe untuk pola chart
 
-# Data Limit (Berapa candle ke belakang yg diambil)
-LIMIT_TREND = 500
-LIMIT_EXEC = 300
-LIMIT_SETUP = 100
-
-# Filter Tren BTC (Bitcoin King Effect)
-USE_BTC_CORRELATION = True       # Wajib cek gerak-gerik Bitcoin?
-BTC_SYMBOL = 'BTC/USDT'
-BTC_EMA_PERIOD = 50              # EMA Trend Filter Bitcoin
-CORRELATION_THRESHOLD_BTC = 0.7  # Minimal korelasi untuk dianggap ngikut BTC
-CORRELATION_PERIOD = 30          # Periode cek korelasi
-DEFAULT_CORRELATION_HIGH = 0.99  # Nilai default jika data korrelasi belum ada
-
-# Parameter Indikator
-EMA_TREND_MAJOR = 21             # EMA filter tren utama
-EMA_FAST = 7                     # EMA Cepat
-EMA_SLOW = 21                    # EMA Lambat
-RSI_PERIOD = 14                  # RSI standard
-RSI_OVERSOLD = 35                # Batas bawah RSI (Jenuh Jual)
-RSI_OVERBOUGHT = 65              # Batas atas RSI (Jenuh Beli)
-ADX_PERIOD = 14                  # Kekuatan Tren
-VOL_MA_PERIOD = 20               # Rata-rata Volume
-BB_LENGTH = 20                   # Bollinger Bands Length
-BB_STD = 2.0                     # Bollinger Bands Deviasi
-STOCHRSI_LEN = 14                # Stochastic RSI
-STOCHRSI_K = 3
-STOCHRSI_D = 3
-MACD_FAST = 12
-MACD_SLOW = 26
-MACD_SIGNAL = 9
 
 # ==============================================================================
 # 🎯 EKSEKUSI ORDER & TARGET PROFIT

@@ -343,13 +343,16 @@ FINAL INSTRUCTIONS (LIQUIDITY HUNT PROTOCOL):
    - Wick penetrates S1/R1 level but candle body CLOSES on the opposite side?
    - Volume spike present (>1.5x average)?
    - RSI/Stoch at extreme levels (oversold for Long, overbought for Short)?
-3. SCENARIO SELECTION: Choose A or B based on which zone shows ACTIVE sweep with confirmation.
-4. NO-TRADE ZONE: Return WAIT if price is strictly between S1 and R1 (no sweep opportunity).
+3. TREND FILTER (CRITICAL):
+   - If Trend is STRONG BEARISH → DISQUALIFY Scenario A (Long), UNLESS deep oversold + StochRSI K crosses ABOVE D.
+   - If Trend is STRONG BULLISH → DISQUALIFY Scenario B (Short), UNLESS deep overbought + StochRSI K crosses BELOW D.
+4. SCENARIO SELECTION: Choose A or B based on which zone shows ACTIVE sweep with confirmation AND passes Trend Filter.
+5. NO-TRADE ZONE: Return WAIT if price is strictly between S1 and R1 (no sweep opportunity).
 {btc_instruction_prompt}
 
 {strategy_instruction}
 
-7. DECISION: Return WAIT if no active sweep confirmed.
+8. DECISION: Return WAIT if no active sweep confirmed OR trend filter disqualifies the scenario.
 
 OUTPUT FORMAT (JSON ONLY):
 {{
