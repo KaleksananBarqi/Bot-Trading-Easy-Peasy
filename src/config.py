@@ -232,7 +232,7 @@ COOLDOWN_IF_LOSS = 7200          # Jeda trading di koin ini jika LOSS (detik)
 # 🎯 EKSEKUSI ORDER & TARGET PROFIT
 # ==============================================================================
 ENABLE_MARKET_ORDERS = False      # Izinkan Market Order (Hajar Kanan/Kiri)?
-LIMIT_ORDER_EXPIRY_SECONDS = 147600 # Batas waktu Limit Order pending (dihapus jika basi) -> ~41 Jam
+LIMIT_ORDER_EXPIRY_SECONDS = 7200   # Batas waktu Limit Order pending (dihapus jika basi)
 
 # Stop Loss (SL) & Take Profit (TP) - Fallback/Default
 DEFAULT_SL_PERCENT = 0.015       # 1.5% (Jaga-jaga jika ATR bermasalah)

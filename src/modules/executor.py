@@ -551,6 +551,29 @@ class OrderExecutor:
                     tracker_data = self.safety_orders_tracker[symbol]
                     tracked_id = str(tracker_data.get('entry_id', ''))
                     
+                    # [NEW] Check Expiry Time First
+                    current_time = time.time()
+                    expires_at = tracker_data.get('expires_at', float('inf'))
+
+                    if current_time > expires_at:
+                        # Order expired -> Cancel & Cleanup
+                        logger.info(f"⏰ Limit Order {symbol} expired after timeout. Cancelling...")
+                        try:
+                            await self.exchange.cancel_order(tracked_id, symbol)
+                        except Exception as e:
+                            logger.warning(f"⚠️ Failed to cancel expired order {symbol} (might be already gone): {e}")
+
+                        # Clean tracker
+                        del self.safety_orders_tracker[symbol]
+                        changes_made = True
+                        
+                        await kirim_tele(
+                            f"⏰ <b>ORDER EXPIRED</b>\n"
+                            f"Limit Order {symbol} dibatalkan karena timeout > 2 jam.\n"
+                            f"Tracker cleaned."
+                        )
+                        return # Skip further checks since we removed it
+                    
                     if tracked_id not in open_order_ids:
                         # Order is missing! Either Filled or Cancelled.
                         

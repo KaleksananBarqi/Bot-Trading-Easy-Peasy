@@ -43,13 +43,21 @@ Integrasi Computer Vision yang canggih:
 *   **Validasi Pola**: AI Vision memvalidasi apakah ada pola reversal atau continuation.
 *   **MACD Divergence Detection**: Deteksi visual divergensi harga vs momentum.
 
-### 3. 🛡️ Liquidity Hunt Specialist Strategy (PROVEN!)
+### 3. 🛡️ Multi-Strategy AI System
 
-**Strategi utama yang telah teruji dan terbukti profitable:**
+Bot tidak hanya mengandalkan satu strategi! AI akan **memilih strategi terbaik** berdasarkan kondisi market saat itu:
+
+| Strategi | Kondisi Optimal | Cara Kerja |
+|----------|-----------------|------------|
+| **LIQUIDITY_REVERSAL_MASTER** | Sweep rejection di Pivot S1/R1 | Entry saat harga menyapu liquidity zone lalu berbalik |
+| **PULLBACK_CONTINUATION** | Trend kuat dengan pullback ke EMA | Entry saat pullback di uptrend atau bounce di downtrend |
+| **BREAKDOWN_FOLLOW** | Breakout dengan volume tinggi | Follow momentum breakout dari level S1/R1 |
+
+#### 🏆 Strategi Unggulan: Liquidity Hunt Specialist (PROVEN!)
 
 Bot menggunakan strategi **Liquidity Hunt Specialist** yang fokus mencari titik balik di area "Stop Run" dan "Liquidity Grab" — zona di mana market maker sering memburu stop loss retail trader sebelum membalikkan arah.
 
-#### 📊 Hasil Backtest (Januari 2026)
+**📊 Hasil Backtest (Januari 2026)**
 | Metrik | Hasil |
 |--------|-------|
 | **Total Profit** | +$845.42 (+84.54%) |
@@ -59,13 +67,13 @@ Bot menggunakan strategi **Liquidity Hunt Specialist** yang fokus mencari titik 
 | **Profit Factor** | 7.94 |
 | **Max Drawdown** | -1.82% ✅ (Sangat aman) |
 
-#### 🏆 Performa per Koin
+**🏆 Performa per Koin**
 | Koin | Profit | Total Trades |
 |------|--------|--------------|
 | SOL/USDT | +$566.16 | 40 trades |
 | BTC/USDT | +$279.26 | 44 trades |
 
-#### 💡 Konsep Strategi
+**💡 Konsep Strategi**
 1. **Deteksi Liquidity Zone**: Identifikasi area di mana banyak stop loss berkumpul
 2. **Tunggu "Sweep"**: Sabar menunggu harga menyapu zona likuiditas
 3. **Entry saat Reversal**: Masuk posisi setelah konfirmasi pembalikan arah
@@ -101,24 +109,57 @@ Sistem filter berita cerdas yang memastikan AI hanya menerima informasi relevan:
 *   ✅ Keyword customizable per koin di `config.py`
 *   ✅ Sumber berita dari 15+ RSS feeds internasional & Indonesia
 
-### 8. 🔄 Intelligent Trailing Stop Loss - **NEW!**
+### 8. 🔄 Intelligent Trailing Stop Loss
 Sistem trailing stop otomatis yang mengunci profit saat market bergerak menguntungkan:
 
 **Cara Kerja:**
 1. Bot membuka posisi dengan SL & TP awal
-2. Saat harga bergerak 45% menuju TP → Trailing Stop aktif
+2. Saat harga bergerak **80%** menuju TP → Trailing Stop aktif
 3. SL otomatis naik/turun mengikuti harga dengan jarak 0.75%
 4. Minimal profit 0.5% dikunci saat trailing aktif
 
 **Ilustrasi (LONG Position):**
 ```
 Entry: $100 | TP: $110 | SL Awal: $97
-Harga naik ke $104.5 (45% ke TP) → Trailing Aktif!
-- SL baru: $103.72 (0.75% di bawah harga tertinggi)
-Harga naik ke $108 → SL naik ke $107.19
-Harga turun ke $107 → SL tetap $107.19 (terkunci!)
-Harga turun ke $107.19 → Posisi ditutup dengan profit ~7%
+Harga naik ke $108 (80% ke TP) → Trailing Aktif!
+- SL baru: $107.19 (0.75% di bawah harga tertinggi)
+Harga naik ke $109 → SL naik ke $108.18
+Harga turun ke $108.50 → SL tetap $108.18 (terkunci!)
+Harga turun ke $108.18 → Posisi ditutup dengan profit ~8%
 ```
+
+### 9. 📈 Multi-Timeframe Technical Analysis
+Arsitektur analisis 3-layer untuk presisi maksimal:
+
+| Layer | Timeframe | Fungsi | Indikator |
+|-------|-----------|--------|------------|
+| **TREND** | 1H | Arah tren besar | EMA 21, ADX |
+| **SETUP** | 30M | Deteksi pola | MACD |
+| **EXECUTION** | 15M | Entry timing | RSI, StochRSI, Bollinger Bands |
+
+### 10. ❄️ Cooldown Anti-FOMO/Revenge Trading
+Mekanisme pendinginan otomatis setelah trade selesai:
+*   **Setelah PROFIT**: Jeda 1 jam sebelum re-entry di koin yang sama
+*   **Setelah LOSS**: Jeda 2 jam untuk mencegah revenge trading
+
+### 11. ⏰ Limit Order Expiry System
+Pembersihan otomatis limit order yang tidak terisi:
+*   Order yang pending > 2 jam akan **auto-cancel**
+*   Mencegah order "zombie" yang menggantung
+*   Sinkronisasi real-time dengan exchange
+
+### 12. 🐋 On-Chain Whale Detection
+Deteksi transaksi whale secara real-time via WebSocket:
+*   Threshold: > $1,000,000 USDT
+*   Pelacakan per-koin (bukan global)
+*   Integrasi dengan Stablecoin Inflow dari DeFiLlama
+*   De-duplication untuk mencegah spam notifikasi
+
+### 13. 📚 Order Book Depth Analysis
+Analisis kedalaman order book untuk deteksi buying/selling pressure:
+*   Range analisis: 2% dari current price
+*   Kalkulasi bid/ask volume dalam USDT
+*   Imbalance percentage untuk konfirmasi momentum
 
 ---
 
@@ -323,7 +364,8 @@ sudo systemctl status trading-bot
  │    │    ├── 👁️ pattern_recognizer.py # Vision AI Engine
  │    │    ├── ⚙️ executor.py           # Eksekusi Order & Sync Posisi
  │    │    ├── 📊 market_data.py        # Pengolah Data & Indikator
- │    │    └── 🗞️ sentiment.py          # Analisis Berita & RSS
+ │    │    ├── 🗞️ sentiment.py          # Analisis Berita & RSS
+ │    │    └── 🐋 onchain.py            # Deteksi Whale & Stablecoin Inflow
  │    ├── 📂 utils/              # Fungsi Pembantu
  │    │    ├── 🧮 calc.py               # Kalkulasi Dual Scenarios & Risk
  │    │    ├── 📝 prompt_builder.py     # Konstruktor Prompt AI Dinamis
@@ -331,9 +373,34 @@ sudo systemctl status trading-bot
  │    ├── ⚙️ config.py                 # PUSAT KONFIGURASI
  │    └── 🚀 main.py                   # Titik Masuk Bot
  ├── 📂 backtesting/             # ⏳ Sistem Pengujian Historis
- ├── 📂 tests/                   # 🧪 Automated Testing
+ │    ├── 📊 backtest.py               # Engine Backtest Utama
+ │    └── 📈 backtest_result.md        # Hasil & Laporan Backtest
+ ├── 📂 tests/                   # 🧪 Automated Testing (25+ test files)
  └── 📦 pyproject.toml           # Manajemen Dependensi Modern
 ```
+
+---
+
+## 🧪 Automated Testing
+
+Proyek ini dilengkapi dengan **25+ automated test files** untuk memastikan kualitas kode:
+
+```bash
+# Menjalankan semua tests
+python -m pytest tests/
+
+# Menjalankan test spesifik
+python -m pytest tests/test_trailing_logic.py
+```
+
+**Test Coverage:**
+*   ✅ Trailing Stop Logic
+*   ✅ News Filtering System
+*   ✅ Pattern Recognition Validation
+*   ✅ Limit Order Expiry
+*   ✅ Profit/Loss Calculation
+*   ✅ Market Data Optimization
+*   ✅ Benchmark Performance Tests
 
 ---
 
