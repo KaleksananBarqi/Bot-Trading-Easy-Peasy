@@ -48,7 +48,6 @@ def main():
         
         # 1. Detect AI SIGNAL MATCHED
         if "AI SIGNAL MATCHED" in text:
-            # Extract details using Regex
             try:
                 symbol_match = re.search(r"Coin: (\w+/\w+)", text)
                 side_match = re.search(r"Signal: \W+ (BUY|SELL)", text)
@@ -60,10 +59,10 @@ def main():
                 if symbol_match and side_match:
                     symbol = symbol_match.group(1)
                     parsed_trade = {
-                        "timestamp": timestamp_str, # Will update to ISO format later if needed, assuming current format is roughly usable or we convert
+                        "timestamp": timestamp_str,
                         "symbol": symbol,
                         "side": side_match.group(1),
-                        "type": "LIMIT", # Defaulting to LIMIT as seen in logs
+                        "type": "LIMIT",
                         "entry_price": entry_match.group(1) if entry_match else "0",
                         "exit_price": "0",
                         "size_usdt": size_match.group(1) if size_match else "0",
@@ -72,42 +71,72 @@ def main():
                         "roi_percent": "0",
                         "fee": "0",
                         "strategy_tag": strategy_match.group(1) if strategy_match else "Unknown",
-                        "result": "PENDING", # Default
+                        "result": "SIGNAL", # Changed from PENDING
                         "prompt": "",
                         "reason": reason_match.group(1).strip() if reason_match else "",
                         "setup_at": timestamp_str,
                         "filled_at": ""
                     }
-                    
-                    # Store as active order for this symbol
                     active_orders[symbol] = parsed_trade
             except Exception as e:
                 print(f"Error parsing signal msg {msg.get('id')}: {e}")
 
         # 2. Detect LIMIT PLACED
         elif "LIMIT PLACED" in text:
-            # Extract symbol to confirm placement
-            # Format: "BTC/USDT buy @ ..."
             symbol_match = re.search(r"(\w+/\w+) (buy|sell) @", text, re.IGNORECASE)
             if symbol_match:
                 symbol = symbol_match.group(1)
-                # If we have an active signal for this symbol, update it
                 if symbol in active_orders:
-                    active_orders[symbol]["filled_at"] = timestamp_str # Using placement time as filled_at for now
-                    active_orders[symbol]["result"] = "OPEN" # Placed
+                    active_orders[symbol]["result"] = "PLACED"
 
-        # 3. Detect ORDER SYNC / EXPIRED / CANCELLED
-        elif "ORDER SYNC" in text or "ORDER EXPIRED" in text or "cancelled manually" in text:
-            # Format: "Order for BTC/USDT was cancelled..."
-            symbol_match = re.search(r"Order for (\w+/\w+)", text)
+        # 3. Detect FILLED
+        elif "ENTRY FILLED" in text:
+            symbol_match = re.search(r"✨ (\w+/\w+)", text)
             if symbol_match:
                 symbol = symbol_match.group(1)
                 if symbol in active_orders:
-                    # Mark as CANCELLED or EXPIRED
+                    active_orders[symbol]["result"] = "OPEN"
+                    active_orders[symbol]["filled_at"] = timestamp_str
+
+        # 4. Detect HIT (TP/SL)
+        elif "HIT" in text and ("STOP LOSS" in text or "TAKE PROFIT" in text):
+            symbol_match = re.search(r"✨ (\w+/\w+)", text)
+            if symbol_match:
+                symbol = symbol_match.group(1)
+                if symbol in active_orders:
+                    trade = active_orders.pop(symbol)
+                    
+                    # Extract result details
+                    is_tp = "TAKE PROFIT" in text
+                    trade["result"] = "WIN" if is_tp else "LOSS"
+                    
+                    price_match = re.search(r"Price: ([\d.]+)", text)
+                    pnl_match = re.search(r"PnL: ([+-]?\$?[\d.]+)", text)
+                    roi_match = re.search(r"ROI: ([+-]?[\d.]+)%", text)
+                    
+                    if price_match:
+                        trade["exit_price"] = price_match.group(1)
+                    if pnl_match:
+                        # Remove $ if present
+                        pnl_str = pnl_match.group(1).replace("$", "")
+                        trade["pnl_usdt"] = pnl_str
+                        trade["pnl_percent"] = pnl_str # Rough estimate if not available
+                    if roi_match:
+                        trade["roi_percent"] = roi_match.group(1)
+                    
+                    trades.append(trade)
+
+        # 5. Detect ORDER SYNC / EXPIRED / CANCELLED
+        elif "ORDER SYNC" in text or "ORDER EXPIRED" in text or "cancelled manually" in text:
+            symbol_match = re.search(r"Order for (\w+/\w+)", text)
+            if not symbol_match: # Try direct symbol search
+                 symbol_match = re.search(r"(\w+/\w+)", text)
+            
+            if symbol_match:
+                symbol = symbol_match.group(1)
+                if symbol in active_orders:
                     status = "EXPIRED" if "EXPIRED" in text or "timeout" in text else "CANCELLED"
                     active_orders[symbol]["result"] = status
-                    
-                    # Move to finalized trades list
                     trades.append(active_orders.pop(symbol))
         
         # 4. Handle generic stops (Bot Stopped Manually) - optional
