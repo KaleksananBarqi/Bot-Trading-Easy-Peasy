@@ -13,6 +13,8 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from src.modules.journal import TradeJournal
+from src.utils.helper import get_coin_leverage
+
 
 # Page Config
 st.set_page_config(
@@ -285,3 +287,139 @@ st.dataframe(
 # Footer
 st.markdown("---")
 st.caption("Bot Trading Dashboard v2.0 | Enhanced by Auto-Agent")
+
+# 6. PNL CARD GENERATOR
+st.markdown("---")
+st.subheader("📸 Share PnL Card")
+
+if not df_filtered.empty:
+    # Prepare list of trades for dropdown
+    # Format: "BTC/USDT | WIN +$123.45 | 2024-05-20"
+    trade_options = []
+    
+    # We use df_display which is already sorted by newest
+    # Access original index to retrieve full row data if needed, or just use iloc
+    # df_display has reset index? No, let's check. 
+    # st.dataframe(df_display) shows it.
+    
+    # Let's create a list of indices and labels
+    # We iterate over the dataframe to create options
+    
+    # Need to handle potential missing columns or data safely
+    trade_choices = {}
+    for index, row in df_display.iterrows():
+        symbol = row.get('symbol', 'UNKNOWN')
+        pnl = row.get('pnl_usdt', 0)
+        result = "WIN" if pnl >= 0 else "LOSS"
+        date_str = row['timestamp'].strftime('%d/%m %H:%M')
+        
+        label = f"{date_str} - {symbol} ({result}) ${pnl:.2f}"
+        trade_choices[label] = row
+        
+    selected_label = st.selectbox("Pilih Trade untuk dibuatkan Kartu:", list(trade_choices.keys()))
+    
+    if selected_label:
+        trade = trade_choices[selected_label]
+        
+        # Data Preparation
+        symbol = trade.get('symbol', 'BTC/USDT')
+        side = trade.get('side', 'LONG').capitalize()
+        entry_price = float(trade.get('entry_price', 0))
+        exit_price = float(trade.get('exit_price', 0))
+        roi = float(trade.get('roi_percent', 0))
+        leverage = get_coin_leverage(symbol)
+        
+        # Color coding
+        if roi >= 0:
+            roi_color = "#00ff88" # Green
+            roi_bg = "rgba(0, 255, 136, 0.1)"
+            side_color = "#00ff88"
+        else:
+            roi_color = "#ff4b4b" # Red
+            roi_bg = "rgba(255, 75, 75, 0.1)"
+            side_color = "#ff4b4b"
+            
+        # Dynamic leverage text
+        leverage_text = f"{leverage}X"
+        
+        # HTML/CSS Template
+        card_html = f"""
+        <div style="
+            width: 400px;
+            background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+            border-radius: 20px;
+            padding: 30px;
+            font-family: 'Arial', sans-serif;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid #333;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+        ">
+            <!-- Background Decoration -->
+            <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: {roi_color}; opacity: 0.1; border-radius: 50%; blur: 50px;"></div>
+            
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.5rem; font-weight: bold; letter-spacing: 1px;">{symbol}</span>
+                    <span style="background: #333; color: #ccc; padding: 2px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold;">Perpetual</span>
+                </div>
+                <div style="background: #2a2a2a; border: 1px solid #444; border-radius: 8px; padding: 5px 12px;">
+                    <span style="color: white; font-weight: bold;">Bot EzPeasy</span>
+                </div>
+            </div>
+            
+            <!-- Side & Leverage -->
+            <div style="display: flex; gap: 10px; margin-bottom: 30px;">
+                <span style="color: {side_color}; font-weight: bold; font-size: 1.1rem;">{side}</span>
+                <span style="color: #888; font-weight: bold; font-size: 1.1rem;">|</span>
+                <span style="color: white; font-weight: bold; font-size: 1.1rem;">{leverage_text}</span>
+            </div>
+            
+            <!-- ROI Section -->
+            <div style="text-align: left; margin-bottom: 30px;">
+                <div style="color: #888; font-size: 1rem; margin-bottom: 5px;">Return on Investment (ROI)</div>
+                <div style="font-size: 3.5rem; font-weight: 800; color: {roi_color}; text-shadow: 0 0 20px {roi_bg};">
+                    {roi:+.2f}%
+                </div>
+            </div>
+            
+            <!-- Prices -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 3px;">Entry Price</div>
+                    <div style="font-size: 1.2rem; font-weight: bold;">{entry_price:,.4f}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 3px;">Exit Price</div>
+                    <div style="font-size: 1.2rem; font-weight: bold;">{exit_price:,.4f}</div>
+                </div>
+            </div>
+            
+            <!-- Divider -->
+            <div style="height: 1px; background: #333; margin: 20px 0;"></div>
+            
+            <!-- Footer/QR Placeholder -->
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="color: #888; font-size: 0.8rem; font-style: italic;">Automated by</div>
+                    <div style="font-weight: bold; color: #fff;">Bot Trading Easy Peasy</div>
+                    <div style="color: #444; font-size: 0.7rem; margin-top: 5px;">{trade['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}</div>
+                </div>
+                
+                <!-- QR Code Placeholder (Mock visual) -->
+                <div style="width: 50px; height: 50px; background: white; padding: 3px; border-radius: 5px;">
+                   <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BotTradingEasyPeasy" width="100%" height="100%" />
+                </div>
+            </div>
+        </div>
+        """
+        
+        # Display
+        col_preview, col_info = st.columns([1, 1])
+        with col_preview:
+            st.markdown(card_html, unsafe_allow_html=True)
+            st.caption("📸 Silakan screenshot kartu di atas untuk dibagikan.")
+
