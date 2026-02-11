@@ -38,7 +38,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Title
-st.title("🤖 Bot Trading Performance Dashboard")
+st.title("🤖 Bot Trading Easy Peasy Performance Dashboard")
 st.markdown("---")
 
 # Load Data
@@ -201,11 +201,41 @@ st.plotly_chart(fig_heat, use_container_width=True)
 st.subheader("📝 Trade History & AI Audits")
 
 # Formatting for Table
-display_cols = ['timestamp', 'symbol', 'side', 'type', 'entry_price', 'exit_price', 'pnl_usdt', 'roi_percent', 'strategy_tag', 'prompt', 'reason']
+display_cols = ['timestamp', 'symbol', 'side', 'type', 'entry_price', 'exit_price', 'pnl_usdt', 'roi_percent', 'strategy_tag', 'prompt', 'reason', 'setup_at', 'filled_at']
+# Ensure columns exist (for old CSV compatibility)
+for col in ['setup_at', 'filled_at']:
+    if col not in df_filtered.columns:
+        df_filtered[col] = None
+
 df_display = df_filtered[display_cols].copy()
+
+# Calculate Durations
+def calc_duration(start, end):
+    if pd.isna(start) or pd.isna(end) or start == '' or end == '':
+        return None
+    try:
+        s = pd.to_datetime(start)
+        e = pd.to_datetime(end)
+        diff = e - s
+        total_seconds = int(diff.total_seconds())
+        
+        if total_seconds < 60:
+            return f"{total_seconds}s"
+        elif total_seconds < 3600:
+            return f"{total_seconds // 60}m"
+        else:
+            return f"{total_seconds // 3600}h {(total_seconds % 3600) // 60}m"
+    except:
+        return None
+
+df_display['Setup->Fill'] = df_display.apply(lambda x: calc_duration(x['setup_at'], x['filled_at']), axis=1)
+df_display['Trade Duration'] = df_display.apply(lambda x: calc_duration(x['filled_at'], x['timestamp']), axis=1)
 
 # Sort by newest
 df_display = df_display.sort_values(by='timestamp', ascending=False)
+
+# Remove raw timestamp cols for display
+df_display = df_display.drop(columns=['setup_at', 'filled_at'])
 
 # Interactive Table
 st.dataframe(

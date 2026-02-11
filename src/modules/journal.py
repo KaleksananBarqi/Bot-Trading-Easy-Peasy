@@ -19,7 +19,8 @@ class TradeJournal:
             'entry_price', 'exit_price', 'size_usdt', 
             'pnl_usdt', 'pnl_percent', 'roi_percent',
             'fee', 'strategy_tag', 'result',
-            'prompt', 'reason'
+            'prompt', 'reason',
+            'setup_at', 'filled_at'
         ]
         self._ensure_file_exists()
 
@@ -65,7 +66,7 @@ class TradeJournal:
 
             # 2. Prepare Row
             row = [
-                datetime.now().isoformat(),         # timestamp
+                data.get('timestamp', datetime.now().isoformat()), # timestamp (allow override)
                 data.get('symbol', 'UNKNOWN'),      # symbol
                 data.get('side', 'UNKNOWN'),        # side
                 data.get('type', 'UNKNOWN'),        # type
@@ -79,7 +80,9 @@ class TradeJournal:
                 data.get('strategy_tag', 'MANUAL'), # strategy
                 result,                             # result
                 data.get('prompt', '-').replace('\n', ' '), # prompt (oneline)
-                data.get('reason', '-').replace('\n', ' ')  # reason (oneline)
+                data.get('reason', '-').replace('\n', ' '), # reason (oneline)
+                data.get('setup_at', ''),                   # setup_at (timestamp/iso)
+                data.get('filled_at', '')                   # filled_at (timestamp/iso)
             ]
 
             # 3. Append to CSV

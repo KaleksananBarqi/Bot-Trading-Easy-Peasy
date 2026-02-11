@@ -48,7 +48,19 @@ def generate_dummy_data():
         fee = size_usdt * leverage * 0.0004 # 0.04% fee
         pnl_usdt -= fee # Net PnL
         
+        # [NEW] Timestamps for Durations
+        # timestamp is close time (approx)
+        timestamp_dt = start_time + timedelta(days=i*0.5 + random.uniform(0, 0.5))
+        
+        # setup -> filled (1-120 mins)
+        filled_at_dt = timestamp_dt - timedelta(minutes=random.randint(5, 120))
+        setup_at_dt = filled_at_dt - timedelta(minutes=random.randint(1, 15))
+        
+        setup_at = setup_at_dt.isoformat()
+        filled_at = filled_at_dt.isoformat()
+
         trade_data = {
+            'timestamp': timestamp_dt.isoformat(), # [NEW] Pass Valid Timestamp
             'symbol': symbol,
             'side': side,
             'type': 'MARKET' if 'Market' in strategy else 'LIMIT',
@@ -60,7 +72,9 @@ def generate_dummy_data():
             'roi_percent': pnl_percent, # Simplified ROI
             'strategy_tag': strategy,
             'prompt': f"Analyze {symbol} on 15m timeframe...",
-            'reason': random.choice(reasons)
+            'reason': random.choice(reasons),
+            'setup_at': setup_at,
+            'filled_at': filled_at
         }
         
         # Log to CSV

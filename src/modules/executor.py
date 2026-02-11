@@ -196,6 +196,7 @@ class OrderExecutor:
                     "strategy": strategy_tag,
                     "atr_value": atr_value,
                     "created_at": time.time(),
+                    "filled_at": time.time(), # Market order filled immediately (approx)
                     "ai_prompt": ai_prompt,
                     "ai_reason": ai_reason
                 }

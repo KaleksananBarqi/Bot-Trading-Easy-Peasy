@@ -230,9 +230,16 @@ async def main():
                 # Ambil data tambahan dari tracker sebelum dihapus
                 tracker = executor.safety_orders_tracker.get(symbol, {})
                 strategy_tag = tracker.get('strategy_tag', 'UNKNOWN')
-                prompt_text = tracker.get('ai_prompt', '-') # Perlu disimpan saat entry
-                reason_text = tracker.get('ai_reason', '-') # Perlu disimpan saat entry
+                prompt_text = tracker.get('ai_prompt', '-')
+                reason_text = tracker.get('ai_reason', '-')
+                setup_at_ts = tracker.get('created_at', 0)
+                filled_at_ts = tracker.get('filled_at', 0)
                 
+                # Format timestamps to ISO string if they exist
+                from datetime import datetime
+                setup_at_str = datetime.fromtimestamp(setup_at_ts).isoformat() if setup_at_ts > 0 else ''
+                filled_at_str = datetime.fromtimestamp(filled_at_ts).isoformat() if filled_at_ts > 0 else ''
+
                 trade_data = {
                     'symbol': symbol,
                     'side': order_info['S'], # BUY/SELL (Closing side)
@@ -245,7 +252,9 @@ async def main():
                     'fee': float(order_info.get('n', 0)), # Commission Asset
                     'strategy_tag': strategy_tag,
                     'prompt': prompt_text,
-                    'reason': reason_text
+                    'reason': reason_text,
+                    'setup_at': setup_at_str,
+                    'filled_at': filled_at_str
                 }
                 
                 if journal:
@@ -264,6 +273,12 @@ async def main():
                      side_filled = o['S'] # BUY/SELL
                      size_usdt = qty_filled * price_filled
                      
+                     # Update Tracker with FILLED time
+                     # Need to ensure tracker exists (it should via execute_entry)
+                     if sym in executor.safety_orders_tracker:
+                         executor.safety_orders_tracker[sym]['filled_at'] = time.time()
+                         await executor.save_tracker()
+
                      # Calculate TP/SL for Notification
                      tracker = executor.safety_orders_tracker.get(sym, {})
                      atr_val = tracker.get('atr_value', 0)
