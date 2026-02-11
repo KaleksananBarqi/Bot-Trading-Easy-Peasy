@@ -14,6 +14,7 @@ if project_root not in sys.path:
 
 from src.modules.journal import TradeJournal
 from src.utils.helper import get_coin_leverage
+from src.utils.pnl_generator import create_pnl_card
 
 
 # Page Config
@@ -318,108 +319,47 @@ if not df_filtered.empty:
         
     selected_label = st.selectbox("Pilih Trade untuk dibuatkan Kartu:", list(trade_choices.keys()))
     
+
     if selected_label:
         trade = trade_choices[selected_label]
         
-        # Data Preparation
-        symbol = trade.get('symbol', 'BTC/USDT')
-        side = trade.get('side', 'LONG').capitalize()
-        entry_price = float(trade.get('entry_price', 0))
-        exit_price = float(trade.get('exit_price', 0))
-        roi = float(trade.get('roi_percent', 0))
-        leverage = get_coin_leverage(symbol)
-        
-        # Color coding
-        if roi >= 0:
-            roi_color = "#00ff88" # Green
-            roi_bg = "rgba(0, 255, 136, 0.1)"
-            side_color = "#00ff88"
-        else:
-            roi_color = "#ff4b4b" # Red
-            roi_bg = "rgba(255, 75, 75, 0.1)"
-            side_color = "#ff4b4b"
+        # Data Preparation for Generator
+        # Construct trade_data dict
+        trade_data = {
+            'symbol': trade.get('symbol', 'UNKNOWN'),
+            'side': trade.get('side', 'LONG'),
+            'entry_price': float(trade.get('entry_price', 0)),
+            'exit_price': float(trade.get('exit_price', 0)),
+            'pnl_usdt': float(trade.get('pnl_usdt', 0)),
+            'roi_percent': float(trade.get('roi_percent', 0)),
+            'timestamp': trade['timestamp'],
+            'leverage': get_coin_leverage(trade.get('symbol', 'UNKNOWN'))
+        }
+
+        # Generate Image
+        try:
+            img_buffer = create_pnl_card(trade_data)
             
-        # Dynamic leverage text
-        leverage_text = f"{leverage}X"
-        
-        # HTML/CSS Template
-        card_html = f"""
-        <div style="
-            width: 400px;
-            background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
-            border-radius: 20px;
-            padding: 30px;
-            font-family: 'Arial', sans-serif;
-            color: white;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border: 1px solid #333;
-            margin: 0 auto;
-            position: relative;
-            overflow: hidden;
-        ">
-            <!-- Background Decoration -->
-            <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: {roi_color}; opacity: 0.1; border-radius: 50%; blur: 50px;"></div>
-            
-            <!-- Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.5rem; font-weight: bold; letter-spacing: 1px;">{symbol}</span>
-                    <span style="background: #333; color: #ccc; padding: 2px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold;">Perpetual</span>
-                </div>
-                <div style="background: #2a2a2a; border: 1px solid #444; border-radius: 8px; padding: 5px 12px;">
-                    <span style="color: white; font-weight: bold;">Bot EzPeasy</span>
-                </div>
-            </div>
-            
-            <!-- Side & Leverage -->
-            <div style="display: flex; gap: 10px; margin-bottom: 30px;">
-                <span style="color: {side_color}; font-weight: bold; font-size: 1.1rem;">{side}</span>
-                <span style="color: #888; font-weight: bold; font-size: 1.1rem;">|</span>
-                <span style="color: white; font-weight: bold; font-size: 1.1rem;">{leverage_text}</span>
-            </div>
-            
-            <!-- ROI Section -->
-            <div style="text-align: left; margin-bottom: 30px;">
-                <div style="color: #888; font-size: 1rem; margin-bottom: 5px;">Return on Investment (ROI)</div>
-                <div style="font-size: 3.5rem; font-weight: 800; color: {roi_color}; text-shadow: 0 0 20px {roi_bg};">
-                    {roi:+.2f}%
-                </div>
-            </div>
-            
-            <!-- Prices -->
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <div>
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 3px;">Entry Price</div>
-                    <div style="font-size: 1.2rem; font-weight: bold;">{entry_price:,.4f}</div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 3px;">Exit Price</div>
-                    <div style="font-size: 1.2rem; font-weight: bold;">{exit_price:,.4f}</div>
-                </div>
-            </div>
-            
-            <!-- Divider -->
-            <div style="height: 1px; background: #333; margin: 20px 0;"></div>
-            
-            <!-- Footer/QR Placeholder -->
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="color: #888; font-size: 0.8rem; font-style: italic;">Automated by</div>
-                    <div style="font-weight: bold; color: #fff;">Bot Trading Easy Peasy</div>
-                    <div style="color: #444; font-size: 0.7rem; margin-top: 5px;">{trade['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}</div>
-                </div>
+            col_preview, col_info = st.columns([1, 1])
+            with col_preview:
+                st.image(img_buffer, caption="Preview Kartu PnL", use_container_width=True)
                 
-                <!-- QR Code Placeholder (Mock visual) -->
-                <div style="width: 50px; height: 50px; background: white; padding: 3px; border-radius: 5px;">
-                   <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BotTradingEasyPeasy" width="100%" height="100%" />
-                </div>
-            </div>
-        </div>
-        """
-        
-        # Display
-        col_preview, col_info = st.columns([1, 1])
-        with col_preview:
-            st.markdown(card_html, unsafe_allow_html=True)
-            st.caption("📸 Silakan screenshot kartu di atas untuk dibagikan.")
+            with col_info:
+                st.write("### 📸 Siap Dibagikan!")
+                st.write("Klik tombol di bawah untuk mengunduh gambar kartu PnL ini.")
+                
+                # Check outcome for filename
+                outcome = "WIN" if trade_data['roi_percent'] >= 0 else "LOSS"
+                file_name = f"PnL_{outcome}_{trade_data['symbol'].replace('/', '')}_{trade_data['timestamp'].strftime('%Y%m%d')}.png"
+                
+                st.download_button(
+                    label="⬇️ Download Image",
+                    data=img_buffer,
+                    file_name=file_name,
+                    mime="image/png",
+                    use_container_width=True
+                )
+                
+        except Exception as e:
+            st.error(f"Gagal membuat kartu: {str(e)}")
 
