@@ -12,7 +12,11 @@ from typing import Dict, List, Tuple, Optional
 import config
 from ai_logic import AISimulator
 
+import sys
 warnings.filterwarnings('ignore')
+
+# Force UTF-8 Output
+sys.stdout.reconfigure(encoding='utf-8')
 
 class BacktestEngine:
     def __init__(self, initial_capital: float = 10000, commission: float = 0.0004):
@@ -208,10 +212,10 @@ class BacktestEngine:
             
             # Hitung SL dan TP
             if signal == "LONG":
-                sl_price = entry_price - (atr * config.ATR_MULTIPLIER_SL)
+                sl_price = entry_price - (atr * config.TRAP_SAFETY_SL)
                 tp_price = entry_price + (atr * config.ATR_MULTIPLIER_TP1)
             else:
-                sl_price = entry_price + (atr * config.ATR_MULTIPLIER_SL)
+                sl_price = entry_price + (atr * config.TRAP_SAFETY_SL)
                 tp_price = entry_price - (atr * config.ATR_MULTIPLIER_TP1)
             
             return {
@@ -376,48 +380,88 @@ class BacktestEngine:
                         continue
                     
                     # Simulasikan trade
-                    entry_time = df_5m.index[i]
+                    # ==========================================================
+                    # [FIX] LOGIKA "PENDING ORDER" / LIMIT ORDER VALIDATION
+                    # ==========================================================
+                    is_filled = False
+                    fill_time = None
+                    fill_idx = -1
+                    
+                    # Batas waktu tunggu (Expiry)
+                    # Ambil dari config atau default 24 jam (288 candle 5m)
+                    max_wait_bars = 288 
+                    
+                    # Loop untuk cek apakah Limit Order kemakan?
+                    for k in range(i + 1, min(i + 1 + max_wait_bars, len(df_5m))):
+                         future_bar_check = df_5m.iloc[k]
+                         
+                         if signal_info['signal'] == "LONG":
+                             # Limit Buy: Low harus <= Entry Price
+                             if future_bar_check['low'] <= signal_info['entry_price']:
+                                 is_filled = True
+                                 fill_time = df_5m.index[k]
+                                 fill_idx = k
+                                 break
+                         else:
+                             # Limit Sell: High harus >= Entry Price
+                             if future_bar_check['high'] >= signal_info['entry_price']:
+                                 is_filled = True
+                                 fill_time = df_5m.index[k]
+                                 fill_idx = k
+                                 break
+                    
+                    # Jika tidak fill sampai expired, skip trade ini
+                    if not is_filled:
+                        # Optional: Print log expired
+                        # print(f"  🚫 Order Expired: {symbol} Signal @ {df_5m.index[i]}")
+                        continue
+                        
+                    # ==========================================================
+                    # TRADE ACTIVE (FILLED) - SEKARANG CEK EXIT
+                    # ==========================================================
                     entry_price = signal_info['entry_price']
                     sl_price = signal_info['sl_price']
                     tp_price = signal_info['tp_price']
                     
-                    # Cari exit point (SL atau TP)
+                    entry_time = fill_time # Waktu start trade adalah waktu filled
+                    
+                    # Cari exit point (SL atau TP) mulai dari candle SETELAH filled
                     exit_found = False
                     exit_type = None
                     exit_price = None
                     exit_time = None
+                    last_idx_checked = fill_idx
                     
-                    for j in range(i + 1, min(i + 500, len(df_5m))):  # Max 500 bar forward
+                    for j in range(fill_idx + 1, min(fill_idx + 500, len(df_5m))):  # Max 500 bar hold
                         future_bar = df_5m.iloc[j]
+                        last_idx_checked = j
                         
                         if signal_info['signal'] == "LONG":
-                            # Cek TP
-                            if future_bar['high'] >= tp_price:
-                                exit_type = "TP"
-                                exit_price = tp_price
+                            # Prioritas Cek SL dulu (Conservative Backtest)
+                            # Jika dalam satu candle Low kena SL dan High kena TP, anggap SL (Worst case)
+                            if future_bar['low'] <= sl_price:
+                                exit_type = "SL"
+                                exit_price = sl_price
                                 exit_time = df_5m.index[j]
                                 exit_found = True
                                 break
-                            # Cek SL
-                            elif future_bar['low'] <= sl_price:
-                                exit_type = "SL"
-                                exit_price = sl_price
+                            elif future_bar['high'] >= tp_price:
+                                exit_type = "TP"
+                                exit_price = tp_price
                                 exit_time = df_5m.index[j]
                                 exit_found = True
                                 break
                         
                         else:  # SHORT
-                            # Cek TP
-                            if future_bar['low'] <= tp_price:
-                                exit_type = "TP"
-                                exit_price = tp_price
+                            if future_bar['high'] >= sl_price:
+                                exit_type = "SL"
+                                exit_price = sl_price
                                 exit_time = df_5m.index[j]
                                 exit_found = True
                                 break
-                            # Cek SL
-                            elif future_bar['high'] >= sl_price:
-                                exit_type = "SL"
-                                exit_price = sl_price
+                            elif future_bar['low'] <= tp_price:
+                                exit_type = "TP"
+                                exit_price = tp_price
                                 exit_time = df_5m.index[j]
                                 exit_found = True
                                 break
@@ -425,8 +469,8 @@ class BacktestEngine:
                     # Jika tidak exit dalam 500 bar, exit di harga terakhir
                     if not exit_found:
                         exit_type = "TIME_EXIT"
-                        exit_price = df_5m.iloc[min(i + 500, len(df_5m) - 1)]['close']
-                        exit_time = df_5m.index[min(i + 500, len(df_5m) - 1)]
+                        exit_price = df_5m.iloc[min(fill_idx + 500, len(df_5m) - 1)]['close']
+                        exit_time = df_5m.index[min(fill_idx + 500, len(df_5m) - 1)]
                     
                     # Hitung P&L
                     if signal_info['signal'] == "LONG":
@@ -466,7 +510,6 @@ class BacktestEngine:
                     }
                     
                     self.trades.append(trade)
-                    self.last_entry_bar = i
                     
                     # Update equity curve
                     self.equity_curve.append({
@@ -475,13 +518,37 @@ class BacktestEngine:
                         'pnl_cumulative': self.capital - self.initial_capital
                     })
                     
-                    # Skip beberapa bar setelah entry (cooldown)
-                    i += 10
+                    # Skip loop utama (i) sampai candle terakhir yang kita proses
+                    self.last_entry_bar = last_idx_checked
+                    
+                    # Kita set i manual untuk loop python? Tidak bisa di for-loop range
+                    # Tapi kita bisa manfaatkan 'last_entry_bar' di check_entry_signal untuk skip logic
+                    # Namun loop 'i' tetap jalan. 
+                    # Solusi simple: i tidak bisa dilompati di 'for i in range', 
+                    # tapi check_entry_signal punya logika: if i - self.last_entry_bar < 24 return None.
+                    # Jadi aman.
+                    
+                    # [OPTIONAL] Print Trade Log Realtime
+                    # print(f"  ✅ Trade: {symbol} {signal_info['signal']} | PnL: ${pnl_usdt:.2f} ({exit_type})")
         
         print("\n✅ Backtest selesai!")
     
     def generate_report(self):
         """Generate laporan hasil backtest"""
+        # Buat timestamp unik
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Define base paths
+        base_dir = os.path.join(os.path.dirname(__file__), 'backtest_results')
+        csv_dir = os.path.join(base_dir, 'csv')
+        json_dir = os.path.join(base_dir, 'json')
+        img_dir = os.path.join(base_dir, 'images')
+        
+        # Create directories if not exists
+        os.makedirs(csv_dir, exist_ok=True)
+        os.makedirs(json_dir, exist_ok=True)
+        os.makedirs(img_dir, exist_ok=True)
+
         if not self.trades:
             print("❌ Tidak ada trade yang dieksekusi dalam periode ini")
             return
@@ -594,10 +661,44 @@ class BacktestEngine:
         self.plot_results(trades_df, equity_df)
         
         # Simpan hasil ke CSV
-        trades_df.to_csv('backtest_results.csv', index=False)
-        print(f"\n💾 Hasil backtest disimpan ke 'backtest_results.csv'")
+        csv_filename = f'backtest_trades_{timestamp}.csv'
+        csv_path = os.path.join(csv_dir, csv_filename)
+        trades_df.to_csv(csv_path, index=False)
+        print(f"\n💾 CSV disimpan ke: {csv_path}")
+
+        # Simpan ringkasan ke JSON
+        summary_data = {
+            'timestamp': timestamp,
+            'config': {
+                'initial_capital': self.initial_capital,
+                'final_capital': self.capital,
+                'start_date': config.BACKTEST_START_DATE,
+                'end_date': config.BACKTEST_END_DATE
+            },
+            'metrics': {
+                'total_pnl': total_pnl,
+                'win_rate': win_rate,
+                'profit_factor': profit_factor,
+                'max_drawdown': max_drawdown,
+                'sharpe_ratio': sharpe_ratio,
+                'total_trades': total_trades,
+                'winning_trades': len(winning_trades),
+                'losing_trades': len(losing_trades)
+            }
+        }
+        
+        json_filename = f'backtest_summary_{timestamp}.json'
+        json_path = os.path.join(json_dir, json_filename)
+        with open(json_path, 'w') as f:
+            json.dump(summary_data, f, indent=4)
+        print(f"💾 JSON Summary disimpan ke: {json_path}")
+
+        # Simpan visualisasi
+        img_filename = f'backtest_chart_{timestamp}.png'
+        img_path = os.path.join(img_dir, img_filename)
+        self.plot_results(trades_df, equity_df, save_path=img_path)
     
-    def plot_results(self, trades_df: pd.DataFrame, equity_df: pd.DataFrame):
+    def plot_results(self, trades_df: pd.DataFrame, equity_df: pd.DataFrame, save_path: str = None):
         """Plot hasil backtest"""
         fig, axes = plt.subplots(3, 2, figsize=(15, 12))
         
@@ -685,7 +786,9 @@ class BacktestEngine:
         ax6.set_title('Distribusi Tipe Exit', fontsize=12, fontweight='bold')
         
         plt.tight_layout()
-        plt.savefig('backtest_results.png', dpi=150, bbox_inches='tight')
+        if save_path:
+            plt.savefig(save_path, dpi=150, bbox_inches='tight')
+            print(f"💾 Chart Image disimpan ke: {save_path}")
         plt.show()
 
 # Fungsi untuk load data (contoh)
@@ -765,13 +868,14 @@ def load_sample_data(symbols: List[str], start_date: str, end_date: str) -> Dict
 
 # Main execution
 if __name__ == "__main__":
-    print("🔧 BACKTEST ENGINE - PULLBACK SNIPER STRATEGY")
+    print("🔧 BACKTEST ENGINE")
     print("="*60)
     
     # Konfigurasi backtest
-    START_DATE = "2024-01-01"
-    END_DATE = "2024-03-01"
-    INITIAL_CAPITAL = 10000
+    # Konfigurasi backtest
+    START_DATE = config.BACKTEST_START_DATE
+    END_DATE = config.BACKTEST_END_DATE
+    INITIAL_CAPITAL = config.BACKTEST_INITIAL_CAPITAL
     
     # Inisialisasi backtest engine
     backtester = BacktestEngine(
@@ -782,17 +886,58 @@ if __name__ == "__main__":
     # Dapatkan simbol dari config
     symbols = [coin['symbol'] for coin in config.DAFTAR_KOIN]
     
-    # Load data (ini adalah placeholder - perlu implementasi nyata)
-    print("\n📥 Memuat data historis...")
-    symbol_data, btc_data = load_sample_data(symbols, START_DATE, END_DATE)
+    # Load data nyata menggunakan HistoricalDataFetcher
+    print("\n📥 Mempersiapkan data historis...")
+    from data_fetcher import fetch_and_save_data
     
-    # Jalankan backtest
-    backtester.run_backtest(
-        symbol_data=symbol_data,
-        btc_data=btc_data,
-        start_date=START_DATE,
-        end_date=END_DATE
-    )
+    # Ambil data (otomatis load CSV atau download dari Binance jika belum ada)
+    # Fungsi fetch_and_save_data sudah menghandle logika cek cache/download
+    all_data = fetch_and_save_data()
     
-    # Generate laporan
-    backtester.generate_report()
+    if all_data:
+        # Pisahkan data BTC dan data simbol lain
+        btc_data_raw = all_data.get('BTC/USDT', None)
+        symbol_data = {k: v for k, v in all_data.items() if k != 'sentiment'}
+        sentiment_data = all_data.get('sentiment', None)
+        
+        # Jika BTC tidak ada di all_data (misal di-skip), coba ambil lewat fetcher manual
+        if btc_data_raw is None:
+             print("⚠️ Data BTC tidak ditemukan di bundle, mencoba fetch terpisah...")
+             # Instance manual jika perlu, tapi idealnya sudah ada di fetch_and_save_data
+             # Untuk saat ini kita asumsikan fetch_and_save_data sudah benar mengambil BTC
+             pass
+
+        # Format data BTC agar sesuai dengan yang diharapkan run_backtest (DataFrame)
+        # Di data_fetcher, struktur return adalah {symbol: {timeframe: df}}
+        # Kita butuh BTC DataFrame timeframe '1h' untuk trend filter
+        btc_data = None
+        if btc_data_raw and '1h' in btc_data_raw:
+            btc_data = btc_data_raw['1h']
+        
+        # Validasi
+        if not symbol_data:
+             print("❌ Tidak ada data simbol yang valid untuk dibacktest.")
+             exit()
+             
+        if btc_data is None:
+             print("⚠️ Warning: Data BTC 1h tidak ditemukan. Filter trend BTC mungkin tidak akurat atau disable.")
+             # Buat dummy BTC data jika krusial, atau biarkan None (backtest engine harus handle)
+             # Di sini kita coba generate dummy flat dari data pertama yang ada
+             first_sym = list(symbol_data.keys())[0]
+             dates = symbol_data[first_sym]['1h'].index
+             btc_data = pd.DataFrame({'close': [50000]*len(dates)}, index=dates)
+
+        # Jalankan backtest dengan data nyata
+        backtester.run_backtest(
+            symbol_data=symbol_data,
+            btc_data=btc_data,
+            start_date=START_DATE,
+            end_date=END_DATE,
+            sentiment_data=sentiment_data
+        )
+        
+        # Generate laporan
+        backtester.generate_report()
+        
+    else:
+        print("❌ Gagal memuat data. Periksa koneksi atau config.")

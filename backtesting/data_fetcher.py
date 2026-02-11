@@ -9,7 +9,11 @@ import os
 import json
 from typing import Dict, List, Optional, Tuple
 import warnings
+import sys
 warnings.filterwarnings('ignore')
+
+# Force UTF-8 Output
+sys.stdout.reconfigure(encoding='utf-8')
 
 class HistoricalDataFetcher:
     """
@@ -231,14 +235,17 @@ class HistoricalDataFetcher:
         
         return all_data
     
-    def save_data_to_csv(self, data_dict: Dict, base_path: str = 'historical_data'):
+    def save_data_to_csv(self, data_dict: Dict, base_path: str = None):
         """
         Menyimpan data ke file CSV untuk penggunaan ulang
         
         Args:
             data_dict: Dictionary data dari fetch_all_symbols_data
-            base_path: Path folder penyimpanan
+            base_path: Path folder penyimpanan (default: backtesting/historical_data relatif terhadap script)
         """
+        if base_path is None:
+            base_path = os.path.join(os.path.dirname(__file__), 'historical_data')
+
         if not os.path.exists(base_path):
             os.makedirs(base_path)
         
@@ -275,16 +282,19 @@ class HistoricalDataFetcher:
         
         return saved_files
     
-    def load_data_from_csv(self, base_path: str = 'historical_data') -> Dict:
+    def load_data_from_csv(self, base_path: str = None) -> Dict:
         """
         Memuat data dari file CSV yang sudah disimpan
         
         Args:
-            base_path: Path folder data
+            base_path: Path folder data (default: backtesting/historical_data relatif terhadap script)
             
         Returns:
             Dictionary dengan struktur yang sama seperti fetch_all_symbols_data
         """
+        if base_path is None:
+            base_path = os.path.join(os.path.dirname(__file__), 'historical_data')
+
         if not os.path.exists(base_path):
             print(f"❌ Folder {base_path} tidak ditemukan")
             return {}
@@ -527,15 +537,17 @@ def fetch_and_save_data():
     print("="*60)
     
     # Konfigurasi
-    START_DATE = "2026-01-01"
-    END_DATE = "2026-02-01"
+    # Konfigurasi
+    START_DATE = config.BACKTEST_START_DATE
+    END_DATE = config.BACKTEST_END_DATE
     TIMEFRAMES = ['5m', '1h']  # Timeframe yang dibutuhkan untuk strategi
     
     # Ambil simbol dari config bot (hanya beberapa untuk testing)
     SYMBOLS = [coin['symbol'] for coin in config.DAFTAR_KOIN]  # Hanya 3 simbol pertama untuk testing
     
-    # Tambahkan BTC untuk filter trend
-    SYMBOLS.append('BTC/USDT')
+    # Tambahkan BTC untuk filter trend (jika belum ada)
+    if 'BTC/USDT' not in SYMBOLS:
+        SYMBOLS.append('BTC/USDT')
     
     print(f"📅 Periode: {START_DATE} hingga {END_DATE}")
     print(f"🎯 Jumlah simbol: {len(SYMBOLS)}")
@@ -548,7 +560,7 @@ def fetch_and_save_data():
     
     # Opsi 1: Load data dari cache/CSV jika sudah ada
     print("\n1. Mencoba memuat data dari cache...")
-    cached_data = fetcher.load_data_from_csv('historical_data')
+    cached_data = fetcher.load_data_from_csv()
     
     if cached_data:
         print(f"\n✅ Data ditemukan di cache untuk {len(cached_data)} simbol")
@@ -569,7 +581,8 @@ def fetch_and_save_data():
             print(f"\n🎯 Data BTC/USDT: {len(btc_data.get('1h', pd.DataFrame()))} bar")
 
         # Cek F&G data
-        fng_file = os.path.join('historical_data', 'fear_greed.csv')
+        base_path = os.path.join(os.path.dirname(__file__), 'historical_data')
+        fng_file = os.path.join(base_path, 'fear_greed.csv')
         if os.path.exists(fng_file):
             print(f"🧠 Data Fear & Greed ditemukan.")
         else:
@@ -589,7 +602,7 @@ def fetch_and_save_data():
             # Ambil F&G
             fng_df = fetcher.fetch_fear_and_greed_history()
             if not fng_df.empty:
-                fng_df.to_csv(os.path.join('historical_data', 'fear_greed.csv'))
+                fng_df.to_csv(os.path.join(base_path, 'fear_greed.csv'))
 
             # Simpan data yang diperbarui
             print("\n3. Menyimpan data ke CSV...")
@@ -611,9 +624,12 @@ def fetch_and_save_data():
         )
         
         # Ambil F&G
+        base_path = os.path.join(os.path.dirname(__file__), 'historical_data')
         fng_df = fetcher.fetch_fear_and_greed_history()
         if not fng_df.empty:
-            fng_df.to_csv(os.path.join('historical_data', 'fear_greed.csv'))
+            if not os.path.exists(base_path):
+                os.makedirs(base_path)
+            fng_df.to_csv(os.path.join(base_path, 'fear_greed.csv'))
             all_data['sentiment'] = fng_df
 
         # Validasi data

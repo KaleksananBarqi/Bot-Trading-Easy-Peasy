@@ -1,54 +1,19 @@
 {
-  "total_symbols": 14,
+  "total_symbols": 3,
   "symbols": [
     "BTC/USDT",
-    "ETH/USDT",
     "SOL/USDT",
-    "BNB/USDT",
-    "AVAX/USDT",
-    "ADA/USDT",
-    "SUI/USDT",
-    "TRX/USDT",
-    "XPL/USDT",
-    "LINK/USDT",
-    "XRP/USDT",
-    "LTC/USDT",
-    "DOGE/USDT",
-    "ZEC/USDT"
+    "sentiment"
   ],
   "timeframes": [
     "5m",
     "1h"
   ],
   "saved_files": [
-    "historical_data\\BTC_USDT\\5m.csv",
-    "historical_data\\BTC_USDT\\1h.csv",
-    "historical_data\\ETH_USDT\\5m.csv",
-    "historical_data\\ETH_USDT\\1h.csv",
-    "historical_data\\SOL_USDT\\5m.csv",
-    "historical_data\\SOL_USDT\\1h.csv",
-    "historical_data\\BNB_USDT\\5m.csv",
-    "historical_data\\BNB_USDT\\1h.csv",
-    "historical_data\\AVAX_USDT\\5m.csv",
-    "historical_data\\AVAX_USDT\\1h.csv",
-    "historical_data\\ADA_USDT\\5m.csv",
-    "historical_data\\ADA_USDT\\1h.csv",
-    "historical_data\\SUI_USDT\\5m.csv",
-    "historical_data\\SUI_USDT\\1h.csv",
-    "historical_data\\TRX_USDT\\5m.csv",
-    "historical_data\\TRX_USDT\\1h.csv",
-    "historical_data\\XPL_USDT\\5m.csv",
-    "historical_data\\XPL_USDT\\1h.csv",
-    "historical_data\\LINK_USDT\\5m.csv",
-    "historical_data\\LINK_USDT\\1h.csv",
-    "historical_data\\XRP_USDT\\5m.csv",
-    "historical_data\\XRP_USDT\\1h.csv",
-    "historical_data\\LTC_USDT\\5m.csv",
-    "historical_data\\LTC_USDT\\1h.csv",
-    "historical_data\\DOGE_USDT\\5m.csv",
-    "historical_data\\DOGE_USDT\\1h.csv",
-    "historical_data\\ZEC_USDT\\5m.csv",
-    "historical_data\\ZEC_USDT\\1h.csv"
+    "C:\\Projek\\Bot Trading\\Bot-Trading-Easy-Peasy\\backtesting\\historical_data\\BTC_USDT\\5m.csv",
+    "C:\\Projek\\Bot Trading\\Bot-Trading-Easy-Peasy\\backtesting\\historical_data\\BTC_USDT\\1h.csv",
+    "C:\\Projek\\Bot Trading\\Bot-Trading-Easy-Peasy\\backtesting\\historical_data\\SOL_USDT\\5m.csv",
+    "C:\\Projek\\Bot Trading\\Bot-Trading-Easy-Peasy\\backtesting\\historical_data\\SOL_USDT\\1h.csv"
   ],
-  "timestamp": "2026-01-22T13:08:17.212652"
+  "timestamp": "2026-02-11T11:47:13.378181"
 }

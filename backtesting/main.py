@@ -5,10 +5,13 @@ import pandas_ta as ta
 import time
 import requests
 import sys
-import os
 import logging
 import json
 import config 
+import os 
+
+# Force UTF-8 Output
+sys.stdout.reconfigure(encoding='utf-8')
 
 # ==========================================
 # KONFIGURASI & GLOBALS

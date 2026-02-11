@@ -1,0 +1,19 @@
+{
+    "timestamp": "20260211_114716",
+    "config": {
+        "initial_capital": 50,
+        "final_capital": 49.84742549195895,
+        "start_date": "2026-01-01",
+        "end_date": "2026-02-10"
+    },
+    "metrics": {
+        "total_pnl": -0.152574508041048,
+        "win_rate": 0.0,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.0,
+        "sharpe_ratio": 0,
+        "total_trades": 1,
+        "winning_trades": 0,
+        "losing_trades": 1
+    }
+}
