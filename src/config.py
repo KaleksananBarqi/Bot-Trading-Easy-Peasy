@@ -240,7 +240,7 @@ DEFAULT_TP_PERCENT = 0.025       # 2.5%
 
 # Penghitungan SL/TP Dinamis (Berbasis ATR)
 ATR_PERIOD = 14
-ATR_MULTIPLIER_SL = 0.75          # Ini adalah ATR untuk Entry sesuai liquidity Hunt 
+ATR_MULTIPLIER_SL = 0.75          # Harga dimana entry jika passive/limit order
 ATR_MULTIPLIER_TP1 = 3.0         # Target TP = 3x ATR (Risk Reward 1:1.5)
 TRAP_SAFETY_SL = 2.0             # Jarak Safety SL untuk Liquidity Hunt
 
