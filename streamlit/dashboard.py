@@ -841,7 +841,8 @@ if not df_filtered.empty:
             'pnl_usdt': float(trade.get('pnl_usdt', 0)),
             'roi_percent': float(trade.get('roi_percent', 0)),
             'timestamp': trade['timestamp'],
-            'leverage': get_coin_leverage(trade.get('symbol', 'UNKNOWN'))
+            'leverage': get_coin_leverage(trade.get('symbol', 'UNKNOWN')),
+            'strategy': trade.get('strategy_tag', '-')
         }
 
         try:

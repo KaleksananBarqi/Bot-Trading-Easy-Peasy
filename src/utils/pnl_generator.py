@@ -239,6 +239,11 @@ class CryptoPnLGenerator:
         pnl_str = f"{pnl:+.4f} USDT"
         draw.text((margin, 680), pnl_str, font=font_pnl, fill=text_primary)
         
+        # Strategy Name
+        strategy_name = data.get('strategy', 'Unknown Strategy').replace('_', ' ')
+        font_strat = self.font_loader('regular', 30, fallback_key='regular')
+        draw.text((margin, 760), strategy_name, font=font_strat, fill=text_secondary)
+        
         # --- 4. Horizontal Footer (Entry, Last, Referral, QR) ---
         entry = float(data.get('entry_price', 0))
         exit_price = float(data.get('exit_price', 0))
@@ -471,10 +476,16 @@ class CryptoPnLGenerator:
         if user_cfg.get('show_qr', True) and qrcode:
             qr_data = user_cfg.get('qr_data', 'https://example.com')
             try:
-                qr = qrcode.QRCode(box_size=10, border=1)
+                # Border=3 memberikan whitespace (quiet zone) yang cukup tebal dan rapi
+                qr = qrcode.QRCode(box_size=10, border=3)
                 qr.add_data(qr_data)
                 qr.make(fit=True)
-                qr_img = qr.make_image(fill_color="white", back_color="black").resize((size, size))
+                
+                # Standard Black on White agar lebih kontras dan 'clean'
+                # Menggunakan LANCZOS untuk hasil resize yang lebih halus
+                qr_img = qr.make_image(fill_color="black", back_color="white")
+                qr_img = qr_img.resize((size, size), Image.Resampling.LANCZOS)
+                
                 img.paste(qr_img, (x, y))
             except Exception as e:
                 print(f"Error generating QR: {e}")
@@ -500,7 +511,8 @@ if __name__ == "__main__":
         'exit_price': 92000.00,
         'pnl_usdt': 3250.00,
         'roi_percent': 315.50,
-        'leverage': 50
+        'leverage': 50,
+        'strategy': 'MACD Crossover'
     }
     
     img_buffer = generator.generate_card(dummy_data)
