@@ -380,7 +380,7 @@ def get_plotly_layout(**overrides):
             borderwidth=0,
             font=dict(color='#94a3b8'),
         ),
-        title=None,
+        title="",
     )
     base.update(overrides)
     return base
