@@ -245,6 +245,30 @@ def _calculate_tech_data_threaded(bars_exec, bars_trend, symbol):
             }
         }
 
+        # [NEW] 11. Global Trend (1D) Calculation
+        # Menghitung tren jangka panjang untuk filter AI
+        global_trend = "NEUTRAL"
+        try:
+            if len(bars_trend) > config.EMA_TREND_MAJOR:
+                df_trend = pd.DataFrame(bars_trend, columns=['timestamp','open','high','low','close','volume'])
+                # Calculate EMA on 1D data
+                ema_major_series = df_trend.ta.ema(length=config.EMA_TREND_MAJOR)
+                
+                # Get the last closed candle (index -2)
+                # Index -1 is the current forming candle
+                if len(df_trend) >= 2:
+                    idx = -2
+                    price_1d = df_trend['close'].iloc[idx]
+                    ema_1d = ema_major_series.iloc[idx]
+                    
+                    if pd.notna(ema_1d):
+                        global_trend = "BULLISH" if price_1d > ema_1d else "BEARISH"
+        except Exception as e_glob:
+            logger.error(f"Global Trend Calc Warning {symbol}: {e_glob}")
+
+        # Inject Global Trend to tech_data
+        tech_data["global_trend_1d"] = global_trend
+
         return tech_data
 
     except Exception as e:

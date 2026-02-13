@@ -271,19 +271,13 @@ SCENARIO B: Sell/Short Setup
 - Pivot Points: {pivot_str}
 --------------------------------------------------
 """
-        btc_instruction_prompt = f"""
-1. 📊 ASSESS MACRO CONTEXT:
-   - Market Structure: {market_struct}
-   - BTC Trend: {btc_trend}
-   {btc_instruction}
-   
-   🧠 PANDUAN INTERPRETASI:
-   | Kondisi | Implikasi untuk LONG | Implikasi untuk SHORT |
-   |---------|---------------------|----------------------|
-   | Structure BEARISH + BTC BEARISH | ⛔ FORBIDDEN - butuh RSI<{config.RSI_DEEP_OVERSOLD} + crossover + sweep | ✅ Didukung macro |
-   | Structure BULLISH + BTC BULLISH | ✅ Didukung macro | ⛔ FORBIDDEN - butuh RSI>{config.RSI_DEEP_OVERBOUGHT} + crossover + sweep |
-   | Structure & BTC bertentangan | Ambigu - WAIT lebih aman | Ambigu - WAIT lebih aman |
-"""
+        btc_instruction_prompt = config.PROMPT_BTC_WITH_CONTEXT.format(
+            market_struct=market_struct,
+            btc_trend=btc_trend,
+            btc_instruction=btc_instruction,
+            rsi_oversold=config.RSI_DEEP_OVERSOLD,
+            rsi_overbought=config.RSI_DEEP_OVERBOUGHT
+        )
     else:
         # Jika BTC Hidden (Independent Move), hanya tampilkan Market Structure & Pivot
         macro_section = f"""
@@ -293,50 +287,25 @@ SCENARIO B: Sell/Short Setup
 - Pivot Points: {pivot_str}
 --------------------------------------------------
 """
-        btc_instruction_prompt = f"""
-1. 📊 ASSESS MACRO CONTEXT:
-   - Current {config.TIMEFRAME_TREND} Market Structure: {market_struct}
-   
-   🧠 PANDUAN INTERPRETASI:
-   - Jika Structure BEARISH:
-     • LONG/BUY = ⛔ FORBIDDEN kecuali:
-       RSI < {config.RSI_DEEP_OVERSOLD} + StochRSI K cross above D + sweep S1 + volume > {config.VOLUME_SPIKE_MULTIPLIER}x avg
-     • SHORT/SELL = ✅ Didukung macro
-   
-   - Jika Structure BULLISH:
-     • SHORT/SELL = ⛔ FORBIDDEN kecuali:
-       RSI > {config.RSI_DEEP_OVERBOUGHT} + StochRSI K cross below D + sweep R1 + volume > {config.VOLUME_SPIKE_MULTIPLIER}x avg
-     • LONG/BUY = ✅ Didukung macro
-"""
+        btc_instruction_prompt = config.PROMPT_BTC_NO_CONTEXT.format(
+            timeframe_trend=config.TIMEFRAME_TREND,
+            market_struct=market_struct,
+            rsi_oversold=config.RSI_DEEP_OVERSOLD,
+            volume_spike=config.VOLUME_SPIKE_MULTIPLIER,
+            rsi_overbought=config.RSI_DEEP_OVERBOUGHT
+        )
 
     # [LOGIC: STRATEGY INSTRUCTION - LIQUIDITY HUNT PROTOCOL]
-    strategy_instruction = f"""
-6. STRATEGY SELECTION (CHOOSE ONE):
-   
-   A. LIQUIDITY_REVERSAL_MASTER
-      ✓ USE IF: Sweep rejection confirmed (wick > S1/R1, body closes back)
-      ✓ REQUIRES: Volume spike > {config.VOLUME_SPIKE_MULTIPLIER}x + RSI extreme
-      → Select SCENARIO A (Long) or B (Short) based on sweep zone
-      → NOTE: Must pass Exception criteria if Trend Lock is active.
-   
-   B. PULLBACK_CONTINUATION
-      ✓ USE IF: Strong trend (ADX > {config.ADX_PERIOD}) + price pulling back to EMA
-      ✓ REQUIRES: Trend direction clear, no sweep happening
-      → LONG in uptrend pullback to EMA {config.EMA_FAST}/{config.EMA_SLOW}
-      → SHORT in downtrend bounce to EMA {config.EMA_FAST}/{config.EMA_SLOW}
-   
-   C. BREAKDOWN_FOLLOW
-      ✓ USE IF: Price CLOSES beyond S1/R1 with volume (true breakout, not sweep)
-      ✓ REQUIRES: Body close beyond level + volume confirmation
-      → SHORT if breaks S1, LONG if breaks R1
-   
-   D. WAIT (No Trade)
-      ✓ USE IF: Price in no-man's land (between S1-R1) OR conflicting signals
-
-7. EXECUTION MODE:
-   {'- Market Order: Available for confirmed setups' if config.ENABLE_MARKET_ORDERS else 'pass'}
-   - Limit Order: Use pre-calculated entry from EXECUTION SCENARIOS.
-"""
+    # [LOGIC: STRATEGY INSTRUCTION - LIQUIDITY HUNT PROTOCOL]
+    execution_mode_text = '- Market Order: Available for confirmed setups' if config.ENABLE_MARKET_ORDERS else 'pass'
+    
+    strategy_instruction = config.PROMPT_STRATEGY_SELECTION.format(
+        volume_spike=config.VOLUME_SPIKE_MULTIPLIER,
+        adx_period=config.ADX_PERIOD,
+        ema_fast=config.EMA_FAST,
+        ema_slow=config.EMA_SLOW,
+        execution_mode_text=execution_mode_text
+    )
 
     prompt = f"""
 ROLE: {config.AI_SYSTEM_ROLE}
@@ -427,22 +396,15 @@ REMINDER: Adhere strictly to the TREND LOCK GATE defined in your system role.
 {strategy_instruction}
 
 8. DECISION: Return WAIT if no setup confirmed OR trend filter disqualifies all scenarios.
-
-OUTPUT FORMAT (JSON ONLY):
-{{
-  "analysis": {{
-    "interaction_zone": "TESTING_S1 / TESTING_R1 / MID_RANGE",
-    "zone_reaction": "WICK_REJECTION (Reversal) / BREAKOUT_CLOSE (Continuation) / TESTING (Indecisive)",
-    "price_vs_pivot": "BELOW_S1 / ABOVE_R1 / INSIDE_RANGE"
-  }},
-  "selected_strategy": "NAME OF STRATEGY",
-  "execution_mode": { '"MARKET" | "LIMIT"' if config.ENABLE_MARKET_ORDERS else '"LIMIT"' },
-  "decision": "BUY" | "SELL" | "WAIT",
-  "reason": "Explain your logic in INDONESIAN language, referencing specific macro and micro factors.",
-  "confidence": 0-100,
-  "risk_level": "LOW" | "MEDIUM" | "HIGH"
-}}
 """
+
+    execution_mode_json = '{ "MARKET" | "LIMIT" }' if config.ENABLE_MARKET_ORDERS else '"LIMIT"'
+    
+    output_format_prompt = config.PROMPT_MARKET_ANALYSIS_OUTPUT_FORMAT.format(
+        execution_mode_json=execution_mode_json
+    )
+
+    prompt += output_format_prompt
     return prompt
 
 def build_sentiment_prompt(sentiment_data, onchain_data):
@@ -463,39 +425,14 @@ def build_sentiment_prompt(sentiment_data, onchain_data):
     inflow_status = onchain_data.get('stablecoin_inflow', 'Neutral')
 
     # 2. Prompt Construction
-    prompt = f"""
-ROLE: You are an expert Crypto Narrative Analyst. You analyze market sentiment, news, and on-chain flows to provide a "Bird's Eye View" of the market condition.
-
-TASK: Analyze the provided data and generate a SENTIMENT REPORT in INDONESIAN language.
-
---------------------------------------------------
-DATA INPUT:
-[MARKET MOOD]
-- Fear & Greed Index: {fng_value} ({fng_text})
-- Stablecoin Inflow: {inflow_status}
-
-[WHALE ACTIVITY (ON-CHAIN)]
-{whale_str}
-
-[LATEST HEADLINES (RSS)]
-{news_str}
---------------------------------------------------
-
-INSTRUCTIONS:
-1. Synthesize the "Market Vibe" based on F&G and News.
-2. Analyze if Whales are accumulating (Bullish) or dumping (Bearish).
-3. Provide a clear summary in INDONESIAN.
-
-OUTPUT FORMAT (JSON ONLY):
-{{
-  "analysis": "sentiment",
-  "overall_sentiment": "BULLISH" | "BEARISH" | "NEUTRAL" | "MIXED",
-  "sentiment_score": 0-100,
-  "summary": "Full summary in Indonesian (max 1 paragraph). Mention key drivers.",
-  "key_drivers": ["List of 2-3 main factors driving the sentiment"],
-  "risk_assessment": "RISK LEVEL (Low/Medium/High) - Short reason why."
-}}
-"""
+    # 2. Prompt Construction
+    prompt = config.PROMPT_SENTIMENT_ANALYSIS.format(
+        fng_value=fng_value,
+        fng_text=fng_text,
+        inflow_status=inflow_status,
+        whale_str=whale_str,
+        news_str=news_str
+    )
     return prompt
 
 def build_pattern_recognition_prompt(symbol, timeframe, raw_data=None):
@@ -512,13 +449,10 @@ def build_pattern_recognition_prompt(symbol, timeframe, raw_data=None):
             f"- Volume: {raw_data.get('volume', 0)}\n"
         )
 
-    prompt_text = (
-        f"Analyze this {timeframe} chart for {symbol}. {raw_info}"
-        "1. VISUAL PATTERNS: Identify Chart Patterns (e.g. Head & Shoulders, Flags, Wedges, Double Top/Bottom).\n"
-        "2. MACD DIVERGENCE (Bottom Panel): Look for divergences between Price and MACD Histogram/Lines.\n"
-        "   - BULLISH DIVERGENCE: Price makes Lower Low, MACD makes Higher Low -> Signal Reversal UP.\n"
-        "   - BEARISH DIVERGENCE: Price makes Higher High, MACD makes Lower High -> Signal Reversal DOWN.\n"
-        "Determine the overall bias (BULLISH/BEARISH/NEUTRAL). Keep it concise (max 3-4 sentences)."
+    prompt_text = config.PROMPT_PATTERN_RECOGNITION.format(
+        timeframe=timeframe,
+        symbol=symbol,
+        raw_info=raw_info
     )
     return prompt_text
 
