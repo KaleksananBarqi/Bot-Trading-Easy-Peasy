@@ -49,15 +49,15 @@ LOOP_SKIP_DELAY = 2              # Delay saat skip coin karena data tidak lengka
 # ------------------------------------------------------------------------------
 # 1. GROUP 1: TREND (Analisa Tren Besar)
 # ------------------------------------------------------------------------------
-TIMEFRAME_TREND = '1h'           # Timeframe untuk melihat tren besar
+TIMEFRAME_TREND = '4h'           # Timeframe untuk melihat tren besar
 LIMIT_TREND = 500                # Limit candle
-EMA_TREND_MAJOR = 21             # EMA filter tren utama (Trend Direction)
+EMA_TREND_MAJOR = 50             # EMA filter tren utama (Trend Direction)
 ADX_PERIOD = 14                  # Kekuatan Tren (Trend Strength)
 
 # ------------------------------------------------------------------------------
 # 2. GROUP 2: SETUP (Pola & Struktur)
 # ------------------------------------------------------------------------------
-TIMEFRAME_SETUP = '30m'          # Timeframe untuk pola chart
+TIMEFRAME_SETUP = '1h'          # Timeframe untuk pola chart
 LIMIT_SETUP = 100                # Limit candle
 
 MACD_FAST = 12
@@ -101,7 +101,7 @@ VOLUME_SPIKE_MULTIPLIER = 2.0    # Volume harus N kali dari average untuk konfir
 USE_BTC_CORRELATION = True       # Wajib cek gerak-gerik Bitcoin?
 BTC_SYMBOL = 'BTC/USDT'
 BTC_EMA_PERIOD = 50              # EMA Trend Filter Bitcoin
-CORRELATION_THRESHOLD_BTC = 0.7  # Minimal korelasi untuk dianggap ngikut BTC
+CORRELATION_THRESHOLD_BTC = 0.8  # Minimal korelasi untuk dianggap ngikut BTC
 CORRELATION_PERIOD = 30          # Periode cek korelasi
 DEFAULT_CORRELATION_HIGH = 0.99  # Nilai default jika data korrelasi belum ada
 

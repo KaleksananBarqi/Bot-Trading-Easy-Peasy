@@ -61,21 +61,7 @@ Bot tidak hanya mengandalkan satu strategi! AI akan **memilih strategi terbaik**
 
 Bot menggunakan strategi **Liquidity Hunt Specialist** yang fokus mencari titik balik di area "Stop Run" dan "Liquidity Grab" — zona di mana market maker sering memburu stop loss retail trader sebelum membalikkan arah.
 
-**📊 Hasil Backtest (Januari 2026)**
-| Metrik | Hasil |
-|--------|-------|
-| **Total Profit** | +$845.42 (+84.54%) |
-| **Modal Awal → Akhir** | $1,000 → $1,845.42 |
-| **Win Rate** | 84.52% (71 TP, 13 SL) |
-| **Total Trades** | 84 trades |
-| **Profit Factor** | 7.94 |
-| **Max Drawdown** | -1.82% ✅ (Sangat aman) |
 
-**🏆 Performa per Koin**
-| Koin | Profit | Total Trades |
-|------|--------|--------------|
-| SOL/USDT | +$566.16 | 40 trades |
-| BTC/USDT | +$279.26 | 44 trades |
 
 **💡 Konsep Strategi**
 1. **Deteksi Liquidity Zone**: Identifikasi area di mana banyak stop loss berkumpul
@@ -414,9 +400,7 @@ sudo systemctl status trading-bot
  ├── 📂 assets/                  # 🖼️ Aset Statis
  │    ├── 📂 fonts/              # Font Kustom untuk PnL Card
  │    └── 📂 icons/              # Ikon & Logo Exchange
- ├── 📂 backtesting/             # ⏳ Sistem Pengujian Historis
- │    ├── 📊 backtest.py               # Engine Backtest Utama
- │    └── 📈 backtest_result.md        # Hasil & Laporan Backtest
+
  ├── 📂 tests/                   # 🧪 Automated Testing (25+ test files)
  └── 📦 pyproject.toml           # Manajemen Dependensi Modern
 ```

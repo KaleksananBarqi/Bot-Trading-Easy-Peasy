@@ -1,2 +1,0 @@
-symbol,entry_time,exit_time,side,strategy,entry_price,exit_price,exit_type,position_value,pnl_usdt,pnl_percent,leverage,sl_price,tp_price,adx,rsi,atr,volume_valid,month
-BTC/USDT,2026-01-02 09:45:00,2026-01-02 09:50:00,SHORT,LIQUIDITY_REVERSAL_MASTER,89277.32167073226,89454.17945935161,SL,5.0,-0.152574508041048,-2.97149016082096,15,89454.17945935161,89012.03498780323,28.64018038376606,67.79208047051955,88.42889430967548,True,2026-01
