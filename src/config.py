@@ -47,9 +47,9 @@ AI_APP_URL = "https://github.com/KaleksananBarqi/Bot-Trading-Easy-Peasy"
 AI_APP_TITLE = "Bot Trading Easy Peasy"
 
 # Analisa Berita & Sentimen
-ENABLE_SENTIMENT_ANALYSIS = False          # Aktifkan analisa sentimen berita?
-AI_SENTIMENT_MODEL = 'xiaomi/mimo-v2-flash' # Model ekonomis untuk baca berita
-SENTIMENT_ANALYSIS_INTERVAL = '3h'         # Seberapa sering cek sentimen (misal: tiap 3 jam)
+ENABLE_SENTIMENT_ANALYSIS = True          # Aktifkan analisa sentimen berita?
+AI_SENTIMENT_MODEL = 'arcee-ai/trinity-large-preview:free' # Model ekonomis untuk baca berita
+SENTIMENT_ANALYSIS_INTERVAL = '1h'         # Seberapa sering cek sentimen (misal: tiap 3 jam)
 SENTIMENT_UPDATE_INTERVAL = '1h'           # Interval update data raw sentimen
 SENTIMENT_PROVIDER = 'RSS_Feed'  # Sumber: 'RSS_Feed'
 
