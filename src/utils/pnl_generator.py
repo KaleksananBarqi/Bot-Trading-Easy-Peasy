@@ -204,7 +204,7 @@ class CryptoPnLGenerator:
         pnl = float(data.get('pnl_usdt', 0))
         is_win = roi >= 0
         roi_color = up_color if is_win else down_color
-        badge_color = up_color if side == "LONG" else down_color
+        badge_color = up_color if side in ["LONG", "BUY"] else down_color
         
         # Symbol Title
         font_symbol = self.font_loader('bold', 72, fallback_key='bold')
