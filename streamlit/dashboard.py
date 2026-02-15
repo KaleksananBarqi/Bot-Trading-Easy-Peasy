@@ -518,6 +518,8 @@ def get_plotly_layout(**overrides):
 @st.cache_data(ttl=60)
 def get_data():
     journal = TradeJournal()
+    df = journal.load_trades()
+    
     # Convert Timestamp to WIB (UTC+7)
     if not df.empty and 'timestamp' in df.columns:
         # 1. Ensure datetime
