@@ -32,9 +32,9 @@ DAFTAR_KOIN = [
 # 2. 🧠 KECERDASAN BUATAN (AI) & STRATEGI ADAPTIF
 # ==============================================================================
 # Otak Utama (Decision Maker)
-AI_MODEL_NAME = 'deepseek/deepseek-v3.2'
+AI_MODEL_NAME = 'arcee-ai/trinity-large-preview:free'
 AI_TEMPERATURE = 0.0             # 0.0 = Logis & Konsisten, 1.0 = Kreatif & Halusinasi
-AI_CONFIDENCE_THRESHOLD = 70     # Minimal keyakinan (%) untuk berani eksekusi
+AI_CONFIDENCE_THRESHOLD = 65     # Minimal keyakinan (%) untuk berani eksekusi
 
 # Reasoning (Untuk Model yang Support Reasoning Tokens)
 AI_REASONING_ENABLED = False     # Aktifkan fitur reasoning? (True/False)
@@ -190,8 +190,9 @@ ORDER_SLTP_RETRY_DELAY = 2       # Jeda retry (detik)
 PAKAI_DEMO = True               # False = Real Money, True = Testnet
 
 # Identitas File
-LOG_FILENAME = 'bot_trading.log'
-TRACKER_FILENAME = 'safety_tracker.json'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_FILENAME = os.path.join(BASE_DIR, 'bot_trading.log')
+TRACKER_FILENAME = os.path.join(BASE_DIR, 'safety_tracker.json')
 
 # Database (MongoDB)
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
