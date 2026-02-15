@@ -6,6 +6,8 @@ import plotly.graph_objects as go
 import json
 import sys
 import os
+import calendar
+from datetime import datetime, timedelta
 
 # Robustly add project root to sys.path so 'config' can be imported by src modules
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -339,6 +341,106 @@ st.markdown("""
         transform: translateY(-1px) !important;
     }
 
+    /* ── Calendar Grid ────────────────────────────────────────────── */
+    .calendar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+        background: var(--bg-card);
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-subtle);
+    }
+    .calendar-header h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .calendar-nav-btn {
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-subtle);
+        color: var(--text-primary);
+        padding: 0.4rem 0.8rem;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 600;
+    }
+    .calendar-nav-btn:hover {
+        background: var(--accent-blue);
+        border-color: var(--accent-blue);
+        color: white;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.8rem;
+    }
+    
+    .day-header {
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        padding-bottom: 0.5rem;
+    }
+
+    .day-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 0.8rem;
+        min-height: 100px;
+        position: relative;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .day-card:hover {
+        border-color: var(--border-color);
+        transform: translateY(-2px);
+    }
+    .day-card.empty {
+        background: transparent;
+        border: none;
+    }
+    
+    .day-date {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        margin-bottom: 0.4rem;
+    }
+    
+    .day-pnl {
+        font-size: 0.85rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .day-card.positive {
+        background: rgba(16, 185, 129, 0.05);
+        border-color: rgba(16, 185, 129, 0.2);
+    }
+    .day-card.positive .day-pnl { color: var(--accent-green); }
+    
+    .day-card.negative {
+        background: rgba(239, 68, 68, 0.05);
+        border-color: rgba(239, 68, 68, 0.2);
+    }
+    .day-card.negative .day-pnl { color: var(--accent-red); }
+    
+    .day-card.neutral {
+        opacity: 0.6;
+    }
+    .day-card.neutral .day-pnl { color: var(--text-muted); }
+
     /* ── Responsive ────────────────────────────────────────────────── */
     @media (max-width: 768px) {
         .dashboard-header { padding: 1.2rem 1rem; }
@@ -363,6 +465,12 @@ st.markdown("""
         
         /* Chart Containers */
         .js-plotly-plot { margin-bottom: 1rem; }
+        
+        /* Calendar Mobile */
+        .calendar-grid { grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .day-card { min-height: 60px; padding: 4px; }
+        .day-date { font-size: 0.75rem; }
+        .day-pnl { font-size: 0.65rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -745,7 +853,9 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-tab_symbol, tab_strat, tab_model, tab_scatter = st.tabs(["🪙 By Symbol", "🧠 By Strategy", "🤖 By AI Model", "📉 Duration PnL"])
+tab_symbol, tab_strat, tab_model, tab_daily, tab_calendar, tab_drawdown, tab_dist = st.tabs([
+    "🪙 Symbol", "🧠 Strategy", "🤖 Model", "� Daily PnL", "🗓️ Calendar", "�📉 Drawdown", "📊 Distribution"
+])
 
 with tab_symbol:
     # Prepare Data
@@ -820,27 +930,160 @@ with tab_model:
     else:
         st.info("Data AI Model belum tersedia.")
 
-with tab_scatter:
-    # Trade Duration vs PnL
-    df_dur = df_filtered.copy()
-    if 'filled_at' in df_dur.columns and 'timestamp' in df_dur.columns:
-        # Ensure datetimelike
-        # (Assuming filled_at might be string ISO from CSV/Mongo)
-        # Note: In log_trade it is saved as string ISO. in load_trades we convert timestamp but maybe not filled_at?
-        # Let's try to parse on the fly if needed
-        pass # Logic handled in basic scatter
+with tab_daily:
+    # Aggregating PnL by Day
+    df_daily = df_filtered.copy()
+    df_daily['date'] = df_daily['timestamp'].dt.date
+    daily_stats = df_daily.groupby('date')['pnl_usdt'].sum().reset_index()
+    
+    colors_daily = ['#10b981' if v >= 0 else '#ef4444' for v in daily_stats['pnl_usdt']]
+    
+    fig_daily = go.Figure(data=[go.Bar(
+        x=daily_stats['date'], y=daily_stats['pnl_usdt'],
+        marker=dict(color=colors_daily),
+        hovertemplate='<b>%{x}</b><br>PnL: $%{y:.2f}<extra></extra>'
+    )])
+    fig_daily.update_layout(**get_plotly_layout(height=400, title="Daily PnL Performance"))
+    st.plotly_chart(fig_daily, use_container_width=True)
 
-    fig_scatter = px.scatter(
-        df_filtered, 
-        x='roi_percent', 
-        y='pnl_usdt',
-        color='result',
-        hover_data=['symbol', 'strategy_tag', 'ai_model'],
-        color_discrete_map={'WIN': '#10b981', 'LOSS': '#ef4444', 'BREAKEVEN': '#f59e0b', 'CANCELLED': '#64748b', 'EXPIRED': '#475569'},
-        title="Distribution: ROI % vs PnL ($)"
+with tab_calendar:
+    # PnL Calendar View (Custom Grid)
+    
+    # 1. Initialize Session State for Calendar Navigation
+    if 'cal_year' not in st.session_state:
+        st.session_state.cal_year = datetime.now().year
+    if 'cal_month' not in st.session_state:
+        st.session_state.cal_month = datetime.now().month
+
+    # 2. Navigation Functions
+    def prev_month():
+        if st.session_state.cal_month == 1:
+            st.session_state.cal_month = 12
+            st.session_state.cal_year -= 1
+        else:
+            st.session_state.cal_month -= 1
+
+    def next_month():
+        if st.session_state.cal_month == 12:
+            st.session_state.cal_month = 1
+            st.session_state.cal_year += 1
+        else:
+            st.session_state.cal_month += 1
+
+    # 3. Prepare Data for Selected Month
+    current_year = st.session_state.cal_year
+    current_month = st.session_state.cal_month
+    
+    # Filter data for this specific month
+    df_cal = df_filtered.copy()
+    df_cal['date'] = df_cal['timestamp'].dt.date
+    month_data = df_cal[
+        (df_cal['timestamp'].dt.year == current_year) & 
+        (df_cal['timestamp'].dt.month == current_month)
+    ]
+    
+    # Aggregate PnL by day
+    daily_pnl = month_data.groupby('date')['pnl_usdt'].sum().to_dict()
+    
+    # 4. Calendar Header (Navigation)
+    month_name = calendar.month_name[current_month]
+    
+    col_prev, col_title, col_next = st.columns([1, 4, 1])
+    with col_prev:
+        st.button("◀ Prev", on_click=prev_month, key="btn_prev_month", use_container_width=True)
+    with col_title:
+        st.markdown(
+            f"<h3 style='text-align: center; margin: 0; padding-top: 5px;'>{month_name} {current_year}</h3>", 
+            unsafe_allow_html=True
+        )
+    with col_next:
+        st.button("Next ▶", on_click=next_month, key="btn_next_month", use_container_width=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # 5. Calendar Grid Rendering
+    # Day Headers
+    cols = st.columns(7)
+    days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] # Sunday first for standard view? 
+    # Python calendar.monthcalendar uses Monday (0) to Sunday (6).
+    # Let's align with standard Python calendar: Mon-Sun
+    days_header = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    
+    for i, day in enumerate(days_header):
+        cols[i].markdown(f"<div class='day-header'>{day}</div>", unsafe_allow_html=True)
+        
+    # Get weeks matrix (0 means date belongs to prev/next month)
+    cal = calendar.monthcalendar(current_year, current_month)
+    
+    for week in cal:
+        cols = st.columns(7)
+        for i, day_num in enumerate(week):
+            if day_num == 0:
+                # Empty cell
+                cols[i].markdown("<div class='day-card empty'></div>", unsafe_allow_html=True)
+            else:
+                # Actual date cell
+                date_obj = datetime(current_year, current_month, day_num).date()
+                pnl = daily_pnl.get(date_obj, 0.0)
+                
+                # Determine styling
+                card_class = "neutral"
+                pnl_text = f"{pnl:.2f}"
+                
+                if pnl > 0:
+                    card_class = "positive"
+                    pnl_text = f"+{pnl:.2f}"
+                elif pnl < 0:
+                    card_class = "negative"
+                    pnl_text = f"{pnl:.2f}"
+                elif pnl == 0 and date_obj in daily_pnl:
+                     # Explicit 0 PnL trades
+                    card_class = "neutral"
+                    pnl_text = "0.00"
+                else:
+                    # No trades
+                    card_class = "neutral"
+                    pnl_text = "-"
+
+                cols[i].markdown(f"""
+                <div class='day-card {card_class}'>
+                    <div class='day-date'>{day_num}</div>
+                    <div class='day-pnl'>{pnl_text}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+
+with tab_drawdown:
+    # Calculate Drawdown
+    df_dd = df_filtered.sort_values(by='timestamp')
+    df_dd['cumulative'] = df_dd['pnl_usdt'].cumsum()
+    df_dd['high_water_mark'] = df_dd['cumulative'].cummax()
+    df_dd['drawdown'] = df_dd['cumulative'] - df_dd['high_water_mark']
+    
+    # Drawdown Percentage (approx if capital known, using absolute $ here as requested "Area chart")
+    # If we want %, we need starting capital. We'll stick to $ Drawdown for now.
+    
+    fig_dd = go.Figure()
+    fig_dd.add_trace(go.Scatter(
+        x=df_dd['timestamp'], y=df_dd['drawdown'],
+        fill='tozeroy',
+        fillcolor='rgba(239,68,68,0.2)',
+        line=dict(color='#ef4444', width=1.5),
+        name='Drawdown ($)'
+    ))
+    fig_dd.update_layout(**get_plotly_layout(height=400, title="Equity Drawdown ($)"))
+    st.plotly_chart(fig_dd, use_container_width=True)
+
+with tab_dist:
+    # PnL Distribution
+    fig_dist = px.histogram(
+        df_filtered, x="pnl_usdt", nbins=30,
+        color_discrete_sequence=['#3b82f6'],
+        title="PnL Distribution (Histogram)"
     )
-    fig_scatter.update_layout(**get_plotly_layout(height=400))
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    fig_dist.update_layout(**get_plotly_layout(height=400))
+    fig_dist.update_traces(marker_line_width=1, marker_line_color="#1e293b")
+    st.plotly_chart(fig_dist, use_container_width=True)
 
 
 # =============================================================================
@@ -961,149 +1204,67 @@ st.dataframe(
 
 
 # =============================================================================
-# TRADE TECHNICAL DETAILS (NEW)
-# =============================================================================
-# Check if new columns exist in the data
-has_tech_data = 'technical_data' in df_filtered.columns
-has_config_snap = 'config_snapshot' in df_filtered.columns
-
-if has_tech_data or has_config_snap:
-    st.markdown("""
-    <div class="section-header">
-        <div class="section-icon">🔧</div>
-        <div>
-            <h3>Detail Teknikal & Konfigurasi</h3>
-            <p class="section-desc">Snapshot indikator dan setting yang digunakan saat entry trade</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Build trade selector for detail view (completed trades only)
-    completed_df = df_filtered[df_filtered['result'].isin(['WIN', 'LOSS', 'BREAKEVEN'])].sort_values('timestamp', ascending=False)
-
-    if not completed_df.empty:
-        detail_choices = {}
-        for idx, row in completed_df.iterrows():
-            sym = row.get('symbol', '?')
-            pnl_val = row.get('pnl_usdt', 0)
-            res = row.get('result', '?')
-            ts = row['timestamp'].strftime('%d/%m %H:%M') if pd.notna(row['timestamp']) else '?'
-            label = f"{ts} — {sym} ({res}) ${pnl_val:.2f}"
-            detail_choices[label] = row
-
-        selected_detail = st.selectbox("🔍 Pilih Trade untuk Detail:", list(detail_choices.keys()), key="tech_detail_select")
-
-        if selected_detail:
-            detail_row = detail_choices[selected_detail]
-
-            # Parse JSON columns safely
-            def safe_parse_json(val):
-                if pd.isna(val) or val == '' or val is None:
-                    return {}
-                if isinstance(val, dict):
-                    return val
-                try:
-                    return json.loads(str(val))
-                except (json.JSONDecodeError, TypeError):
-                    return {}
-
-            tech_info = safe_parse_json(detail_row.get('technical_data', '{}')) if has_tech_data else {}
-            config_info = safe_parse_json(detail_row.get('config_snapshot', '{}')) if has_config_snap else {}
-
-            col_tech, col_cfg = st.columns(2)
-
-            with col_tech:
-                st.markdown("""
-                <div class="card-container">
-                    <div class="card-title">📊 Technical Snapshot</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                if tech_info:
-                    # Display key indicators
-                    st.json(tech_info, expanded=False)
-                else:
-                    st.info("Data teknikal belum tersedia.")
-
-            with col_cfg:
-                st.markdown("""
-                <div class="card-container">
-                    <div class="card-title">⚙️ Config Snapshot</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                if config_info:
-                    # Dynamic Table for Config
-                    st.dataframe(
-                        pd.DataFrame(list(config_info.items()), columns=['Key', 'Value']),
-                        hide_index=True,
-                        use_container_width=True,
-                        height=300
-                    )
-                else:
-                    st.info("Config snapshot belum tersedia.")
-    else:
-        st.info("Belum ada trade yang selesai (WIN/LOSS) untuk dilihat detailnya.")
-
-
-# =============================================================================
-# PNL CARD GENERATOR
+# TRADE ANALYSIS & SHARING (COMBINED)
 # =============================================================================
 st.markdown("""
 <div class="section-header">
-    <div class="section-icon">📸</div>
+    <div class="section-icon">🔍</div>
     <div>
-        <h3>Share PnL Card</h3>
-        <p class="section-desc">Generate kartu PnL untuk dibagikan ke sosial media</p>
+        <h3>Analisis Trade & Share PnA</h3>
+        <p class="section-desc">Detail teknikal lengkap dan kartu PnL untuk dibagikan</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-if not df_filtered.empty:
+# Filter for completed trades (WIN/LOSS/BREAKEVEN) with safe check
+if 'result' in df_filtered.columns:
+    completed_df = df_filtered[df_filtered['result'].isin(['WIN', 'LOSS', 'BREAKEVEN'])].sort_values('timestamp', ascending=False)
+else:
+    completed_df = pd.DataFrame()
+
+if not completed_df.empty:
+    # 1. Trade Selector
     trade_choices = {}
-    for index, row in df_display.iterrows():
-        symbol = row.get('symbol', 'UNKNOWN')
-        pnl = row.get('pnl_usdt', 0)
-        result = "WIN" if pnl >= 0 else "LOSS"
-        date_str = row['timestamp'].strftime('%d/%m %H:%M')
-        label = f"{date_str} — {symbol} ({result}) ${pnl:.2f}"
+    for idx, row in completed_df.iterrows():
+        sym = row.get('symbol', '?')
+        pnl_val = row.get('pnl_usdt', 0)
+        res = row.get('result', '?')
+        ts = row['timestamp'].strftime('%d/%m %H:%M') if pd.notna(row['timestamp']) else '?'
+        label = f"{ts} — {sym} ({res}) ${pnl_val:.2f}"
         trade_choices[label] = row
+
+    selected_trade_label = st.selectbox("Pilih Trade untuk Dianalisis:", list(trade_choices.keys()), key="combined_trade_select")
+
+    if selected_trade_label:
+        trade_row = trade_choices[selected_trade_label]
         
-    selected_label = st.selectbox("Pilih Trade:", list(trade_choices.keys()))
-    
-    if selected_label:
-        trade = trade_choices[selected_label]
+        # =================================================================
+        # SECTION A: PNL CARD (TOP)
+        # =================================================================
+        st.markdown("#### 📸 Share PnL Card")
         
         trade_data = {
-            'symbol': trade.get('symbol', 'UNKNOWN'),
-            'side': trade.get('side', 'LONG'),
-            'entry_price': float(trade.get('entry_price', 0)),
-            'exit_price': float(trade.get('exit_price', 0)),
-            'pnl_usdt': float(trade.get('pnl_usdt', 0)),
-            'roi_percent': float(trade.get('roi_percent', 0)),
-            'timestamp': trade['timestamp'],
-            'leverage': get_coin_leverage(trade.get('symbol', 'UNKNOWN')),
-            'strategy': trade.get('strategy_tag', '-')
+            'symbol': trade_row.get('symbol', 'UNKNOWN'),
+            'side': trade_row.get('side', 'LONG'),
+            'entry_price': float(trade_row.get('entry_price', 0)) if pd.notna(trade_row.get('entry_price')) else 0.0,
+            'exit_price': float(trade_row.get('exit_price', 0)) if pd.notna(trade_row.get('exit_price')) else 0.0,
+            'pnl_usdt': float(trade_row.get('pnl_usdt', 0)) if pd.notna(trade_row.get('pnl_usdt')) else 0.0,
+            'roi_percent': float(trade_row.get('roi_percent', 0)) if pd.notna(trade_row.get('roi_percent')) else 0.0,
+            'timestamp': trade_row['timestamp'],
+            'leverage': get_coin_leverage(trade_row.get('symbol', 'UNKNOWN')),
+            'strategy': trade_row.get('strategy_tag', '-')
         }
 
         try:
             pnl_gen = CryptoPnLGenerator()
             img_buffer = pnl_gen.generate_card(trade_data)
             
-            col_preview, col_info = st.columns([1, 1])
+            col_preview, col_dl = st.columns([1, 1])
             with col_preview:
-                st.image(img_buffer, caption="Preview Kartu PnL", use_container_width=True)
-                
-            with col_info:
-                st.markdown("""
-                <div class="card-container">
-                    <div class="card-title">📸 Siap Dibagikan</div>
-                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0;">
-                        Klik tombol di bawah untuk mengunduh gambar kartu PnL.
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-                
+                 st.image(img_buffer, caption="Preview Kartu PnL", use_container_width=True)
+            
+            with col_dl:
+                st.info("Kartu PnL ini siap dibagikan ke media sosial Anda.")
                 outcome = "WIN" if trade_data['roi_percent'] >= 0 else "LOSS"
                 file_name = f"PnL_{outcome}_{trade_data['symbol'].replace('/', '')}_{trade_data['timestamp'].strftime('%Y%m%d')}.png"
                 
@@ -1114,9 +1275,87 @@ if not df_filtered.empty:
                     mime="image/png",
                     use_container_width=True
                 )
-                
         except Exception as e:
-            st.error(f"Gagal membuat kartu: {str(e)}")
+            st.error(f"Gagal membuat kartu PnL: {str(e)}")
+
+        st.divider()
+
+        # =================================================================
+        # SECTION B: TECHNICAL & CONFIG DETAILS (BOTTOM)
+        # =================================================================
+        st.markdown("#### 🔧 Detail Teknikal & Konfigurasi")
+
+        # Parse JSON safely
+        def safe_parse_json(val):
+            if pd.isna(val) or val == '' or val is None:
+                return {}
+            if isinstance(val, dict):
+                return val
+            try:
+                return json.loads(str(val))
+            except (json.JSONDecodeError, TypeError):
+                return {}
+
+        technical_data_col = 'technical_data'
+        config_col = 'config_snapshot'
+        
+        tech_info = safe_parse_json(trade_row.get(technical_data_col, '{}')) if technical_data_col in trade_row else {}
+        config_info = safe_parse_json(trade_row.get(config_col, '{}')) if config_col in trade_row else {}
+
+        col_tech, col_cfg = st.columns([1, 1])
+        
+        with col_tech:
+            st.markdown("""
+            <div class="card-container">
+                <div class="card-title">📊 Technical Snapshot</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if tech_info:
+                # Indicators
+                t1, t2, t3 = st.columns(3)
+                t1.metric("RSI", f"{tech_info.get('rsi', 0):.1f}")
+                t2.metric("ATR", f"{tech_info.get('atr', 0):.2f}")
+                t3.metric("ADX", f"{tech_info.get('adx', 0):.1f}")
+                
+                st.markdown("---")
+                
+                # Signals
+                t4, t5 = st.columns(2)
+                t4.markdown(f"**Price:** ${tech_info.get('price', 0):,.2f}")
+                t4.markdown(f"**EMA Trend:** {tech_info.get('price_vs_ema', '-')}")
+                
+                t5.markdown(f"**BTC Trend:** {tech_info.get('btc_trend', '-')}")
+                t5.markdown(f"**Corr:** {tech_info.get('btc_correlation', '-')}")
+                
+                with st.expander("Full Technical Data"):
+                    st.json(tech_info)
+            else:
+                st.info("Data teknikal tidak tersedia untuk trade ini.")
+
+        with col_cfg:
+            st.markdown("""
+            <div class="card-container">
+                <div class="card-title">⚙️ Config Snapshot</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if config_info:
+                # Key Params
+                c1, c2 = st.columns(2)
+                c1.metric("Leverage", f"{config_info.get('leverage', '-')}")
+                c1.metric("Risk %", f"{config_info.get('risk_percent', '-')}%")
+                
+                c2.markdown(f"**AI Model:** {config_info.get('ai_model', '-')}")
+                c2.markdown(f"**Sentiment:** {config_info.get('sentiment_model', '-')}")
+                
+                with st.expander("Full Configuration"):
+                    st.json(config_info)
+            else:
+                st.info("Data konfigurasi tidak tersedia.")
+
+else:
+    st.info("Belum ada trade yang selesai (WIN/LOSS/BREAKEVEN) untuk ditampilkan.")
 
 
 # =============================================================================
