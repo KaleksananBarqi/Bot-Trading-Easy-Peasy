@@ -121,9 +121,67 @@ async def main():
     pattern_recognizer = PatternRecognizer(market_data)
     journal = TradeJournal()
 
+
     # 3. PRELOAD DATA
     await market_data.initialize_data()
     await sentiment.update_all() # Initial Fetch Headline & F&G
+    
+    # [NEW] Helper for Sentiment Analysis (Declared here to capture scope)
+    async def run_sentiment_analysis():
+        if not config.ENABLE_SENTIMENT_ANALYSIS:
+            return
+
+        try:
+            # Prepare Prompt
+            s_data = sentiment.get_latest()
+            o_data = onchain.get_latest()
+            prompt = build_sentiment_prompt(s_data, o_data)
+            
+            # Ask AI
+            logger.info(f"📝 SENTIMENT AI PROMPT:\n{prompt}")
+            result = await ai_brain.analyze_sentiment(prompt)
+            
+            if result:
+                # Save Analysis to Cache
+                sentiment.save_analysis(result)
+
+                # Kirim ke Telegram Channel Sentiment
+                mood = result.get('overall_sentiment', 'UNKNOWN')
+                score = result.get('sentiment_score', 0)
+                phase = result.get('market_phase', '-')
+                smart_money = result.get('smart_money_activity', '-')
+                retail_mood = result.get('retail_sentiment', '-')
+                
+                summary = result.get('summary', '-')
+                drivers = result.get('key_drivers', [])
+                risk = result.get('risk_assessment', 'N/A')
+                drivers_str = "\n".join([f"• {d}" for d in drivers])
+                
+                icon = "😐"
+                if score > 60: icon = "🚀"
+                elif score < 40: icon = "🐻"
+                
+                msg = (
+                    f"📢 <b>PASAR SAAT INI {mood} {icon}</b>\n"
+                    f"Score: {score}/100\n\n"
+                    f"🌀 <b>Phase:</b> {phase}\n"
+                    f"🐋 <b>Whales:</b> {smart_money}\n"
+                    f"👥 <b>Retail:</b> {retail_mood}\n\n"
+                    f"📝 <b>Ringkasan:</b>\n{summary}\n\n"
+                    f"🔑 <b>Faktor Utama:</b>\n{drivers_str}\n\n"
+                    f"⚠️ <b>Risk Assessment:</b>\n{risk}\n\n"
+                    f"<i>Analisa ini digenerate otomatis oleh AI ({config.AI_SENTIMENT_MODEL})</i>"
+                )
+                
+                logger.info(f"📤 SENTIMENT TELEGRAM MESSAGE:\n{msg}")
+                await kirim_tele(msg, channel='sentiment')
+                logger.info("✅ Sentiment Report Sent.")
+        except Exception as e:
+            logger.error(f"❌ Sentiment Loop Error: {e}")
+
+    # [NEW] Initial AI Analysis (Blocking)
+    logger.info("🧠 Performing Initial AI Sentiment Analysis...")
+    await run_sentiment_analysis()
     
     # 4. START BACKGROUND TASKS
     # WebSocket Callback Wrappers
@@ -365,57 +423,9 @@ async def main():
 
             # B. AI SENTIMENT ANALYSIS (Report Generation)
             if config.ENABLE_SENTIMENT_ANALYSIS and current_time >= next_sentiment_analysis_time:
-                 logger.info("🧠 Running Dedicated Sentiment Analysis (AI)...")
-                 async def run_sentiment_analysis():
-                    try:
-                        # Prepare Prompt
-                        s_data = sentiment.get_latest()
-                        o_data = onchain.get_latest()
-                        prompt = build_sentiment_prompt(s_data, o_data)
-                        
-                        # Ask AI
-                        logger.info(f"📝 SENTIMENT AI PROMPT:\n{prompt}")
-                        result = await ai_brain.analyze_sentiment(prompt)
-                        
-                        if result:
-                            # [NEW] Save Analysis to Cache
-                            sentiment.save_analysis(result)
-
-                            # Kirim ke Telegram Channel Sentiment
-                            mood = result.get('overall_sentiment', 'UNKNOWN')
-                            score = result.get('sentiment_score', 0)
-                            phase = result.get('market_phase', '-')
-                            smart_money = result.get('smart_money_activity', '-')
-                            retail_mood = result.get('retail_sentiment', '-')
-                            
-                            summary = result.get('summary', '-')
-                            drivers = result.get('key_drivers', [])
-                            risk = result.get('risk_assessment', 'N/A')
-                            drivers_str = "\n".join([f"• {d}" for d in drivers])
-                            
-                            icon = "😐"
-                            if score > 60: icon = "🚀"
-                            elif score < 40: icon = "🐻"
-                            
-                            msg = (
-                                f"📢 <b>PASAR SAAT INI {mood} {icon}</b>\n"
-                                f"Score: {score}/100\n\n"
-                                f"🌀 <b>Phase:</b> {phase}\n"
-                                f"🐋 <b>Whales:</b> {smart_money}\n"
-                                f"👥 <b>Retail:</b> {retail_mood}\n\n"
-                                f"📝 <b>Ringkasan:</b>\n{summary}\n\n"
-                                f"🔑 <b>Faktor Utama:</b>\n{drivers_str}\n\n"
-                                f"⚠️ <b>Risk Assessment:</b>\n{risk}\n\n"
-                                f"<i>Analisa ini digenerate otomatis oleh AI ({config.AI_SENTIMENT_MODEL})</i>"
-                            )
-                            
-                            logger.info(f"📤 SENTIMENT TELEGRAM MESSAGE:\n{msg}")
-                            await kirim_tele(msg, channel='sentiment')
-                            logger.info("✅ Sentiment Report Sent.")
-                    except Exception as e:
-                        logger.error(f"❌ Sentiment Loop Error: {e}")
-
-                 # Run in background
+                 logger.info("🧠 Running Scheduled Sentiment Analysis (AI)...")
+                 
+                 # Run in background via create_task
                  asyncio.create_task(run_sentiment_analysis())
                  
                  # Schedule Next Analysis
