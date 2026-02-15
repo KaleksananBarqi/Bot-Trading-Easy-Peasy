@@ -378,6 +378,10 @@ async def main():
                             # Kirim ke Telegram Channel Sentiment
                             mood = result.get('overall_sentiment', 'UNKNOWN')
                             score = result.get('sentiment_score', 0)
+                            phase = result.get('market_phase', '-')
+                            smart_money = result.get('smart_money_activity', '-')
+                            retail_mood = result.get('retail_sentiment', '-')
+                            
                             summary = result.get('summary', '-')
                             drivers = result.get('key_drivers', [])
                             risk = result.get('risk_assessment', 'N/A')
@@ -390,6 +394,9 @@ async def main():
                             msg = (
                                 f"📢 <b>PASAR SAAT INI {mood} {icon}</b>\n"
                                 f"Score: {score}/100\n\n"
+                                f"🌀 <b>Phase:</b> {phase}\n"
+                                f"🐋 <b>Whales:</b> {smart_money}\n"
+                                f"👥 <b>Retail:</b> {retail_mood}\n\n"
                                 f"📝 <b>Ringkasan:</b>\n{summary}\n\n"
                                 f"🔑 <b>Faktor Utama:</b>\n{drivers_str}\n\n"
                                 f"⚠️ <b>Risk Assessment:</b>\n{risk}\n\n"
