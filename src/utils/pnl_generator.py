@@ -4,11 +4,30 @@ import os
 from io import BytesIO
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageChops
+import sys
+
+# Ensure src module can be imported
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+# Try Logger Import
+try:
+    from src.utils.helper import logger
+except ImportError:
+    import logging
+    logger = logging.getLogger("PnLGenerator")
 
 # Coba import qrcode, jika tidak ada, gunakan placeholder
 try:
     import qrcode
 except ImportError:
+    try:
+        from src.utils.helper import logger
+        logger.warning("⚠️ Library 'qrcode' not found. QR code generation disabled.")
+    except:
+        print("⚠️ Library 'qrcode' not found. QR code generation disabled.")
     qrcode = None
 
 class CryptoPnLGenerator:
@@ -518,7 +537,11 @@ class CryptoPnLGenerator:
     def _draw_qr(self, img, x, y, size):
         """Menggambar QR code."""
         user_cfg = self.config.get('user', {})
-        if user_cfg.get('show_qr', True) and qrcode:
+        if user_cfg.get('show_qr', True):
+            if not qrcode:
+                logger.warning("⚠️ QR Code requested but 'qrcode' library is not installed.")
+                return
+
             qr_data = user_cfg.get('qr_data', 'https://example.com')
             try:
                 # Border=3 memberikan whitespace (quiet zone) yang cukup tebal dan rapi
@@ -533,7 +556,7 @@ class CryptoPnLGenerator:
                 
                 img.paste(qr_img, (x, y))
             except Exception as e:
-                print(f"Error generating QR: {e}")
+                logger.error(f"❌ Error generating QR: {e}")
 
     # --- Legacy Methods (fallback untuk portrait mode) ---
     def _draw_header(self, img, draw, width, margin):

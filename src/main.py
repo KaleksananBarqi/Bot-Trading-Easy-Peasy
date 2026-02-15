@@ -734,6 +734,7 @@ async def main():
                         'strategy_mode': strategy_mode,
                         'exec_mode': exec_mode,
                         'dynamic_size': config.USE_DYNAMIC_SIZE,
+                        'ENTRY_AT_RETAIL_SL': config.ATR_MULTIPLIER_SL,
                     }
 
                     await executor.execute_entry(

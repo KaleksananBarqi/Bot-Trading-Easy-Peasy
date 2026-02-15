@@ -343,9 +343,26 @@ st.markdown("""
     @media (max-width: 768px) {
         .dashboard-header { padding: 1.2rem 1rem; }
         .dashboard-header h1 { font-size: 1.3rem; }
+        .dashboard-header .subtitle { font-size: 0.75rem; }
+        
+        /* KPI Cards Stacking/Grid */
+        div[data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 auto !important;
+            min-width: 100% !important;
+            margin-bottom: 1rem;
+        }
+        
+        /* KPI Value Size Adjustment */
+        .kpi-card .kpi-value { font-size: 1.4rem; }
+        
+        /* Stats Bar Stacking */
         .stats-bar { flex-direction: column; gap: 0.5rem; }
         .stats-bar .stat-item { border-right: none !important; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; }
         .stats-bar .stat-item:last-child { border-bottom: none; }
+        
+        /* Chart Containers */
+        .js-plotly-plot { margin-bottom: 1rem; }
     }
 </style>
 """, unsafe_allow_html=True)
