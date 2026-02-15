@@ -245,10 +245,13 @@ async def main():
                 setup_at_str = datetime.fromtimestamp(setup_at_ts).isoformat() if setup_at_ts > 0 else ''
                 filled_at_str = datetime.fromtimestamp(filled_at_ts).isoformat() if filled_at_ts > 0 else ''
 
+                # [FIX] Get Order Type from Tracker (Entry Type), not Closing Order Type
+                entry_order_type = tracker.get('order_type', 'MARKET')
+
                 trade_data = {
                     'symbol': symbol,
                     'side': tracker.get('side', 'LONG' if order_info['S'] == 'SELL' else 'SHORT'), 
-                    'type': order_type,
+                    'type': entry_order_type,
                     'entry_price': tracker.get('entry_price', 0), # Ambil dari tracker
                     'exit_price': price,
                     'size_usdt': size_closed_usdt,

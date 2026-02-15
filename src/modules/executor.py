@@ -180,6 +180,7 @@ class OrderExecutor:
                     "created_at": time.time(),
                     "expires_at": time.time() + config.LIMIT_ORDER_EXPIRY_SECONDS,
                     "strategy": strategy_tag,
+                    "order_type": order_type.upper(),
                     "atr_value": atr_value, # Save ATR for Safety Calculation
                     "ai_prompt": ai_prompt,
                     "ai_reason": ai_reason,
@@ -196,6 +197,7 @@ class OrderExecutor:
                 self.safety_orders_tracker[symbol] = {
                     "status": "PENDING", 
                     "strategy": strategy_tag,
+                    "order_type": order_type.upper(),
                     "atr_value": atr_value,
                     "created_at": time.time(),
                     "filled_at": time.time(), # Market order filled immediately (approx)
