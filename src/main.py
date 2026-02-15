@@ -730,6 +730,8 @@ async def main():
                         'leverage': lev,
                         'ai_confidence': confidence,
                         'ai_model': config.AI_MODEL_NAME,
+                        'vision_model': config.AI_VISION_MODEL,
+                        'sentiment_model': config.AI_SENTIMENT_MODEL,
                         'timeframe_exec': config.TIMEFRAME_EXEC,
                         'strategy_mode': strategy_mode,
                         'exec_mode': exec_mode,

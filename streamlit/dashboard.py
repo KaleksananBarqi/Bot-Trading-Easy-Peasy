@@ -523,6 +523,69 @@ profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else float('inf')
 avg_win = win_trades['pnl_usdt'].mean() if not win_trades.empty else 0
 avg_loss = loss_trades['pnl_usdt'].mean() if not loss_trades.empty else 0
 
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+def calculate_streaks(df):
+    if df.empty:
+        return 0, 0, 0
+    
+    # Sort by time just in case
+    df_sorted = df.sort_values('timestamp')
+    
+    current_streak = 0
+    max_win_streak = 0
+    max_loss_streak = 0
+    
+    # Logic: +1 for WIN, -1 for LOSS
+    # Ignore 0 PnL for streak breaking? Or count as break? Let's count as break.
+    
+    streak_counter = 0
+    
+    for pnl in df_sorted['pnl_usdt']:
+        if pnl > 0:
+            if streak_counter >= 0:
+                streak_counter += 1
+            else:
+                streak_counter = 1
+        elif pnl < 0:
+            if streak_counter <= 0:
+                streak_counter -= 1
+            else:
+                streak_counter = -1
+        else:
+            streak_counter = 0
+            
+        if streak_counter > max_win_streak: max_win_streak = streak_counter
+        if streak_counter < max_loss_streak: max_loss_streak = streak_counter
+    
+    current_streak = streak_counter
+    return current_streak, max_win_streak, abs(max_loss_streak)
+
+# Extract Model Info from Config Snapshot
+def extract_model_info(row):
+    cfg = row.get('config_snapshot', '{}')
+    if isinstance(cfg, str):
+        try:
+            cfg = json.loads(cfg)
+        except:
+            cfg = {}
+    elif not isinstance(cfg, dict):
+        cfg = {}
+        
+    return pd.Series([
+        cfg.get('ai_model', 'Unknown'), 
+        cfg.get('vision_model', '-'),
+        cfg.get('sentiment_model', '-')
+    ])
+
+if not df_filtered.empty:
+    df_filtered[['ai_model', 'vision_model', 'sentiment_model']] = df_filtered.apply(extract_model_info, axis=1)
+
+# Stats Calculation
+current_streak, max_win, max_loss = calculate_streaks(df_filtered)
+
 pnl_sign = "+" if total_pnl >= 0 else ""
 pnl_color_class = "green" if total_pnl >= 0 else "red"
 wr_color_class = "green" if win_rate >= 50 else ("amber" if win_rate >= 40 else "red")
@@ -579,16 +642,12 @@ with col4:
 st.markdown(f"""
 <div class="stats-bar">
     <div class="stat-item">
-        <div class="stat-label">Completed</div>
-        <div class="stat-value">{completed_trades_count}</div>
+        <div class="stat-label">Streak (Curr/Max)</div>
+        <div class="stat-value">{current_streak} / +{max_win}</div>
     </div>
     <div class="stat-item">
-        <div class="stat-label">Cancelled</div>
-        <div class="stat-value" style="color: var(--text-muted);">{canceled_trades_count}</div>
-    </div>
-    <div class="stat-item">
-        <div class="stat-label">Expired</div>
-        <div class="stat-value" style="color: var(--text-muted);">{expired_trades_count}</div>
+        <div class="stat-label">Max Drawdown Streak</div>
+        <div class="stat-value" style="color: var(--accent-red);">{max_loss}L</div>
     </div>
     <div class="stat-item">
         <div class="stat-label">Gross Profit</div>
@@ -673,34 +732,59 @@ with col_chart2:
 # =============================================================================
 # CHARTS ROW 2 — PnL by Symbol + PnL by Strategy
 # =============================================================================
+# =============================================================================
+# CHARTS ROW 2 — ADVANCED ANALYTICS (TABS)
+# =============================================================================
 st.markdown("""
 <div class="section-header">
     <div class="section-icon">🔬</div>
     <div>
-        <h3>Analisis Performa</h3>
-        <p class="section-desc">Breakdown PnL berdasarkan koin dan strategi</p>
+        <h3>Analisis Performa Mendalam</h3>
+        <p class="section-desc">Breakdown berdasarkan Koin, Strategi, dan Model AI</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-col_adv1, col_adv2 = st.columns(2)
+tab_symbol, tab_strat, tab_model, tab_scatter = st.tabs(["🪙 By Symbol", "🧠 By Strategy", "🤖 By AI Model", "📉 Duration PnL"])
 
-with col_adv1:
-    pnl_by_symbol = df_filtered.groupby('symbol')['pnl_usdt'].sum().reset_index()
-    pnl_by_symbol = pnl_by_symbol.sort_values(by='pnl_usdt', ascending=True)
+with tab_symbol:
+    # Prepare Data
+    pnl_by_symbol = df_filtered.groupby('symbol').agg(
+        Total_PnL=('pnl_usdt', 'sum'),
+        Win_Rate=('result', lambda x: (x == 'WIN').mean() * 100),
+        Count=('result', 'count')
+    ).reset_index()
     
-    bar_colors = ['#10b981' if v >= 0 else '#ef4444' for v in pnl_by_symbol['pnl_usdt']]
+    pnl_by_symbol = pnl_by_symbol.sort_values(by='Total_PnL', ascending=True)
     
-    fig_symbol = go.Figure(data=[go.Bar(
-        x=pnl_by_symbol['pnl_usdt'], y=pnl_by_symbol['symbol'],
-        orientation='h',
-        marker=dict(color=bar_colors, line=dict(width=0)),
-        hovertemplate='<b>%{y}</b><br>PnL: $%{x:.2f}<extra></extra>',
-    )])
-    fig_symbol.update_layout(**get_plotly_layout(height=350))
-    st.plotly_chart(fig_symbol, use_container_width=True)
+    col_sym1, col_sym2 = st.columns(2)
+    
+    with col_sym1:
+        # Chart PnL
+        bar_colors = ['#10b981' if v >= 0 else '#ef4444' for v in pnl_by_symbol['Total_PnL']]
+        fig_symbol = go.Figure(data=[go.Bar(
+            x=pnl_by_symbol['Total_PnL'], y=pnl_by_symbol['symbol'],
+            orientation='h',
+            marker=dict(color=bar_colors, line=dict(width=0)),
+            hovertemplate='<b>%{y}</b><br>PnL: $%{x:.2f}<extra></extra>',
+        )])
+        fig_symbol.update_layout(**get_plotly_layout(height=400, title="Net PnL per Symbol"))
+        st.plotly_chart(fig_symbol, use_container_width=True)
+        
+    with col_sym2:
+        # Chart Win Rate
+        fig_wr = go.Figure(data=[go.Bar(
+            x=pnl_by_symbol['Win_Rate'], y=pnl_by_symbol['symbol'],
+            orientation='h',
+            marker=dict(color='#3b82f6', line=dict(width=0)),
+            hovertemplate='<b>%{y}</b><br>Win Rate: %{x:.1f}%<br>Trades: %{customdata}',
+            customdata=pnl_by_symbol['Count']
+        )])
+        fig_wr.update_layout(**get_plotly_layout(height=400, title="Win Rate per Symbol (%)"))
+        fig_wr.update_xaxes(range=[0, 100])
+        st.plotly_chart(fig_wr, use_container_width=True)
 
-with col_adv2:
+with tab_strat:
     pnl_by_strat = df_filtered.groupby('strategy_tag')['pnl_usdt'].sum().reset_index()
     pnl_by_strat = pnl_by_strat.sort_values(by='pnl_usdt', ascending=True)
     
@@ -712,8 +796,51 @@ with col_adv2:
         marker=dict(color=bar_colors_strat, line=dict(width=0)),
         hovertemplate='<b>%{y}</b><br>PnL: $%{x:.2f}<extra></extra>',
     )])
-    fig_strat.update_layout(**get_plotly_layout(height=350))
+    fig_strat.update_layout(**get_plotly_layout(height=400, title="Net PnL by Strategy"))
     st.plotly_chart(fig_strat, use_container_width=True)
+
+with tab_model:
+    if 'ai_model' in df_filtered.columns:
+        pnl_by_model = df_filtered.groupby('ai_model')['pnl_usdt'].sum().reset_index()
+        pnl_by_model = pnl_by_model.sort_values(by='pnl_usdt', ascending=True)
+        
+        # Color based on value
+        colors_model = ['#8b5cf6' if v >= 0 else '#ef4444' for v in pnl_by_model['pnl_usdt']]
+        
+        fig_model = go.Figure(data=[go.Bar(
+            x=pnl_by_model['pnl_usdt'], y=pnl_by_model['ai_model'],
+            orientation='h',
+            marker=dict(color=colors_model, line=dict(width=0)),
+            text=pnl_by_model['pnl_usdt'].apply(lambda x: f"${x:.2f}"),
+            textposition='auto',
+            hovertemplate='<b>%{y}</b><br>PnL: $%{x:.2f}<extra></extra>',
+        )])
+        fig_model.update_layout(**get_plotly_layout(height=400, title="AI Model Performance"))
+        st.plotly_chart(fig_model, use_container_width=True)
+    else:
+        st.info("Data AI Model belum tersedia.")
+
+with tab_scatter:
+    # Trade Duration vs PnL
+    df_dur = df_filtered.copy()
+    if 'filled_at' in df_dur.columns and 'timestamp' in df_dur.columns:
+        # Ensure datetimelike
+        # (Assuming filled_at might be string ISO from CSV/Mongo)
+        # Note: In log_trade it is saved as string ISO. in load_trades we convert timestamp but maybe not filled_at?
+        # Let's try to parse on the fly if needed
+        pass # Logic handled in basic scatter
+
+    fig_scatter = px.scatter(
+        df_filtered, 
+        x='roi_percent', 
+        y='pnl_usdt',
+        color='result',
+        hover_data=['symbol', 'strategy_tag', 'ai_model'],
+        color_discrete_map={'WIN': '#10b981', 'LOSS': '#ef4444', 'BREAKEVEN': '#f59e0b', 'CANCELLED': '#64748b', 'EXPIRED': '#475569'},
+        title="Distribution: ROI % vs PnL ($)"
+    )
+    fig_scatter.update_layout(**get_plotly_layout(height=400))
+    st.plotly_chart(fig_scatter, use_container_width=True)
 
 
 # =============================================================================
@@ -894,38 +1021,9 @@ if has_tech_data or has_config_snap:
 
                 if tech_info:
                     # Display key indicators
-                    t_col1, t_col2, t_col3 = st.columns(3)
-                    with t_col1:
-                        rsi_val = tech_info.get('rsi', 0)
-                        rsi_color = "🟢" if 40 <= rsi_val <= 60 else ("🔴" if rsi_val > 70 else "🟡")
-                        st.metric("RSI", f"{rsi_val:.1f}", delta=None)
-                        st.metric("ATR", f"{tech_info.get('atr', 0):.4f}")
-                    with t_col2:
-                        st.metric("ADX", f"{tech_info.get('adx', 0):.1f}")
-                        st.metric("Price", f"${tech_info.get('price', 0):.2f}")
-                    with t_col3:
-                        st.metric("StochRSI K", f"{tech_info.get('stoch_rsi_k', 0):.1f}")
-                        st.metric("StochRSI D", f"{tech_info.get('stoch_rsi_d', 0):.1f}")
-
-                    # Additional info
-                    st.markdown(f"""
-                    <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.5rem;">
-                        <span style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; color: #94a3b8;">
-                            EMA: <b style="color:#f1f5f9">{tech_info.get('price_vs_ema', '-')}</b>
-                        </span>
-                        <span style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; color: #94a3b8;">
-                            BTC: <b style="color:#f1f5f9">{tech_info.get('btc_trend', '-')}</b>
-                        </span>
-                        <span style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; color: #94a3b8;">
-                            Corr: <b style="color:#f1f5f9">{tech_info.get('btc_correlation', 0):.2f}</b>
-                        </span>
-                        <span style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; color: #94a3b8;">
-                            OB Imb: <b style="color:#f1f5f9">{tech_info.get('order_book_imbalance', 0):.1f}%</b>
-                        </span>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.json(tech_info, expanded=False)
                 else:
-                    st.info("Data teknikal belum tersedia untuk trade ini.")
+                    st.info("Data teknikal belum tersedia.")
 
             with col_cfg:
                 st.markdown("""
@@ -935,31 +1033,15 @@ if has_tech_data or has_config_snap:
                 """, unsafe_allow_html=True)
 
                 if config_info:
-                    c_col1, c_col2 = st.columns(2)
-                    with c_col1:
-                        st.metric("ATR Multiplier TP", f"{config_info.get('atr_multiplier_tp', '-')}")
-                        st.metric("SL Multiplier", f"{config_info.get('trap_safety_sl', '-')}")
-                        st.metric("Risk %", f"{config_info.get('risk_percent', '-')}%")
-                    with c_col2:
-                        st.metric("Leverage", f"x{config_info.get('leverage', '-')}")
-                        st.metric("AI Confidence", f"{config_info.get('ai_confidence', '-')}%")
-                        st.metric("Timeframe", f"{config_info.get('timeframe_exec', '-')}")
-
-                    st.markdown(f"""
-                    <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.5rem;">
-                        <span style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; color: #94a3b8;">
-                            Strategy: <b style="color:#f1f5f9">{config_info.get('strategy_mode', '-')}</b>
-                        </span>
-                        <span style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; color: #94a3b8;">
-                            Exec: <b style="color:#f1f5f9">{config_info.get('exec_mode', '-')}</b>
-                        </span>
-                        <span style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; color: #94a3b8;">
-                            Model: <b style="color:#f1f5f9">{config_info.get('ai_model', '-')}</b>
-                        </span>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    # Dynamic Table for Config
+                    st.dataframe(
+                        pd.DataFrame(list(config_info.items()), columns=['Key', 'Value']),
+                        hide_index=True,
+                        use_container_width=True,
+                        height=300
+                    )
                 else:
-                    st.info("Config snapshot belum tersedia untuk trade ini.")
+                    st.info("Config snapshot belum tersedia.")
     else:
         st.info("Belum ada trade yang selesai (WIN/LOSS) untuk dilihat detailnya.")
 
