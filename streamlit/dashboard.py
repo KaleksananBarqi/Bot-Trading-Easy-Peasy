@@ -518,7 +518,20 @@ def get_plotly_layout(**overrides):
 @st.cache_data(ttl=60)
 def get_data():
     journal = TradeJournal()
-    df = journal.load_trades()
+    # Convert Timestamp to WIB (UTC+7)
+    if not df.empty and 'timestamp' in df.columns:
+        # 1. Ensure datetime
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        
+        # 2. Localize/Convert
+        # Asumsi data di save as Naive/UTC by journal module
+        # Force UTC first if naive, then convert to Asia/Jakarta
+        df['timestamp'] = df['timestamp'].dt.tz_localize('UTC').dt.tz_convert('Asia/Jakarta')
+        
+        # 3. Remove tz info for cleaner display in some widgets (optional, but requested for display)
+        # But Streamlit/Pandas handles tz-aware well usually. 
+        # Let's keep it tz-aware 'Asia/Jakarta' so date extraction works correctly as local date.
+    
     return df
 
 df = get_data()
@@ -529,6 +542,7 @@ df = get_data()
 st.sidebar.markdown("## 🔍 Filters")
 
 if not df.empty:
+    # Data is already converted to WIB in get_data()
     min_date = df['timestamp'].min().date()
     max_date = df['timestamp'].max().date()
     

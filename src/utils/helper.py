@@ -8,12 +8,33 @@ from datetime import datetime, timedelta, timezone
 from src import config
 
 # ==========================================
-# CUSTOM LOGGER (WIB TIME)
+# CUSTOM LOGGER & TIME UTILS (WIB TIME)
 # ==========================================
+WIB_OFFSET = timezone(timedelta(hours=7))
+
+def get_wib_now():
+    """Mengembalikan datetime sekarang dalam WIB (UTC+7)."""
+    return datetime.now(timezone.utc).astimezone(WIB_OFFSET)
+
+def convert_dt_to_wib(dt):
+    """Mengubah datetime (UTC/Naive) ke WIB."""
+    if dt is None: return None
+    if dt.tzinfo is None:
+        # Assume UTC if naive, or system local? 
+        # Better safe: assume UTC if coming from timestamp, or local if coming from now()
+        # Let's standardize on UTC input for safety everywhere in this bot
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(WIB_OFFSET)
+
+def convert_timestamp_to_wib_str(ts, fmt='%a %b %d %H:%M:%S %Y'):
+    """Mengubah unix timestamp ke string WIB."""
+    if not ts: return "-"
+    dt = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(WIB_OFFSET)
+    return dt.strftime(fmt)
+
 def wib_time(*args):
-    utc_dt = datetime.now(timezone.utc)
-    wib_dt = utc_dt + timedelta(hours=7)
-    return wib_dt.timetuple()
+    """Converter untuk logging agar menggunakan WIB."""
+    return get_wib_now().timetuple()
 
 def setup_logger():
     # [FIX] Force UTF-8 untuk Windows Console agar emoji tidak crash

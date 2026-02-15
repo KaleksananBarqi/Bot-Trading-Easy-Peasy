@@ -6,7 +6,10 @@ import time
 import html
 import ccxt.async_support as ccxt
 import config
-from src.utils.helper import logger, kirim_tele, kirim_tele_sync, parse_timeframe_to_seconds, get_next_rounded_time, get_coin_leverage
+from src.utils.helper import (
+    logger, kirim_tele, kirim_tele_sync, parse_timeframe_to_seconds, 
+    get_next_rounded_time, get_coin_leverage, convert_timestamp_to_wib_str
+)
 from src.utils.prompt_builder import build_market_prompt, build_sentiment_prompt
 from src.utils.calc import calculate_trade_scenarios, calculate_dual_scenarios, calculate_profit_loss_estimation
 
@@ -91,8 +94,8 @@ async def main():
     # Jadwal terpisah untuk Analisa AI (agar tidak boros token tiap jam kalau mau)
     next_sentiment_analysis_time = get_next_rounded_time(config.SENTIMENT_ANALYSIS_INTERVAL)
     
-    logger.info(f"⏳ Next Sentiment Data Refresh: {time.ctime(next_sentiment_update_time)}")
-    logger.info(f"⏳ Next Sentiment AI Analysis: {time.ctime(next_sentiment_analysis_time)}")
+    logger.info(f"⏳ Next Sentiment Data Refresh: {convert_timestamp_to_wib_str(next_sentiment_update_time)}")
+    logger.info(f"⏳ Next Sentiment AI Analysis: {convert_timestamp_to_wib_str(next_sentiment_analysis_time)}")
 
     # 1. INITIALIZATION
     exchange = ccxt.binance({
@@ -353,7 +356,7 @@ async def main():
                     
                     # Schedule Next Update
                     next_sentiment_update_time = get_next_rounded_time(config.SENTIMENT_UPDATE_INTERVAL)
-                    logger.info(f"✅ Data Refreshed. Next: {time.ctime(next_sentiment_update_time)}")
+                    logger.info(f"✅ Data Refreshed. Next: {convert_timestamp_to_wib_str(next_sentiment_update_time)}")
                 except Exception as e:
                      logger.error(f"❌ Failed to refresh data: {e}")
 
@@ -414,7 +417,7 @@ async def main():
                  
                  # Schedule Next Analysis
                  next_sentiment_analysis_time = get_next_rounded_time(config.SENTIMENT_ANALYSIS_INTERVAL)
-                 logger.info(f"✅ Analysis Triggered. Next: {time.ctime(next_sentiment_analysis_time)}")
+                 logger.info(f"✅ Analysis Triggered. Next: {convert_timestamp_to_wib_str(next_sentiment_analysis_time)}")
 
             coin_cfg = config.DAFTAR_KOIN[ticker_idx]
             symbol = coin_cfg['symbol']
