@@ -169,11 +169,22 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern
         s_summary = sentiment_analysis.get('summary', 'No summary available.')
         s_risk = sentiment_analysis.get('risk_assessment', 'UNKNOWN')
         
+        # [NEW] Additional Fields
+        s_phase = sentiment_analysis.get('market_phase', 'UNKNOWN')
+        s_smart = sentiment_analysis.get('smart_money_activity', 'UNKNOWN')
+        s_retail = sentiment_analysis.get('retail_sentiment', 'UNKNOWN')
+        s_drivers = sentiment_analysis.get('key_drivers', [])
+        s_drivers_str = ", ".join(s_drivers) if s_drivers else "None"
+        
         sentiment_section_str = (
             f"- AI Market Sentiment: {s_status} (Score: {s_score}/100)\n"
+            f"- Market Phase: {s_phase}\n"
+            f"- Smart Money Activity: {s_smart}\n"
+            f"- Retail Sentiment: {s_retail}\n"
+            f"- Key Drivers: {s_drivers_str}\n"
             f"- Fear & Greed Index: {fng_value} ({fng_text})\n"
-            f"- Key Context: {s_summary}\n"
-            f"- Risk Assessment: {s_risk}"
+            f"- Risk Assessment: {s_risk}\n"
+            f"- Key Context: {s_summary}"
         )
     else:
         # [FALLBACK] Use Raw Data (Mini Mode)
