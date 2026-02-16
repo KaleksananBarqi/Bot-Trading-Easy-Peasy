@@ -23,7 +23,9 @@ class MongoManager:
             return
         
         self.uri = config.MONGO_URI
+        self.uri = config.MONGO_URI
         self.db_name = config.MONGO_DB_NAME
+        self.collection_name = config.MONGO_COLLECTION_NAME
         self.client = None
         self.db = None
         self.trades_collection = None
@@ -41,7 +43,8 @@ class MongoManager:
             self.client.admin.command('ping')
             
             self.db = self.client[self.db_name]
-            self.trades_collection = self.db['trades']
+            self.db = self.client[self.db_name]
+            self.trades_collection = self.db[self.collection_name]
             
             # Ensure indexes
             self._setup_indexes()

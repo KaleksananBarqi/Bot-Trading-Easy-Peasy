@@ -196,7 +196,8 @@ TRACKER_FILENAME = os.path.join(BASE_DIR, 'safety_tracker.json')
 
 # Database (MongoDB)
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "bot_trading_easy_peasy")
+MONGO_DB_NAME = "bot_trading_easy_peasy" # Ubah nama database di sini
+MONGO_COLLECTION_NAME = "trades" # Ubah nama collection di sini
 
 # Credential Loading (Dari .env)
 API_KEY_LIVE = os.getenv("BINANCE_API_KEY")
