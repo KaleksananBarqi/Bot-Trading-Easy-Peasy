@@ -707,6 +707,34 @@ def extract_model_info(row):
 if not df_filtered.empty:
     df_filtered[['ai_model', 'vision_model', 'sentiment_model']] = df_filtered.apply(extract_model_info, axis=1)
 
+    # Extract Technical & Additional Config Features
+    def extract_features(row):
+        tech = {}
+        try:
+            tech = json.loads(row.get('technical_data', '{}'))
+        except:
+            pass
+            
+        cfg = {}
+        try:
+            cfg = json.loads(row.get('config_snapshot', '{}'))
+        except:
+            pass
+            
+        return pd.Series([
+            float(tech.get('rsi', 0) or 0),
+            float(tech.get('atr', 0) or 0),
+            float(tech.get('adx', 0) or 0),
+            float(cfg.get('leverage', 0) or 0),
+            1 if row['pnl_usdt'] > 0 else 0
+        ])
+
+    df_filtered[['rsi', 'atr', 'adx', 'leverage', 'is_win']] = df_filtered.apply(extract_features, axis=1)
+    
+    # Time features
+    df_filtered['hour'] = df_filtered['timestamp'].dt.hour
+    df_filtered['day_name'] = df_filtered['timestamp'].dt.day_name()
+
 # Stats Calculation
 current_streak, max_win, max_loss = calculate_streaks(df_filtered)
 
@@ -869,8 +897,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-tab_symbol, tab_strat, tab_model, tab_daily, tab_calendar, tab_drawdown, tab_dist = st.tabs([
-    "🪙 Symbol", "🧠 Strategy", "🤖 Model", "� Daily PnL", "🗓️ Calendar", "�📉 Drawdown", "📊 Distribution"
+tab_symbol, tab_strat, tab_model, tab_correlation, tab_daily, tab_calendar, tab_drawdown, tab_dist = st.tabs([
+    "🪙 Symbol", "🧠 Strategy", "🤖 Model", "🔍 Correlation", "📅 Daily PnL", "🗓️ Calendar", "📉 Drawdown", "📊 Distribution"
 ])
 
 with tab_symbol:
@@ -945,6 +973,92 @@ with tab_model:
         st.plotly_chart(fig_model, use_container_width=True)
     else:
         st.info("Data AI Model belum tersedia.")
+
+with tab_correlation:
+    st.markdown("#### 🔗 Analisis Korelasi & Faktor Penentu Win Rate")
+    
+    # 1. Correlation Matrix Heatmap
+    st.markdown("##### 1. Korelasi Variabel Numerik")
+    st.caption("Seberapa kuat hubungan antar variabel? (1.0 = Sangat Kuat Positif, -1.0 = Sangat Kuat Negatif)")
+    
+    corr_cols = ['pnl_usdt', 'roi_percent', 'leverage', 'rsi', 'atr', 'adx', 'entry_price', 'size_usdt']
+    # Filter columns that exist and have non-zero variance
+    available_corr_cols = [c for c in corr_cols if c in df_filtered.columns and df_filtered[c].var() > 0]
+    
+    if len(available_corr_cols) > 1:
+        corr_matrix = df_filtered[available_corr_cols].corr()
+        
+        fig_corr = px.imshow(
+            corr_matrix,
+            text_auto='.2f',
+            aspect="auto",
+            color_continuous_scale='RdBu_r',
+            zmin=-1, zmax=1
+        )
+        fig_corr.update_layout(**get_plotly_layout(height=500, title="Correlation Matrix"))
+        st.plotly_chart(fig_corr, use_container_width=True)
+    else:
+        st.info("Data tidak cukup variatif untuk membuat matriks korelasi.")
+        
+    st.divider()
+
+    # 2. AI Model Performance Details
+    st.markdown("##### 2. Performa Berdasarkan Model AI")
+    
+    col_ai1, col_ai2 = st.columns(2)
+    
+    with col_ai1:
+        # Win Rate per Model
+        if 'ai_model' in df_filtered.columns:
+            wr_model = df_filtered.groupby('ai_model').agg(
+                Win_Rate=('is_win', 'mean'),
+                Count=('is_win', 'count')
+            ).reset_index()
+            wr_model['Win_Rate'] *= 100
+            
+            fig_ai_wr = go.Figure(data=[go.Bar(
+                x=wr_model['Win_Rate'], y=wr_model['ai_model'],
+                orientation='h',
+                marker=dict(color='#3b82f6'),
+                text=wr_model['Win_Rate'].apply(lambda x: f"{x:.1f}%"),
+                textposition='auto'
+            )])
+            fig_ai_wr.update_layout(**get_plotly_layout(height=350, title="Win Rate per AI Model"))
+            fig_ai_wr.update_xaxes(range=[0, 100])
+            st.plotly_chart(fig_ai_wr, use_container_width=True)
+            
+    with col_ai2:
+        # PnL Distribution per Model (Box Plot)
+        if 'ai_model' in df_filtered.columns:
+            fig_ai_box = px.box(
+                df_filtered, x="pnl_usdt", y="ai_model",
+                color="ai_model",
+                points="all" # Show all points
+            )
+            fig_ai_box.update_layout(**get_plotly_layout(height=350, title="Distribusi PnL per AI Model"))
+            st.plotly_chart(fig_ai_box, use_container_width=True)
+            
+    st.divider()
+    
+    # 3. Interactive Scatter Plot
+    st.markdown("##### 3. Deep Dive Scatter Plot")
+    
+    sc_col1, sc_col2, sc_col3 = st.columns(3)
+    with sc_col1:
+        x_axis = st.selectbox("Sumbu X", available_corr_cols, index=available_corr_cols.index('rsi') if 'rsi' in available_corr_cols else 0)
+    with sc_col2:
+        y_axis = st.selectbox("Sumbu Y", available_corr_cols, index=available_corr_cols.index('pnl_usdt') if 'pnl_usdt' in available_corr_cols else 0)
+    with sc_col3:
+        color_dim = st.selectbox("Warna", ['result', 'ai_model', 'strategy_tag'])
+
+    fig_scatter = px.scatter(
+        df_filtered, x=x_axis, y=y_axis,
+        color=color_dim,
+        hover_data=['symbol', 'timestamp'],
+        color_discrete_map={'WIN': '#10b981', 'LOSS': '#ef4444'}
+    )
+    fig_scatter.update_layout(**get_plotly_layout(height=500, title=f"{x_axis} vs {y_axis}"))
+    st.plotly_chart(fig_scatter, use_container_width=True)
 
 with tab_daily:
     # Aggregating PnL by Day
