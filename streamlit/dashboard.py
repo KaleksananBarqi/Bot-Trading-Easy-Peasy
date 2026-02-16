@@ -735,6 +735,16 @@ if not df_filtered.empty:
     df_filtered['hour'] = df_filtered['timestamp'].dt.hour
     df_filtered['day_name'] = df_filtered['timestamp'].dt.day_name()
 
+    # -------------------------------------------------------------------------
+    # FIX: Force strict numeric types for Plotly to avoid ValueError
+    # -------------------------------------------------------------------------
+    numeric_cols = ['pnl_usdt', 'roi_percent', 'leverage', 'rsi', 'atr', 'adx', 'entry_price', 'size_usdt']
+    for col in numeric_cols:
+        if col in df_filtered.columns:
+            # Coerce errors (strings/bad data) to NaN, then fill with 0.0 to keep it safe
+            df_filtered[col] = pd.to_numeric(df_filtered[col], errors='coerce').fillna(0.0)
+
+
 # Stats Calculation
 current_streak, max_win, max_loss = calculate_streaks(df_filtered)
 
@@ -982,11 +992,16 @@ with tab_correlation:
     st.caption("Seberapa kuat hubungan antar variabel? (1.0 = Sangat Kuat Positif, -1.0 = Sangat Kuat Negatif)")
     
     corr_cols = ['pnl_usdt', 'roi_percent', 'leverage', 'rsi', 'atr', 'adx', 'entry_price', 'size_usdt']
-    # Filter columns that exist and have non-zero variance
-    available_corr_cols = [c for c in corr_cols if c in df_filtered.columns and df_filtered[c].var() > 0]
+    # Filter columns that exist
+    available_corr_cols = [c for c in corr_cols if c in df_filtered.columns]
     
-    if len(available_corr_cols) > 1:
-        corr_matrix = df_filtered[available_corr_cols].corr()
+    # Strictly for Heatmap, we might still want variance > 0 to avoid messy charts, 
+    # but for Scatter we want at least existence.
+    heat_corr_cols = [c for c in available_corr_cols if df_filtered[c].var() > 0] if len(df_filtered) > 1 else []
+
+    if len(heat_corr_cols) > 1:
+        corr_matrix = df_filtered[heat_corr_cols].corr()
+
         
         fig_corr = px.imshow(
             corr_matrix,
@@ -1051,14 +1066,18 @@ with tab_correlation:
     with sc_col3:
         color_dim = st.selectbox("Warna", ['result', 'ai_model', 'strategy_tag'])
 
-    fig_scatter = px.scatter(
-        df_filtered, x=x_axis, y=y_axis,
-        color=color_dim,
-        hover_data=['symbol', 'timestamp'],
-        color_discrete_map={'WIN': '#10b981', 'LOSS': '#ef4444'}
-    )
-    fig_scatter.update_layout(**get_plotly_layout(height=500, title=f"{x_axis} vs {y_axis}"))
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    if available_corr_cols:
+        fig_scatter = px.scatter(
+            df_filtered, x=x_axis, y=y_axis,
+            color=color_dim,
+            hover_data=['symbol', 'timestamp'],
+            color_discrete_map={'WIN': '#10b981', 'LOSS': '#ef4444'}
+        )
+        fig_scatter.update_layout(**get_plotly_layout(height=500, title=f"{x_axis} vs {y_axis}"))
+        st.plotly_chart(fig_scatter, use_container_width=True)
+    else:
+        st.info("Data tidak mencukupi untuk membuat scatter plot.")
+
 
 with tab_daily:
     # Aggregating PnL by Day
