@@ -207,11 +207,48 @@ async def main():
             if tracked_id == order_id:
                 # This is our limit entry order - was cancelled manually
                 logger.info(f"🗑️ Order CANCELED manually: {sym} (ID: {order_id})")
+                
+                # --- [NEW] LOG TO JOURNAL AS CANCELLED ---
+                # Retrieve data from tracker
+                strategy_tag = tracker.get('strategy', 'UNKNOWN')
+                prompt_text = tracker.get('ai_prompt', '-')
+                reason_text = tracker.get('ai_reason', '-')
+                setup_at_ts = tracker.get('created_at', 0)
+                tech_snapshot = tracker.get('technical_data', {})
+                cfg_snapshot = tracker.get('config_snapshot', {})
+                entry_price_setup = tracker.get('entry_price', 0)
+                side_setup = tracker.get('side', 'UNKNOWN')
+
+                from datetime import datetime
+                setup_at_str = datetime.fromtimestamp(setup_at_ts).isoformat() if setup_at_ts > 0 else ''
+                
+                trade_data = {
+                    'symbol': sym,
+                    'side': side_setup,
+                    'type': 'LIMIT',
+                    'entry_price': entry_price_setup,
+                    'exit_price': 0,
+                    'size_usdt': 0,
+                    'pnl_usdt': 0,
+                    'result': 'CANCELLED', # Explicit Status
+                    'strategy_tag': strategy_tag,
+                    'prompt': prompt_text,
+                    'reason': reason_text,
+                    'setup_at': setup_at_str,
+                    'filled_at': '', # Never filled
+                    'technical_data': tech_snapshot,
+                    'config_snapshot': cfg_snapshot
+                }
+                
+                if journal:
+                    journal.log_trade(trade_data)
+                # ----------------------------------------
+
                 await executor.remove_from_tracker(sym)
                 await kirim_tele(
                     f"🗑️ <b>ORDER CANCELED</b>\n"
                     f"Order {sym} dibatalkan secara manual.\n"
-                    f"Tracker cleaned."
+                    f"Tracker cleaned & Logged to Journal."
                 )
             else:
                 # Not our tracked order (could be SL/TP or other) - just log
@@ -226,11 +263,48 @@ async def main():
             
             if tracked_id == order_id:
                 logger.info(f"⏰ Order EXPIRED/TIMEOUT: {sym} (ID: {order_id})")
+                
+                # --- [NEW] LOG TO JOURNAL AS TIMEOUT ---
+                # Retrieve data from tracker
+                strategy_tag = tracker.get('strategy', 'UNKNOWN')
+                prompt_text = tracker.get('ai_prompt', '-')
+                reason_text = tracker.get('ai_reason', '-')
+                setup_at_ts = tracker.get('created_at', 0)
+                tech_snapshot = tracker.get('technical_data', {})
+                cfg_snapshot = tracker.get('config_snapshot', {})
+                entry_price_setup = tracker.get('entry_price', 0)
+                side_setup = tracker.get('side', 'UNKNOWN')
+
+                from datetime import datetime
+                setup_at_str = datetime.fromtimestamp(setup_at_ts).isoformat() if setup_at_ts > 0 else ''
+                
+                trade_data = {
+                    'symbol': sym,
+                    'side': side_setup,
+                    'type': 'LIMIT',
+                    'entry_price': entry_price_setup,
+                    'exit_price': 0,
+                    'size_usdt': 0,
+                    'pnl_usdt': 0,
+                    'result': 'TIMEOUT', # Explicit Status
+                    'strategy_tag': strategy_tag,
+                    'prompt': prompt_text,
+                    'reason': reason_text,
+                    'setup_at': setup_at_str,
+                    'filled_at': '', # Never filled
+                    'technical_data': tech_snapshot,
+                    'config_snapshot': cfg_snapshot
+                }
+                
+                if journal:
+                    journal.log_trade(trade_data)
+                # ----------------------------------------
+
                 await executor.remove_from_tracker(sym)
                 await kirim_tele(
                     f"⏰ <b>ORDER EXPIRED</b>\n"
                     f"Limit Order {sym} kadaluarsa (timeout).\n"
-                    f"Tracker cleaned."
+                    f"Tracker cleaned & Logged to Journal."
                 )
             else:
                 logger.debug(f"🔔 Order expired (non-entry): {sym} ID {order_id}")

@@ -634,7 +634,7 @@ total_trades = len(df_filtered)
 win_trades = df_filtered[df_filtered['result'] == 'WIN']
 loss_trades = df_filtered[df_filtered['result'] == 'LOSS']
 canceled_trades_count = len(df_filtered[df_filtered['result'] == 'CANCELLED'])
-expired_trades_count = len(df_filtered[df_filtered['result'] == 'EXPIRED'])
+timeout_trades_count = len(df_filtered[df_filtered['result'] == 'TIMEOUT'])
 
 completed_trades_count = len(win_trades) + len(loss_trades)
 win_rate = (len(win_trades) / completed_trades_count * 100) if completed_trades_count > 0 else 0
@@ -662,12 +662,16 @@ def calculate_streaks(df):
     max_win_streak = 0
     max_loss_streak = 0
     
-    # Logic: +1 for WIN, -1 for LOSS
-    # Ignore 0 PnL for streak breaking? Or count as break? Let's count as break.
-    
     streak_counter = 0
     
-    for pnl in df_sorted['pnl_usdt']:
+    for idx, row in df_sorted.iterrows():
+        pnl = row['pnl_usdt']
+        res = row.get('result', '')
+        
+        # Skip cancelled trades for streak calculation to preserve streak
+        if res in ['CANCELLED', 'TIMEOUT']:
+            continue 
+            
         if pnl > 0:
             if streak_counter >= 0:
                 streak_counter += 1
@@ -764,7 +768,7 @@ with col1:
         <div class="kpi-icon">📊</div>
         <div class="kpi-label">Total Trades</div>
         <div class="kpi-value">{total_trades}</div>
-        <div class="kpi-sub">{completed_trades_count} selesai</div>
+        <div class="kpi-sub">{completed_trades_count} done · {canceled_trades_count} cnl · {timeout_trades_count} t/o</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -861,7 +865,7 @@ with col_chart1:
     st.plotly_chart(fig_equity, use_container_width=True)
 
 with col_chart2:
-    color_map = {'WIN': '#10b981', 'LOSS': '#ef4444', 'BREAKEVEN': '#f59e0b', 'CANCELLED': '#64748b', 'EXPIRED': '#475569'}
+    color_map = {'WIN': '#10b981', 'LOSS': '#ef4444', 'BREAKEVEN': '#f59e0b', 'CANCELLED': '#94a3b8', 'TIMEOUT': '#64748b'}
     result_counts = df_filtered['result'].value_counts()
     
     fig_pie = go.Figure(data=[go.Pie(
@@ -1071,7 +1075,7 @@ with tab_correlation:
             df_filtered, x=x_axis, y=y_axis,
             color=color_dim,
             hover_data=['symbol', 'timestamp'],
-            color_discrete_map={'WIN': '#10b981', 'LOSS': '#ef4444'}
+            color_discrete_map={'WIN': '#10b981', 'LOSS': '#ef4444', 'CANCELLED': '#94a3b8', 'TIMEOUT': '#64748b'}
         )
         fig_scatter.update_layout(**get_plotly_layout(height=500, title=f"{x_axis} vs {y_axis}"))
         st.plotly_chart(fig_scatter, use_container_width=True)

@@ -28,12 +28,25 @@ class TradeJournal:
             roi_percent = float(data.get('roi_percent', 0))
             
             # Result Label
-            if pnl_usdt > 0:
-                result = 'WIN'
-            elif pnl_usdt < 0:
-                result = 'LOSS'
-            else:
-                result = 'BREAKEVEN'
+            result = data.get('result', None)
+            
+            if result is None:
+                # Auto-detect if not provided
+                if pnl_usdt > 0:
+                    result = 'WIN'
+                elif pnl_usdt < 0:
+                    result = 'LOSS'
+                else:
+                    result = 'BREAKEVEN'
+            
+            # Special handling for non-filled trades
+            if result in ['CANCELLED', 'TIMEOUT', 'EXPIRED']:
+                pnl_usdt = 0.0
+                pnl_percent = 0.0
+                roi_percent = 0.0
+                size_usdt = 0.0
+                # Entry price is still relevant (the setup price)
+
 
             # 2. Serialize Technical & Config Data (JSON String for compatibility)
             # MongoDB can store dicts directly, but to maintain compatibility with existing Streamlit
