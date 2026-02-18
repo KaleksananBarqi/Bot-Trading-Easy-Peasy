@@ -127,12 +127,12 @@ def _calculate_wick_rejection_static(bars, lookback=5):
         df['lower_wick'] = df[['open', 'close']].min(axis=1) - df['low']
         
         # Handle division by zero
-        df['body_ref'] = df['body'].where(df['body'] > 0, (df['high'] - df['low']) * 0.01)
-        df['body_ref'] = df['body_ref'].where(df['body_ref'] > 0, 0.00000001)
+        df['body_ref'] = df['body'].where(df['body'] > 0, (df['high'] - df['low']) * config.WICK_REJECTION_MIN_BODY_RATIO)
+        df['body_ref'] = df['body_ref'].where(df['body_ref'] > 0, config.WICK_REJECTION_MIN_BODY_REF)
         
         # Logic: Wick must be > 2x Body
-        df['is_bullish'] = df['lower_wick'] > (df['body'] * 2.0)
-        df['is_bearish'] = df['upper_wick'] > (df['body'] * 2.0)
+        df['is_bullish'] = df['lower_wick'] > (df['body'] * config.WICK_REJECTION_MULTIPLIER)
+        df['is_bearish'] = df['upper_wick'] > (df['body'] * config.WICK_REJECTION_MULTIPLIER)
         
         # Calculate strength
         df['strength_bull'] = df['lower_wick'] / df['body_ref']

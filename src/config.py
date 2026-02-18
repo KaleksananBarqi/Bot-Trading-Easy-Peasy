@@ -96,6 +96,7 @@ TRAP_SAFETY_SL = 2.0             # Jarak Safety SL khusus setup Liquidity Hunt
 WHALE_THRESHOLD_USDT = 1000000   # Transaksi > $1 Juta ditandai sebagai Whale
 WHALE_HISTORY_LIMIT = 10         # Cek 10 transaksi terakhir
 STABLECOIN_INFLOW_THRESHOLD_PERCENT = 0.05
+WHALE_DEDUP_WINDOW_SECONDS = 5   # Window deduplikasi transaksi whale (detik)
 
 # Mekanisme Pendinginan (Anti-FOMO/Anti-Revenge)
 COOLDOWN_IF_PROFIT = 3600        # Jeda trading di koin ini jika PROFIT (detik)
@@ -155,6 +156,11 @@ VOLUME_SPIKE_MULTIPLIER = 1.5    # Volume harus 2x rata-rata untuk konfirmasi sw
 # Order Book Analysis
 ORDERBOOK_RANGE_PERCENT = 0.02   # Kedalaman depth 2%
 
+# Wick Rejection Analysis
+WICK_REJECTION_MIN_BODY_RATIO = 0.01       # Fallback: 1% of candle range when body = 0
+WICK_REJECTION_MIN_BODY_REF = 0.00000001   # Minimum body_ref to prevent division by zero
+WICK_REJECTION_MULTIPLIER = 2.0             # Wick must be > 2x Body for valid rejection
+
 # ------------------------------------------------------------------------------
 # 4.4 GROUP: BITCOIN KING EFFECT (Korelasi)
 # ------------------------------------------------------------------------------
@@ -181,6 +187,10 @@ TRAILING_ACTIVATION_THRESHOLD = 0.80  # Aktif saat harga jalan 80% ke TP (Softwa
 TRAILING_CALLBACK_RATE = 0.01       # Jarak trail 0.75% (Software Mode) / 0.8% (Native Mode - Auto Adjust)
 TRAILING_MIN_PROFIT_LOCK = 0.005      # Kunci minimal profit 0.5% (Software Mode Only)
 TRAILING_SL_UPDATE_COOLDOWN = 3       # Interval update ke exchange
+
+# Native Trailing Stop Limits (Binance Futures)
+NATIVE_TRAILING_MIN_RATE = 0.1       # Minimal 0.1%
+NATIVE_TRAILING_MAX_RATE = 5.0       # Maksimal 5.0%
 
 # Mekanisme Retry & Error Handling
 ORDER_SLTP_RETRIES = 3           # Retry pasang SL/TP max 3 kali

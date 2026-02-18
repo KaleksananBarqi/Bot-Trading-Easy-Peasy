@@ -5,17 +5,10 @@ from io import BytesIO
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageChops
 import numpy as np
-import sys
-
-# Ensure src module can be imported
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
-if project_root not in sys.path:
-    sys.path.append(project_root)
 
 # Try Logger Import
 try:
-    from src.utils.helper import logger
+    from .helper import logger
 except ImportError:
     import logging
     logger = logging.getLogger("PnLGenerator")

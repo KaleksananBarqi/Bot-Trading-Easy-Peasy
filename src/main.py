@@ -28,6 +28,25 @@ sentiment = None
 onchain = None
 ai_brain = None
 executor = None
+
+async def activate_native_trailing_delayed(symbol, side, qty):
+    """
+    Activate native trailing stop after a delay.
+    Extracted from main() as a module-level helper function.
+    """
+    logger.info(f"⏳ Waiting {config.TRAILING_ACTIVATION_DELAY}s to activate Native Trailing for {symbol}...")
+    await asyncio.sleep(config.TRAILING_ACTIVATION_DELAY)
+    
+    if not executor.has_active_or_pending_trade(symbol):
+        logger.warning(f"⚠️ Position {symbol} closed before Native Trailing activation.")
+        return
+
+    success = await executor.install_native_trailing_stop(
+        symbol, side, qty, config.TRAILING_CALLBACK_RATE
+    )
+    if success:
+       await kirim_tele(f"🔄 <b>NATIVE TRAILING ACTIVE</b>\n{symbol}\nCallback: {config.TRAILING_CALLBACK_RATE*100}%")
+
 pattern_recognizer = None
 journal = None
 
@@ -470,22 +489,6 @@ async def main():
 
             # Trigger safety check immediately
             await executor.sync_positions()
-    
-    # [NEW] Helper for Native Trailing Delay
-    async def activate_native_trailing_delayed(symbol, side, qty):
-        logger.info(f"⏳ Waiting {config.TRAILING_ACTIVATION_DELAY}s to activate Native Trailing for {symbol}...")
-        await asyncio.sleep(config.TRAILING_ACTIVATION_DELAY)
-        
-        # Double check if position still exists (not closed manually)
-        if not executor.has_active_or_pending_trade(symbol):
-            logger.warning(f"⚠️ Position {symbol} closed before Native Trailing activation.")
-            return
-
-        success = await executor.install_native_trailing_stop(
-            symbol, side, qty, config.TRAILING_CALLBACK_RATE
-        )
-        if success:
-           await kirim_tele(f"🔄 <b>NATIVE TRAILING ACTIVE</b>\n{symbol}\nCallback: {config.TRAILING_CALLBACK_RATE*100}%")
 
     def whale_handler(symbol, amount, side):
         # Callback from Market Data (AggTrade)

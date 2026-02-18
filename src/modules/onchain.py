@@ -15,7 +15,7 @@ class OnChainAnalyzer:
         # De-duplication state per symbol
         self._last_whale_key: dict[str, str] = {}
         self._last_whale_time: dict[str, float] = {}
-        self._dedup_window_seconds: int = 5  # Skip transaksi identik dalam 5 detik
+        self._dedup_window_seconds: int = config.WHALE_DEDUP_WINDOW_SECONDS  # Skip transaksi identik dalam window
 
     def detect_whale(self, symbol: str, size_usdt: float, side: str) -> None:
         """

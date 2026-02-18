@@ -634,8 +634,10 @@ class OrderExecutor:
             # Binance Futures usually supports 0.1% steps.
             
             rate_percent = round(callback_rate * 100, 1)
-            if rate_percent < 0.1: rate_percent = 0.1
-            if rate_percent > 5.0: rate_percent = 5.0 # Max 5% usually
+            if rate_percent < config.NATIVE_TRAILING_MIN_RATE:
+                rate_percent = config.NATIVE_TRAILING_MIN_RATE
+            if rate_percent > config.NATIVE_TRAILING_MAX_RATE:
+                rate_percent = config.NATIVE_TRAILING_MAX_RATE
 
             # Side for SL is opposite of Position
             side_api = 'sell' if side == 'LONG' else 'buy'
