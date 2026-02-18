@@ -736,21 +736,6 @@ class MarketDataManager:
             logger.error(f"Get Tech Data Error {symbol}: {e}")
             return None
 
-    def _calculate_wick_rejection(self, symbol, lookback=5):
-        """Wrapper for backward compatibility / testing"""
-        bars = list(self.market_store.get(symbol, {}).get(config.TIMEFRAME_EXEC, []))
-        return _calculate_wick_rejection_static(bars, lookback)
-
-    def _calculate_market_structure(self, symbol, lookback=5):
-        """Wrapper for backward compatibility / testing"""
-        bars = list(self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, []))
-        return _calculate_market_structure_static(bars, lookback)
-
-    def _calculate_pivot_points(self, symbol):
-        """Wrapper for backward compatibility / testing"""
-        bars = list(self.market_store.get(symbol, {}).get(config.TIMEFRAME_TREND, []))
-        return _calculate_pivot_points_static(bars)
-
     async def get_order_book_depth(self, symbol, limit=20):
         """
         Fetch Order Book and calculate imbalance within 2% range.
