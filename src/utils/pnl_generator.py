@@ -335,16 +335,10 @@ class CryptoPnLGenerator:
     def _create_diagonal_blur_mask(self, w, h):
         """Buat mask diagonal: kiri-bawah putih (blur), kanan-atas hitam (tajam)."""
         import numpy as np
-        # Buat gradient diagonal dari kiri-bawah (255) ke kanan-atas (0)
-        mask_data = np.zeros((h, w), dtype=np.uint8)
-        for y_pos in range(h):
-            for x_pos in range(w):
-                # Normalisasi posisi: 0,0 = kanan-atas, 1,1 = kiri-bawah
-                nx = 1.0 - (x_pos / max(w - 1, 1))
-                ny = y_pos / max(h - 1, 1)
-                # Rata-rata diagonal → semakin dekat kiri-bawah semakin putih
-                val = (nx + ny) / 2.0
-                mask_data[y_pos, x_pos] = int(min(val * 255, 255))
+        x = np.linspace(1, 0, w)
+        y = np.arange(h) / max(h - 1, 1)
+        ny, nx = np.meshgrid(y, x, indexing='ij')
+        mask_data = ((nx + ny) / 2.0 * 255).astype(np.uint8)
         return Image.fromarray(mask_data, 'L')
 
     def _get_panel_image_path(self):
@@ -412,16 +406,10 @@ class CryptoPnLGenerator:
                 
                 # Gradient diagonal: kiri-bawah=0, kanan-atas=max_opacity
                 grad = np.zeros((h, w), dtype=np.float32)
-                for gy in range(h):
-                    for gx in range(w):
-                        # nx: 0 di kiri, 1 di kanan
-                        nx = gx / max(w - 1, 1)
-                        # ny: 1 di atas, 0 di bawah
-                        ny = 1.0 - (gy / max(h - 1, 1))
-                        # Gabungkan: kiri selalu 0, kanan atas paling jelas
-                        # Multiplicative: ny hanya memperkuat di sisi kanan
-                        fade = nx * (0.7 + ny * 0.3)
-                        grad[gy, gx] = min(fade * opacity, 1.0)
+                gx = np.linspace(0, 1, w)
+                gy = 1.0 - (np.arange(h) / max(h - 1, 1))
+                gny, gnx = np.meshgrid(gy, gx, indexing='ij')
+                grad = (gnx * (0.7 + gny * 0.3) * opacity)
                 
                 alpha = (alpha * grad).clip(0, 255).astype(np.uint8)
                 panel_img.putalpha(Image.fromarray(alpha, 'L'))
