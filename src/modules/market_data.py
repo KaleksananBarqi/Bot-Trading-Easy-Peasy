@@ -117,46 +117,49 @@ def _calculate_wick_rejection_static(bars, lookback=5):
         else:
             candidates = bars[start_idx:end_idx]
 
-        rejection_type = "NONE"
-        max_strength = 0.0
-        rejection_count = 0
-
-        for candle in candidates:
-            # [timestamp, open, high, low, close, volume]
-            op, hi, lo, cl = candle[1], candle[2], candle[3], candle[4]
-
-            body = abs(cl - op)
-            upper_wick = hi - max(op, cl)
-            lower_wick = min(op, cl) - lo
-
-            # Avoid division by zero
-            body_ref = body if body > 0 else (hi - lo) * 0.01
-            if body_ref == 0: body_ref = 0.00000001
-
-            # Logic: Wick must be > 2x Body
-            is_bullish = lower_wick > (body * 2.0)
-            is_bearish = upper_wick > (body * 2.0)
-
-            # Determine strength
-            current_strength_bull = lower_wick / body_ref
-            current_strength_bear = upper_wick / body_ref
-
-            if is_bullish:
-                rejection_count += 1
-                if current_strength_bull > max_strength:
-                    max_strength = current_strength_bull
-                    rejection_type = "BULLISH_REJECTION"
-
-            elif is_bearish:
-                rejection_count += 1
-                if current_strength_bear > max_strength:
-                    max_strength = current_strength_bear
-                    rejection_type = "BEARISH_REJECTION"
+        # Vectorized calculation using pandas
+        # candidates format: [timestamp, open, high, low, close, volume]
+        df = pd.DataFrame(candidates, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+        
+        # Calculate wicks and body
+        df['body'] = (df['close'] - df['open']).abs()
+        df['upper_wick'] = df['high'] - df[['open', 'close']].max(axis=1)
+        df['lower_wick'] = df[['open', 'close']].min(axis=1) - df['low']
+        
+        # Handle division by zero
+        df['body_ref'] = df['body'].where(df['body'] > 0, (df['high'] - df['low']) * 0.01)
+        df['body_ref'] = df['body_ref'].where(df['body_ref'] > 0, 0.00000001)
+        
+        # Logic: Wick must be > 2x Body
+        df['is_bullish'] = df['lower_wick'] > (df['body'] * 2.0)
+        df['is_bearish'] = df['upper_wick'] > (df['body'] * 2.0)
+        
+        # Calculate strength
+        df['strength_bull'] = df['lower_wick'] / df['body_ref']
+        df['strength_bear'] = df['upper_wick'] / df['body_ref']
+        
+        # Count rejections
+        rejection_count = df['is_bullish'].sum() + df['is_bearish'].sum()
+        
+        # Find max strength for each type
+        max_bull = df.loc[df['is_bullish'], 'strength_bull'].max() if df['is_bullish'].any() else 0.0
+        max_bear = df.loc[df['is_bearish'], 'strength_bear'].max() if df['is_bearish'].any() else 0.0
+        
+        # Determine final rejection type (strongest wins)
+        if max_bull > max_bear and max_bull > 0:
+            rejection_type = "BULLISH_REJECTION"
+            max_strength = max_bull
+        elif max_bear > 0:
+            rejection_type = "BEARISH_REJECTION"
+            max_strength = max_bear
+        else:
+            rejection_type = "NONE"
+            max_strength = 0.0
 
         return {
             "recent_rejection": rejection_type,
             "rejection_strength": round(max_strength, 2),
-            "rejection_candles": rejection_count
+            "rejection_candles": int(rejection_count)
         }
 
     except Exception as e:
