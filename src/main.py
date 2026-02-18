@@ -511,7 +511,7 @@ async def main():
                 try:
                     # Jalankan di background task agar tidak memblokir main loop (Fire & Forget)
                     asyncio.create_task(sentiment.update_all())
-                    asyncio.create_task(asyncio.to_thread(onchain.fetch_stablecoin_inflows))
+                    asyncio.create_task(onchain.fetch_stablecoin_inflows())
                     
                     # Schedule Next Update
                     next_sentiment_update_time = get_next_rounded_time(config.SENTIMENT_UPDATE_INTERVAL)

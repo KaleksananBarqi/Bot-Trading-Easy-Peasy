@@ -3,6 +3,7 @@ import feedparser
 import random
 import asyncio
 import aiohttp
+import json
 import config
 from datetime import datetime, timezone
 from typing import Optional
@@ -83,8 +84,14 @@ class SentimentAnalyzer:
                 error_msg = data.get('status', {}).get('error_message')
                 logger.warning(f"⚠️ CMC API Error: {error_msg if error_msg else data}")
 
+        except requests.RequestException as e:
+            logger.warning(f"⚠️ Network error fetching F&G: {type(e).__name__}: {e}")
+        except json.JSONDecodeError as e:
+            logger.warning(f"⚠️ Invalid JSON response from CMC F&G API: {e}")
+        except (KeyError, TypeError, ValueError) as e:
+            logger.warning(f"⚠️ Data parsing error in F&G response: {type(e).__name__}: {e}")
         except Exception as e:
-            logger.warning(f"⚠️ Failed to fetch F&G: {e}")
+            logger.warning(f"⚠️ Unexpected error fetching F&G: {type(e).__name__}: {e}")
 
     async def _fetch_single_rss(self, session: aiohttp.ClientSession, url: str, max_per_source: int, max_age_hours: int) -> list:
         """Fetch single RSS feed secara async."""

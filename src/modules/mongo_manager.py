@@ -22,7 +22,14 @@ class MongoManager:
         if self._initialized:
             return
         
-        self.uri = config.MONGO_URI
+        # Guard check: MONGO_URI harus sudah divalidasi oleh config.py
+        # Jika None, berarti config.py belum di-import atau validasi gagal
+        if not config.MONGO_URI:
+            raise RuntimeError(
+                "MongoDB URI is not configured. "
+                "Please ensure MONGO_URI is set in your environment before importing this module."
+            )
+        
         self.uri = config.MONGO_URI
         self.db_name = config.MONGO_DB_NAME
         self.collection_name = config.MONGO_COLLECTION_NAME
@@ -42,7 +49,6 @@ class MongoManager:
             # Trigger connection check
             self.client.admin.command('ping')
             
-            self.db = self.client[self.db_name]
             self.db = self.client[self.db_name]
             self.trades_collection = self.db[self.collection_name]
             

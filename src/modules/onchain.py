@@ -2,7 +2,7 @@
 import time
 from datetime import datetime
 from typing import Optional
-import requests
+import aiohttp
 import config
 from src.utils.helper import logger
 
@@ -58,11 +58,12 @@ class OnChainAnalyzer:
 
 
 
-    def fetch_stablecoin_inflows(self):
+    async def fetch_stablecoin_inflows(self):
         try:
             url = config.DEFILLAMA_STABLECOIN_URL
-            resp = requests.get(url, timeout=config.API_REQUEST_TIMEOUT)
-            data = resp.json()
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=config.API_REQUEST_TIMEOUT)) as resp:
+                    data = await resp.json()
             
             if data and len(data) > 2:
                 # Structure: [{'date': 1600..., 'totalCirculating': {'peggedUSD': 100...}}, ...]

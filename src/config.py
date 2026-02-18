@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -198,7 +199,7 @@ LOG_FILENAME = os.path.join(BASE_DIR, 'bot_trading.log')
 TRACKER_FILENAME = os.path.join(BASE_DIR, 'safety_tracker.json')
 
 # Database (MongoDB)
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+MONGO_URI = os.getenv("MONGO_URI")
 MONGO_DB_NAME = "bot_trading_easy_peasy" # Ubah nama database di sini
 MONGO_COLLECTION_NAME = "trades_02_2026" # Ubah nama collection di sini
 
@@ -482,3 +483,36 @@ OUTPUT FORMAT (JSON ONLY):
   "risk_level": "LOW" | "MEDIUM" | "HIGH"
 }}
 """
+
+
+# ==============================================================================
+# VALIDASI KONFIGURASI WAJIB
+# ==============================================================================
+def _validate_mongo_uri():
+    """Validasi MONGO_URI harus di-set dan formatnya valid."""
+    if not MONGO_URI:
+        raise ValueError(
+            "MONGO_URI environment variable must be set. "
+            "Please set it in your .env file or environment. "
+            "Example: MONGO_URI=mongodb://username:password@host:port/database"
+        )
+    
+    # Validasi format URI
+    try:
+        parsed = urlparse(MONGO_URI)
+        if parsed.scheme not in ('mongodb', 'mongodb+srv'):
+            raise ValueError(
+                f"MONGO_URI must use mongodb:// or mongodb+srv:// scheme. "
+                f"Got: {parsed.scheme}://"
+            )
+        if not parsed.hostname:
+            raise ValueError(
+                "MONGO_URI must include a hostname. "
+                f"Current URI: {MONGO_URI}"
+            )
+    except Exception as e:
+        raise ValueError(f"Invalid MONGO_URI format: {e}")
+
+
+# Jalankan validasi saat modul di-import
+_validate_mongo_uri()
