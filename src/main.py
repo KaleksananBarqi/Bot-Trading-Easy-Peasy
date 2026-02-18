@@ -100,6 +100,11 @@ async def trailing_price_handler(symbol, price):
     if config.ENABLE_TRAILING_STOP and executor:
         await executor.check_trailing_on_price(symbol, price)
 
+async def whale_handler(symbol, amount, side):
+    """Callback dari Market Data (AggTrade) untuk whale detection"""
+    if onchain:
+        onchain.detect_whale(symbol, amount, side)
+
 async def main():
     global market_data, sentiment, onchain, ai_brain, executor, pattern_recognizer, journal
     
@@ -489,10 +494,6 @@ async def main():
 
             # Trigger safety check immediately
             await executor.sync_positions()
-
-    def whale_handler(symbol, amount, side):
-        # Callback from Market Data (AggTrade)
-        onchain.detect_whale(symbol, amount, side)
 
     asyncio.create_task(market_data.start_stream(account_update_cb, order_update_cb, whale_handler))
     asyncio.create_task(safety_monitor_loop())

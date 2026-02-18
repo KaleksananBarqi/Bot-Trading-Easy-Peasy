@@ -9,8 +9,20 @@ import ccxt.async_support as ccxt
 import websockets
 import config
 from collections import deque
+from typing import NamedTuple
 from scipy.signal import argrelextrema
 from src.utils.helper import logger, kirim_tele, wib_time, parse_timeframe_to_seconds
+
+# --- NAMED TUPLES FOR TYPE SAFETY ---
+
+class Candle(NamedTuple):
+    """Represents a single OHLCV candle with named fields for clarity."""
+    timestamp: int
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
 
 # --- STATIC CALCULATION FUNCTIONS (Thread-Safe) ---
 
@@ -21,11 +33,11 @@ def _calculate_pivot_points_static(bars):
 
         # Gunakan candle terakhir yang COMPLETE (Completed Period)
         # [-1] adalah candle berjalan (unconfirmed), [-2] adalah candle terakhir yang close
-        prev_candle = bars[-2]
-        # Format: [timestamp, open, high, low, close, volume]
-        high = prev_candle[2]
-        low = prev_candle[3]
-        close = prev_candle[4]
+        # Unpack into NamedTuple for clarity and type safety
+        prev = Candle(*bars[-2])
+        high = prev.high
+        low = prev.low
+        close = prev.close
 
         # Classic Pivot Formula
         pivot = (high + low + close) / 3
@@ -166,113 +178,215 @@ def _calculate_wick_rejection_static(bars, lookback=5):
         logger.error(f"Wick Rejection Calc Error: {e}")
         return {"recent_rejection": "ERROR", "rejection_strength": 0.0}
 
+
+def _prepare_dataframe(bars):
+    """
+    Prepare DataFrame from OHLCV bars.
+    
+    Args:
+        bars: List of [timestamp, open, high, low, close, volume]
+    
+    Returns:
+        pd.DataFrame with columns: timestamp, open, high, low, close, volume
+    """
+    return pd.DataFrame(bars, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+
+
+def _calculate_ema_indicators(df):
+    """
+    Calculate EMA Fast and Slow indicators.
+    Adds EMA_FAST and EMA_SLOW columns to DataFrame.
+    
+    Args:
+        df: DataFrame with OHLCV data
+    """
+    df['EMA_FAST'] = df.ta.ema(length=config.EMA_FAST)
+    df['EMA_SLOW'] = df.ta.ema(length=config.EMA_SLOW)
+
+
+def _calculate_momentum_indicators(df):
+    """
+    Calculate momentum indicators: RSI, ADX, and Stochastic RSI.
+    Adds RSI, ADX, STOCH_K, and STOCH_D columns to DataFrame.
+    
+    Args:
+        df: DataFrame with OHLCV data
+    """
+    # RSI & ADX
+    df['RSI'] = df.ta.rsi(length=config.RSI_PERIOD)
+    adx_result = df.ta.adx(length=config.ADX_PERIOD)
+    df['ADX'] = adx_result[f"ADX_{config.ADX_PERIOD}"]
+    
+    # Stochastic RSI
+    stoch_rsi = df.ta.stochrsi(
+        length=config.STOCHRSI_LEN,
+        rsi_length=config.RSI_PERIOD,
+        k=config.STOCHRSI_K,
+        d=config.STOCHRSI_D
+    )
+    k_key = f"STOCHRSIk_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
+    d_key = f"STOCHRSId_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
+    df['STOCH_K'] = stoch_rsi[k_key]
+    df['STOCH_D'] = stoch_rsi[d_key]
+
+
+def _calculate_volatility_indicators(df):
+    """
+    Calculate volatility indicators: Bollinger Bands and ATR.
+    Adds BB_UPPER, BB_LOWER, and ATR columns to DataFrame.
+    
+    Args:
+        df: DataFrame with OHLCV data
+    """
+    # Bollinger Bands
+    bb = df.ta.bbands(length=config.BB_LENGTH, std=config.BB_STD)
+    if bb is not None:
+        df['BB_LOWER'] = bb.iloc[:, 0]
+        df['BB_UPPER'] = bb.iloc[:, 2]
+    
+    # ATR (For Liquidity Hunt)
+    df['ATR'] = df.ta.atr(length=config.ATR_PERIOD)
+
+
+def _calculate_volume_indicators(df):
+    """
+    Calculate volume indicator: Volume MA.
+    Adds VOL_MA column to DataFrame.
+    
+    Args:
+        df: DataFrame with OHLCV data
+    """
+    df['VOL_MA'] = df.ta.sma(close='volume', length=config.VOL_MA_PERIOD)
+
+
+def _calculate_trend_state(cur_row):
+    """
+    Calculate trend state based on current row values.
+    
+    Args:
+        cur_row: Series representing current candle data
+    
+    Returns:
+        dict with 'price_vs_ema' and 'trend_major' keys
+    """
+    return {
+        'price_vs_ema': "Above" if cur_row['close'] > cur_row['EMA_FAST'] else "Below",
+        'trend_major': "Bullish" if cur_row['close'] > cur_row['EMA_SLOW'] else "Bearish"
+    }
+
+
+def _calculate_global_trend(bars_trend, symbol):
+    """
+    Calculate global trend (1D timeframe) for AI filter.
+    
+    Args:
+        bars_trend: List of OHLCV bars from trend timeframe
+        symbol: Trading symbol for error logging
+    
+    Returns:
+        str: "BULLISH", "BEARISH", or "NEUTRAL"
+    """
+    if len(bars_trend) <= config.EMA_TREND_MAJOR:
+        return "NEUTRAL"
+    
+    try:
+        df_trend = _prepare_dataframe(bars_trend)
+        ema_major_series = df_trend.ta.ema(length=config.EMA_TREND_MAJOR)
+        
+        # Get last closed candle (index -2, -1 is current forming)
+        if len(df_trend) >= 2:
+            idx = -2
+            price_1d = df_trend['close'].iloc[idx]
+            ema_1d = ema_major_series.iloc[idx]
+            
+            if pd.notna(ema_1d):
+                return "BULLISH" if price_1d > ema_1d else "BEARISH"
+    except Exception as e:
+        logger.error(f"Global Trend Calc Warning {symbol}: {e}")
+    
+    return "NEUTRAL"
+
+
+def _assemble_tech_data(cur_row, trend_state, pivots, structure, wick_rejection, global_trend):
+    """
+    Assemble all technical data into result dictionary.
+    
+    Args:
+        cur_row: Series with current candle indicator values
+        trend_state: dict with price_vs_ema and trend_major
+        pivots: Pivot points data
+        structure: Market structure data
+        wick_rejection: Wick rejection analysis data
+        global_trend: Global trend direction string
+    
+    Returns:
+        dict: Complete technical data dictionary
+    """
+    return {
+        "price": cur_row['close'],
+        "rsi": cur_row['RSI'],
+        "adx": cur_row['ADX'],
+        "ema_fast": cur_row['EMA_FAST'],
+        "ema_slow": cur_row['EMA_SLOW'],
+        "vol_ma": cur_row['VOL_MA'],
+        "volume": cur_row['volume'],
+        "bb_upper": cur_row['BB_UPPER'],
+        "bb_lower": cur_row['BB_LOWER'],
+        "stoch_k": cur_row['STOCH_K'],
+        "stoch_d": cur_row['STOCH_D'],
+        "atr": cur_row['ATR'],
+        "price_vs_ema": trend_state['price_vs_ema'],
+        "trend_major": trend_state['trend_major'],
+        "pivots": pivots,
+        "market_structure": structure,
+        "wick_rejection": wick_rejection,
+        "global_trend_1d": global_trend,
+        "candle_timestamp": int(cur_row['timestamp']),
+        "last_candle": {
+            "open": cur_row['open'],
+            "high": cur_row['high'],
+            "low": cur_row['low'],
+            "close": cur_row['close'],
+            "timestamp": int(cur_row['timestamp'])
+        }
+    }
+
+
 def _calculate_tech_data_threaded(bars_exec, bars_trend, symbol):
     """
     Heavy Calculation Logic (Pandas/TA) to be run in a separate thread.
     Takes Lists of bars (snapshots), not Deques.
+    
+    Refactored to use helper functions for better maintainability and testability.
     """
     try:
-        if len(bars_exec) < config.EMA_SLOW + 5: return None
+        # 1. Validate input data
+        if len(bars_exec) < config.EMA_SLOW + 5:
+            return None
 
-        # 1. Prepare DataFrame
-        df = pd.DataFrame(bars_exec, columns=['timestamp','open','high','low','close','volume'])
+        # 2. Prepare DataFrame
+        df = _prepare_dataframe(bars_exec)
 
-        # 2. EMAs
-        df['EMA_FAST'] = df.ta.ema(length=config.EMA_FAST)
-        df['EMA_SLOW'] = df.ta.ema(length=config.EMA_SLOW) # EMA Trend Major
+        # 3. Calculate all technical indicators
+        _calculate_ema_indicators(df)
+        _calculate_momentum_indicators(df)
+        _calculate_volatility_indicators(df)
+        _calculate_volume_indicators(df)
 
-        # 3. RSI & ADX
-        df['RSI'] = df.ta.rsi(length=config.RSI_PERIOD)
-        df['ADX'] = df.ta.adx(length=config.ADX_PERIOD)[f"ADX_{config.ADX_PERIOD}"]
+        # 4. Get current (confirmed) candle
+        cur = df.iloc[-2]
 
-        # 4. Volume MA
-        df['VOL_MA'] = df.ta.sma(close='volume', length=config.VOL_MA_PERIOD)
+        # 5. Calculate trend state
+        trend_state = _calculate_trend_state(cur)
 
-        # 5. Bollinger Bands
-        bb = df.ta.bbands(length=config.BB_LENGTH, std=config.BB_STD)
-        if bb is not None:
-            df['BB_LOWER'] = bb.iloc[:, 0]
-            df['BB_UPPER'] = bb.iloc[:, 2]
-
-        # 6. Stochastic RSI
-        stoch_rsi = df.ta.stochrsi(length=config.STOCHRSI_LEN, rsi_length=config.RSI_PERIOD, k=config.STOCHRSI_K, d=config.STOCHRSI_D)
-        # keys example: STOCHRSIk_14_14_3_3, STOCHRSId_14_14_3_3
-        k_key = f"STOCHRSIk_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
-        d_key = f"STOCHRSId_{config.STOCHRSI_LEN}_{config.RSI_PERIOD}_{config.STOCHRSI_K}_{config.STOCHRSI_D}"
-        df['STOCH_K'] = stoch_rsi[k_key]
-        df['STOCH_D'] = stoch_rsi[d_key]
-
-        # 7. ATR (Untuk Liquidity Hunt)
-        df['ATR'] = df.ta.atr(length=config.ATR_PERIOD)
-
-        cur = df.iloc[-2] # Confirmed Candle (Close)
-
-        # Simple Trend Check
-        ema_pos = "Above" if cur['close'] > cur['EMA_FAST'] else "Below"
-        trend_major = "Bullish" if cur['close'] > cur['EMA_SLOW'] else "Bearish"
-
-        # 8. Pivot Points (Support/Resistance) from Trend Timeframe (1H)
+        # 6. Calculate external analyses
         pivots = _calculate_pivot_points_static(bars_trend)
-
-        # 9. Market Structure (Swing High/Low)
         structure = _calculate_market_structure_static(bars_trend)
-
-        # 10. Wick Rejection Analysis
         wick_rejection = _calculate_wick_rejection_static(bars_exec)
+        global_trend = _calculate_global_trend(bars_trend, symbol)
 
-        tech_data = {
-            "price": cur['close'],
-            "rsi": cur['RSI'],
-            "adx": cur['ADX'],
-            "ema_fast": cur['EMA_FAST'],
-            "ema_slow": cur['EMA_SLOW'], # EMA Trend Major
-            "vol_ma": cur['VOL_MA'],
-            "volume": cur['volume'],
-            "bb_upper": cur['BB_UPPER'],
-            "bb_lower": cur['BB_LOWER'],
-            "stoch_k": cur['STOCH_K'],
-            "stoch_d": cur['STOCH_D'],
-            "atr": cur['ATR'],
-            "price_vs_ema": ema_pos,
-            "trend_major": trend_major,
-            "pivots": pivots,
-            "market_structure": structure,
-            "wick_rejection": wick_rejection,
-            "candle_timestamp": int(cur['timestamp']),
-            "last_candle": {
-                "open": cur['open'],
-                "high": cur['high'],
-                "low": cur['low'],
-                "close": cur['close'],
-                "timestamp": int(cur['timestamp'])
-            }
-        }
-
-        # [NEW] 11. Global Trend (1D) Calculation
-        # Menghitung tren jangka panjang untuk filter AI
-        global_trend = "NEUTRAL"
-        try:
-            if len(bars_trend) > config.EMA_TREND_MAJOR:
-                df_trend = pd.DataFrame(bars_trend, columns=['timestamp','open','high','low','close','volume'])
-                # Calculate EMA on 1D data
-                ema_major_series = df_trend.ta.ema(length=config.EMA_TREND_MAJOR)
-                
-                # Get the last closed candle (index -2)
-                # Index -1 is the current forming candle
-                if len(df_trend) >= 2:
-                    idx = -2
-                    price_1d = df_trend['close'].iloc[idx]
-                    ema_1d = ema_major_series.iloc[idx]
-                    
-                    if pd.notna(ema_1d):
-                        global_trend = "BULLISH" if price_1d > ema_1d else "BEARISH"
-        except Exception as e_glob:
-            logger.error(f"Global Trend Calc Warning {symbol}: {e_glob}")
-
-        # Inject Global Trend to tech_data
-        tech_data["global_trend_1d"] = global_trend
-
-        return tech_data
+        # 7. Assemble final result
+        return _assemble_tech_data(cur, trend_state, pivots, structure, wick_rejection, global_trend)
 
     except Exception as e:
         logger.error(f"Threaded Calc Error {symbol}: {e}")
