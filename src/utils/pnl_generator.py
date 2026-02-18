@@ -140,17 +140,13 @@ class CryptoPnLGenerator:
         bg_colors = style.get('bg_gradient_colors', ['#1E2329'])
         img = self._create_gradient_bg(width, height, bg_colors)
         
-        # Check Layout Mode
+        # Check Layout Mode (only landscape is supported)
         is_landscape = width > height
         
         if is_landscape:
             self._draw_landscape_layout(img, width, height, margin, trade_data)
         else:
-            # Fallback/Legacy Portrait Mode (Just in case)
-            draw = ImageDraw.Draw(img)
-            self._draw_header(img, draw, width, margin)
-            self._draw_stats(img, draw, width, height, margin, trade_data)
-            self._draw_footer(img, draw, width, height, margin)
+            raise ValueError("Portrait mode is not supported. Please use landscape dimensions (width > height).")
         
         # Watermark (layer terakhir, di atas semua konten)
         self._draw_watermark(img, width, height)
@@ -538,17 +534,6 @@ class CryptoPnLGenerator:
                 img.paste(qr_img, (x, y))
             except Exception as e:
                 logger.error(f"❌ Error generating QR: {e}")
-
-    # --- Legacy Methods (fallback untuk portrait mode) ---
-    def _draw_header(self, img, draw, width, margin):
-        self._draw_user_info(img, draw, margin, margin + 20)
-        self._draw_logo(img, width - margin, margin + 40)
-
-    def _draw_stats(self, img, draw, width, height, margin, data):
-        pass
-
-    def _draw_footer(self, img, draw, width, height, margin):
-        pass
 
 # Standalone execution for testing
 if __name__ == "__main__":
