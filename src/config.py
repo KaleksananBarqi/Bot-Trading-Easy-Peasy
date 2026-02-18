@@ -172,10 +172,13 @@ ENABLE_MARKET_ORDERS = False      # Izinkan Market Order (False = Limit Only)
 LIMIT_ORDER_EXPIRY_SECONDS = 7200 # Hapus Limit Order jika tak terisi dalam 2 jam
 
 # Trailing Stop Loss (TSL)
-ENABLE_TRAILING_STOP = True           # Aktifkan Trailing Stop?
-TRAILING_ACTIVATION_THRESHOLD = 0.80  # Aktif saat harga jalan 80% ke TP
-TRAILING_CALLBACK_RATE = 0.0075       # Jarak trail 0.75%
-TRAILING_MIN_PROFIT_LOCK = 0.005      # Kunci minimal profit 0.5%
+ENABLE_TRAILING_STOP = True           # Aktifkan Trailing Stop? (Master Switch)
+USE_NATIVE_TRAILING = True            # [NEW] Check form Binance (Native) vs Software (Custom)
+TRAILING_ACTIVATION_DELAY = 10        # [NEW] Delay (detik) sebelum pasang Trailing Stop (Native)
+
+TRAILING_ACTIVATION_THRESHOLD = 0.80  # Aktif saat harga jalan 80% ke TP (Software Mode Only)
+TRAILING_CALLBACK_RATE = 0.01       # Jarak trail 0.75% (Software Mode) / 0.8% (Native Mode - Auto Adjust)
+TRAILING_MIN_PROFIT_LOCK = 0.005      # Kunci minimal profit 0.5% (Software Mode Only)
 TRAILING_SL_UPDATE_COOLDOWN = 3       # Interval update ke exchange
 
 # Mekanisme Retry & Error Handling

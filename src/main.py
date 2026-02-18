@@ -446,6 +446,13 @@ async def main():
                          rr = dist_tp / dist_sl if dist_sl > 0 else 0
                          rr_str = f"1:{rr:.2f}"
                      
+                     # [NEW] NATIVE TRAILING LOGIC
+                     trailing_note = ""
+                     if config.USE_NATIVE_TRAILING:
+                         trailing_note = f"\n⏳ <b>Native Trailing:</b> Activating in {config.TRAILING_ACTIVATION_DELAY}s..."
+                         # Schedule activation
+                         asyncio.create_task(activate_native_trailing_delayed(sym, side_filled, qty_filled))
+                     
                      msg = (
                         f"✅ <b>LIMIT ENTRY FILLED</b>\n"
                         f"✨ <b>{sym}</b>\n"
@@ -457,11 +464,28 @@ async def main():
                         f"• TP: {tp_str}\n"
                         f"• SL: {sl_str}\n"
                         f"• R:R: {rr_str}"
+                        f"{trailing_note}"
                      )
                      await kirim_tele(msg)
 
             # Trigger safety check immediately
             await executor.sync_positions()
+    
+    # [NEW] Helper for Native Trailing Delay
+    async def activate_native_trailing_delayed(symbol, side, qty):
+        logger.info(f"⏳ Waiting {config.TRAILING_ACTIVATION_DELAY}s to activate Native Trailing for {symbol}...")
+        await asyncio.sleep(config.TRAILING_ACTIVATION_DELAY)
+        
+        # Double check if position still exists (not closed manually)
+        if not executor.has_active_or_pending_trade(symbol):
+            logger.warning(f"⚠️ Position {symbol} closed before Native Trailing activation.")
+            return
+
+        success = await executor.install_native_trailing_stop(
+            symbol, side, qty, config.TRAILING_CALLBACK_RATE
+        )
+        if success:
+           await kirim_tele(f"🔄 <b>NATIVE TRAILING ACTIVE</b>\n{symbol}\nCallback: {config.TRAILING_CALLBACK_RATE*100}%")
 
     def whale_handler(symbol, amount, side):
         # Callback from Market Data (AggTrade)

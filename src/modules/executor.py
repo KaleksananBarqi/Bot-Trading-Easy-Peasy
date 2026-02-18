@@ -617,6 +617,61 @@ class OrderExecutor:
         # Run all checks
         await asyncio.gather(*[check_symbol(sym) for sym in symbols_to_check])
 
-        # 3. Save only if needed
         if changes_made:
             await self.save_tracker()
+
+    # --- [NEW] NATIVE TRAILING STOP (BINANCE API) ---
+    async def install_native_trailing_stop(self, symbol, side, quantity, callback_rate):
+        """
+        Kirim order TRAILING_STOP_MARKET langsung ke Binance.
+        Ini menggantikan logika software-based trailing stop.
+        """
+        try:
+            # 1. Prepare Parameters
+            # Binance API expects callbackRate as FLOAT (0.1 - 5.0) for Percentage.
+            # Config is decimal (e.g. 0.01 = 1%). So multiply by 100.
+            # Example: 0.0075 * 100 = 0.75 -> Round to 0.8 (Step 0.1) or pass as is if supported.
+            # Binance Futures usually supports 0.1% steps.
+            
+            rate_percent = round(callback_rate * 100, 1)
+            if rate_percent < 0.1: rate_percent = 0.1
+            if rate_percent > 5.0: rate_percent = 5.0 # Max 5% usually
+
+            # Side for SL is opposite of Position
+            side_api = 'sell' if side == 'LONG' else 'buy'
+            
+            # 2. Send Order
+            logger.info(f"📤 Sending NATIVE Trailing Stop: {symbol} | Rate: {rate_percent}%")
+            
+            params = {
+                'callbackRate': rate_percent,
+                'reduceOnly': True,
+                'workingType': 'MARK_PRICE' # or CONTRACT_PRICE
+            }
+            
+            order = await self.exchange.create_order(
+                symbol=symbol,
+                type='TRAILING_STOP_MARKET',
+                side=side_api,
+                amount=quantity,
+                price=None, # Market Trigger
+                params=params
+            )
+            
+            logger.info(f"✅ NATIVE Trailing Stop Active: {symbol} (ID: {order['id']})")
+            
+            # 3. Update Tracker to SECURED (But Trailing Mode is managed by Exchange)
+            if symbol in self.safety_orders_tracker:
+                self.safety_orders_tracker[symbol].update({
+                    "status": "SECURED_NATIVE", # Distinct status
+                    "native_trailing_id": str(order['id']),
+                    "trailing_active": True # Logically active
+                })
+                await self.save_tracker()
+                
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to install Native Trailing: {e}")
+            await kirim_tele(f"⚠️ <b>NATIVE TRAILING ERROR</b>\n{symbol}: {e}")
+            return False
