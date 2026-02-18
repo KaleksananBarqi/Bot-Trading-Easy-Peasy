@@ -4,6 +4,7 @@ import os
 from io import BytesIO
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageChops
+import numpy as np
 import sys
 
 # Ensure src module can be imported
@@ -107,10 +108,9 @@ class CryptoPnLGenerator:
         def create_two_color_gradient(c1, c2, w, h):
             base = Image.new('RGB', (w, h), c1)
             top = Image.new('RGB', (w, h), c2)
+            gradient = np.linspace(0, 255, h, dtype=np.uint8)
+            mask_data = np.repeat(gradient, w).tolist()
             mask = Image.new('L', (w, h))
-            mask_data = []
-            for y in range(h):
-                mask_data.extend([int(255 * (y / h))] * w)
             mask.putdata(mask_data)
             return Image.composite(top, base, mask)
 
