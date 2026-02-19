@@ -59,47 +59,44 @@ class OnChainAnalyzer:
 
 
     async def fetch_stablecoin_inflows(self):
+        # Default fallback
+        self.stablecoin_inflow = "Neutral"
+        
         try:
             url = config.DEFILLAMA_STABLECOIN_URL
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=aiohttp.ClientTimeout(total=config.API_REQUEST_TIMEOUT)) as resp:
                     data = await resp.json()
             
-            if data and len(data) > 2:
-                # Structure: [{'date': 1600..., 'totalCirculating': {'peggedUSD': 100...}}, ...]
-                # Note: "totalCirculatingUSD" key represents aggregated mcap
-                
-                # Get last two records
-                curr = data[-1]
-                prev = data[-2]
-                
-                # Check for 'totalCirculatingUSD' key directly
-                # It is a dict: {'peggedUSD': ..., 'peggedEUR': ...}
-                curr_dict = curr.get('totalCirculatingUSD', {})
-                prev_dict = prev.get('totalCirculatingUSD', {})
-                
-                curr_val = curr_dict.get('peggedUSD', 0)
-                prev_val = prev_dict.get('peggedUSD', 0)
-                
-                if curr_val and prev_val:
-                    change_pct = ((curr_val - prev_val) / prev_val) * 100
-                    
-                    if change_pct > config.STABLECOIN_INFLOW_THRESHOLD_PERCENT:
-                        self.stablecoin_inflow = "Positive"
-                    elif change_pct < -config.STABLECOIN_INFLOW_THRESHOLD_PERCENT:
-                        self.stablecoin_inflow = "Negative"
-                    else:
-                        self.stablecoin_inflow = "Neutral"
-                        
-                    logger.info(f"🪙 Stablecoin Inflow: {self.stablecoin_inflow} ({change_pct:.2f}%)")
-                else:
-                    self.stablecoin_inflow = "Neutral"
-            else:
-                 logger.warning("CoinLlama Data Insufficient")
-                 
+            # Early return if data insufficient
+            if not data or len(data) <= 2:
+                logger.warning("CoinLlama Data Insufficient")
+                return
+            
+            # Get last two records
+            curr = data[-1]
+            prev = data[-2]
+            
+            # Extract values from 'totalCirculatingUSD' dict
+            curr_val = curr.get('totalCirculatingUSD', {}).get('peggedUSD', 0)
+            prev_val = prev.get('totalCirculatingUSD', {}).get('peggedUSD', 0)
+            
+            # Early return if values invalid
+            if not curr_val or not prev_val:
+                return
+            
+            change_pct = ((curr_val - prev_val) / prev_val) * 100
+            
+            # Determine inflow direction
+            if change_pct > config.STABLECOIN_INFLOW_THRESHOLD_PERCENT:
+                self.stablecoin_inflow = "Positive"
+            elif change_pct < -config.STABLECOIN_INFLOW_THRESHOLD_PERCENT:
+                self.stablecoin_inflow = "Negative"
+            
+            logger.info(f"🪙 Stablecoin Inflow: {self.stablecoin_inflow} ({change_pct:.2f}%)")
+                  
         except Exception as e:
             logger.error(f"❌ Failed fetch Stablecoin Inflow: {e}")
-            self.stablecoin_inflow = "Neutral" # Fallback
 
     def get_latest(self, symbol: Optional[str] = None) -> dict:
         """
