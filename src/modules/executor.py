@@ -283,11 +283,11 @@ class OrderExecutor:
 
             try:
                 # A. STOP LOSS (STOP_MARKET)
-                await self.exchange.create_order(symbol, 'STOP_MARKET', side_api, None, None, {
+                sl_order = await self.exchange.create_order(symbol, 'STOP_MARKET', side_api, None, None, {
                     'stopPrice': p_sl, 'closePosition': True, 'workingType': 'MARK_PRICE'
                 })
                 # B. TAKE PROFIT (TAKE_PROFIT_MARKET)
-                await self.exchange.create_order(symbol, 'TAKE_PROFIT_MARKET', side_api, None, None, {
+                tp_order = await self.exchange.create_order(symbol, 'TAKE_PROFIT_MARKET', side_api, None, None, {
                     'stopPrice': p_tp, 'closePosition': True, 'workingType': 'CONTRACT_PRICE'
                 })
                 
@@ -300,6 +300,8 @@ class OrderExecutor:
                         "entry_price": entry_price,
                         "tp_price": tp_price,
                         "sl_price_initial": sl_price,
+                        "sl_order_id": str(sl_order['id']), # [NEW] Store SL ID
+                        "tp_order_id": str(tp_order['id']), # [NEW] Store TP ID
                         "side": side, # LONG/SHORT
                         "trailing_active": False 
                     })
@@ -458,39 +460,51 @@ class OrderExecutor:
 
     async def _amend_sl_order(self, symbol, new_sl_price, side):
         """
-        Helper: Cancel old SL and create new one (or use modifyOrder if supported, 
-        but Cancel+Replace is safer/standard for simple bots).
-        Note: Since we use STOP_MARKET with closePosition=True, we just need to update trigger price.
+        Helper: Cancel old SL and create new one.
+        Optimized: Use stored sl_order_id to avoid fetch_open_orders if possible.
         """
         try:
-             # Binance Futures allows cancelling generic orders. 
-             # To be robust, let's Cancel All Open Orders for this symbol (TP is static, but SL moves).
-             # Wait! If we cancel ALL, we lose the TP order too.
-             # Ideally we should identify the SL order ID. But to keep it simple and robust:
-             # We can just Cancel ALL and Re-Place TP + New SL. 
-             # Or better: Fetch open orders, find STOP_MARKET, cancel it.
+            # 1. Get Stored SL ID
+            tracker = self.safety_orders_tracker.get(symbol, {})
+            sl_order_id = tracker.get('sl_order_id')
              
-             orders = await self.exchange.fetch_open_orders(symbol)
-             sl_order_id = None
-             
-             for o in orders:
-                 if o['type'] == 'stop_market' or o['type'] == 'STOP_MARKET':
-                     sl_order_id = o['id']
-                     break
-            
-             if sl_order_id:
-                 try:
-                     await self.exchange.cancel_order(sl_order_id, symbol)
-                 except Exception as e:
-                     logger.warning(f"Failed to cancel old SL {sl_order_id}: {e}")
+            # Flag to fallback if optimized path fails
+            use_fallback = False
 
-             # Place New SL
-             p_sl = self.exchange.price_to_precision(symbol, new_sl_price)
-             side_api = 'sell' if side == 'LONG' else 'buy'
+            if sl_order_id:
+                try:
+                    # Attempt Fast Cancel
+                    await self.exchange.cancel_order(sl_order_id, symbol)
+                    # logger.debug(f"⚡ Fast Cancel SL {sl_order_id} Success")
+                except Exception as e:
+                    # ID invalid (maybe closed/cancelled externally). Fallback to search.
+                    logger.warning(f"⚠️ Fast Cancel Failed for {sl_order_id}: {e}. Falling back to search.")
+                    use_fallback = True
+            else:
+                use_fallback = True
+
+            # 2. Fallback: Search Open Orders (Expensive)
+            if use_fallback:
+                orders = await self.exchange.fetch_open_orders(symbol)
+                for o in orders:
+                    if o['type'] in ['stop_market', 'STOP_MARKET']:
+                        try:
+                            await self.exchange.cancel_order(o['id'], symbol)
+                        except Exception as e:
+                            logger.warning(f"Failed to cancel old SL {o['id']}: {e}")
+            
+            # 3. Place New SL
+            p_sl = self.exchange.price_to_precision(symbol, new_sl_price)
+            side_api = 'sell' if side == 'LONG' else 'buy'
              
-             await self.exchange.create_order(symbol, 'STOP_MARKET', side_api, None, None, {
-                    'stopPrice': p_sl, 'closePosition': True, 'workingType': 'MARK_PRICE'
-             })
+            new_order = await self.exchange.create_order(symbol, 'STOP_MARKET', side_api, None, None, {
+                'stopPrice': p_sl, 'closePosition': True, 'workingType': 'MARK_PRICE'
+            })
+             
+            # 4. Update Tracker with NEW ID
+            if symbol in self.safety_orders_tracker:
+                self.safety_orders_tracker[symbol]['sl_order_id'] = str(new_order['id'])
+                await self.save_tracker() # Sync new ID to file
              
         except Exception as e:
             logger.error(f"❌ Failed to Amend SL {symbol}: {e}")

@@ -96,6 +96,59 @@ class MongoManager:
             logger.error(f"❌ Failed to insert trade to MongoDB: {e}")
             return False
 
+    ALLOWED_FILTER_FIELDS = frozenset({
+        'timestamp', 'symbol', 'side', 'type',
+        'entry_price', 'exit_price', 'size_usdt',
+        'pnl_usdt', 'pnl_percent', 'roi_percent',
+        'fee', 'strategy_tag', 'result',
+        'prompt', 'reason', 'setup_at', 'filled_at'
+    })
+
+    ALLOWED_SORT_FIELDS = frozenset({
+        'timestamp', 'symbol', 'side', 'type',
+        'entry_price', 'exit_price', 'size_usdt',
+        'pnl_usdt', 'pnl_percent', 'roi_percent',
+        'fee', 'strategy_tag', 'result'
+    })
+
+    MONGO_OPERATORS = frozenset({
+        '$where', '$function', '$expr', '$text', '$search', '$meta',
+        '$near', '$nearSphere', '$geometry', '$maxDistance', '$minDistance',
+        '$all', '$elemMatch', '$exists', '$in', '$nin', '$not', '$or',
+        '$and', '$nor', '$regex', '$options', '$slice', '$size',
+        '$gt', '$gte', '$lt', '$lte', '$ne', '$eq'
+    })
+
+    @staticmethod
+    def _sanitize_filter_query(filter_query: dict) -> dict:
+        if not filter_query:
+            return {}
+        sanitized = {}
+        for key, value in filter_query.items():
+            if key.startswith('$'):
+                logger.warning(f"⚠️ Rejected MongoDB operator in filter: {key}")
+                continue
+            if key not in MongoManager.ALLOWED_FILTER_FIELDS:
+                logger.warning(f"⚠️ Rejected unknown field in filter: {key}")
+                continue
+            if isinstance(value, dict):
+                for op in value.keys():
+                    if op in MongoManager.MONGO_OPERATORS:
+                        logger.warning(f"⚠️ Rejected MongoDB operator in filter value: {op}")
+                        break
+                else:
+                    sanitized[key] = value
+            else:
+                sanitized[key] = value
+        return sanitized
+
+    @staticmethod
+    def _sanitize_sort_field(sort_by: str) -> str:
+        if sort_by not in MongoManager.ALLOWED_SORT_FIELDS:
+            logger.warning(f"⚠️ Rejected unknown sort field: {sort_by}, using 'timestamp'")
+            return 'timestamp'
+        return sort_by
+
     def get_trades(self, filter_query: dict = {}, sort_by: str = "timestamp", ascending: bool = False, limit: int = 0):
         """
         Retrieves trades based on filter.
@@ -105,8 +158,11 @@ class MongoManager:
                 if not self.connect():
                     return []
             
+            sanitized_filter = self._sanitize_filter_query(filter_query)
+            sanitized_sort = self._sanitize_sort_field(sort_by)
+            
             direction = ASCENDING if ascending else DESCENDING
-            cursor = self.trades_collection.find(filter_query).sort(sort_by, direction)
+            cursor = self.trades_collection.find(sanitized_filter).sort(sanitized_sort, direction)
             
             if limit > 0:
                 cursor = cursor.limit(limit)
@@ -121,7 +177,8 @@ class MongoManager:
         try:
             if self.db is None:
                 return 0
-            return self.trades_collection.count_documents(filter_query)
+            sanitized_filter = self._sanitize_filter_query(filter_query)
+            return self.trades_collection.count_documents(sanitized_filter)
         except Exception as e:
             logger.error(f"❌ Error counting trades: {e}")
             return 0

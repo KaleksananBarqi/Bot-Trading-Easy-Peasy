@@ -57,31 +57,38 @@ class CryptoPnLGenerator:
         """Memuat font dari konfigurasi atau fallback ke default sistem."""
         fonts_cfg = self.config.get('fonts', {})
         
-        # Mapping font type ke path
-        self.fonts = {}
+        self._font_cache = {}
         
-        # Helper untuk memuat font dengan ukuran tertentu
         def load_font(key, size, fallback_key=None):
-            # 1. Coba load dari config user (Local Assets)
-            font_path_rel = fonts_cfg.get(key)
-            if font_path_rel:
-                full_path = self._get_asset_path(font_path_rel)
-                if os.path.exists(full_path):
-                    try: return ImageFont.truetype(full_path, size)
-                    except: pass
+            cache_key = (key, size, fallback_key)
+            if cache_key in self._font_cache:
+                return self._font_cache[cache_key]
             
-            # 2. Coba load font fallback dari sistem (Windows specific hardcoded fallback for common fonts)
-            # Ini untk memberikan hasil yang lebih baik daripada 'default' pixelated font
-            base_font = "arial.ttf"
-            if "bold" in key or (fallback_key and "bold" in fallback_key): 
-                base_font = "arialbd.ttf"
-            
-            try:
-                return ImageFont.truetype(base_font, size)
-            except:
-                return ImageFont.load_default()
+            font = self._load_font_inner(fonts_cfg, key, size, fallback_key)
+            self._font_cache[cache_key] = font
+            return font
 
         self.font_loader = load_font
+
+    def _load_font_inner(self, fonts_cfg, key, size, fallback_key=None):
+        """Inner font loading logic (non-cached)."""
+        font_path_rel = fonts_cfg.get(key)
+        if font_path_rel:
+            full_path = self._get_asset_path(font_path_rel)
+            if os.path.exists(full_path):
+                try:
+                    return ImageFont.truetype(full_path, size)
+                except:
+                    pass
+        
+        base_font = "arial.ttf"
+        if "bold" in key or (fallback_key and "bold" in fallback_key):
+            base_font = "arialbd.ttf"
+        
+        try:
+            return ImageFont.truetype(base_font, size)
+        except:
+            return ImageFont.load_default()
 
     def _hex_to_rgb(self, hex_color):
         """Konversi HEX ke RGB/RGBA. Supports #RGB, #RGBA, #RRGGBB and #RRGGBBAA"""
@@ -102,9 +109,8 @@ class CryptoPnLGenerator:
             base = Image.new('RGB', (w, h), c1)
             top = Image.new('RGB', (w, h), c2)
             gradient = np.linspace(0, 255, h, dtype=np.uint8)
-            mask_data = np.repeat(gradient, w).tolist()
-            mask = Image.new('L', (w, h))
-            mask.putdata(mask_data)
+            mask_data = np.repeat(gradient, w).reshape(h, w)
+            mask = Image.fromarray(mask_data, 'L')
             return Image.composite(top, base, mask)
 
         num_sections = len(bg_rgb) - 1
