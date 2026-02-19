@@ -12,9 +12,10 @@
   ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)
   ![Binance](https://img.shields.io/badge/Binance-Futures-yellow?style=for-the-badge&logo=binance)
   ![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
-  ![DeepSeek](https://img.shields.io/badge/Brain-DeepSeek%20V3.2-blueviolet?style=for-the-badge)
-  ![Vision AI](https://img.shields.io/badge/Vision-Llama%20Vision-ff69b4?style=for-the-badge)
-  ![Sentiment AI](https://img.shields.io/badge/Sentiment-Xiaomi%20Mimo-orange?style=for-the-badge)
+  ![AI Brain](https://img.shields.io/badge/Brain-Configurable%20AI-blueviolet?style=for-the-badge)
+  ![Vision AI](https://img.shields.io/badge/Vision-Configurable%20AI-ff69b4?style=for-the-badge)
+  ![Architecture](https://img.shields.io/badge/Architecture-Facade%20%2B%20Orchestrator-informational?style=for-the-badge)
+  ![Tests](https://img.shields.io/badge/Tests-38%2B%20Files-brightgreen?style=for-the-badge)
   ![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
   ![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial-5D6D7E?style=for-the-badge)
 </div>
@@ -25,18 +26,20 @@
 
 **Easy Peasy Trading Bot** adalah sistem trading **Hybrid Multi-AI** tercanggih yang menggabungkan analisis logika, tekstual, dan kemampuan visual (computer vision) untuk menguasai market crypto.
 
-Dibangun di atas arsitektur **Triple AI Core**, bot ini tidak hanya menghitung angka, tapi juga "membaca" narasi berita dan "melihat" struktur market secara visual layaknya trader pro.
+Dibangun di atas arsitektur **Triple AI Core** dengan pola desain **Facade + Orchestrator**, bot ini tidak hanya menghitung angka, tapi juga "membaca" narasi berita dan "melihat" struktur market secara visual layaknya trader pro.
 
 ### 🧠 The Triple AI Core
-1.  **Strategic Brain (Logic AI)**: Ditenagai oleh **DeepSeek V3.2**. Bertugas sebagai eksekutor utama yang mengambil keputusan BUY/SELL/WAIT berdasarkan data teknikal, on-chain, dan sentimen secara holistik.
-2.  **Visual Cortex (Vision AI)**: Ditenagai oleh **Llama-4-Maverick**. Modul Vision yang menganalisis chart candlestick real-time untuk mendeteksi pola murni (Flags, Pennants, Divergence) dan validasi struktur market.
-3.  **Sentiment Analyst (Text AI)**: Ditenagai oleh **Xiaomi Mimo V2 Flash**. Spesialis narasi yang melakukan scanning berita global, news RSS, dan Fear & Greed index untuk menentukan "Market Vibe" saat ini.
+1.  **Strategic Brain (Logic AI)**: Otak utama yang mengambil keputusan BUY/SELL/WAIT berdasarkan data teknikal, on-chain, dan sentimen secara holistik. Mendukung **Reasoning Tokens** untuk proses berpikir yang lebih mendalam dan transparan. Default: `Arcee Trinity Large`.
+2.  **Visual Cortex (Vision AI)**: Modul Vision yang menganalisis chart candlestick real-time untuk mendeteksi pola murni (Flags, Pennants, Divergence) dan validasi struktur market. Default: `Llama-4-Maverick`.
+3.  **Sentiment Analyst (Text AI)**: Melakukan scanning berita global, news RSS, dan Fear & Greed index untuk menentukan "Market Vibe" saat ini. Menganalisis divergensi **Smart Money vs Retail Sentiment**.
+
+> 💡 **Semua model AI 100% configurable!** Ubah model kapan saja di `config.py` (`AI_MODEL_NAME`, `AI_VISION_MODEL`, `AI_SENTIMENT_MODEL`). Bebas pakai model dari **OpenRouter, DeepSeek, Anthropic, Gemini, atau provider manapun** yang compatible dengan OpenAI API format.
 
 ---
 
 ## 🚀 Fitur Utama & Keunggulan
 
-### 1. ⚖️ Dual Execution Plan (Anti-Bias AI) - **NEW!**
+### 1. ⚖️ Dual Execution Plan (Anti-Bias AI)
 Bot tidak lagi menebak arah. Untuk setiap koin, bot menghitung dua skenario sekaligus:
 *   **Scenario A (Long Case)**: Jika market bullish, di mana titik entry, SL, dan TP terbaik?
 *   **Scenario B (Short Case)**: Jika market bearish, di mana titik entry, SL, dan TP terbaik?
@@ -47,6 +50,7 @@ Integrasi Computer Vision yang canggih:
 *   **Chart Rendering**: Otomatis mencetak chart teknikal lengkap dengan indikator.
 *   **Validasi Pola**: AI Vision memvalidasi apakah ada pola reversal atau continuation.
 *   **MACD Divergence Detection**: Deteksi visual divergensi harga vs momentum.
+*   **Retry & Validation**: Output Vision AI divalidasi otomatis dengan keyword check dan panjang minimum, dengan retry otomatis jika output tidak valid.
 
 ### 3. 🛡️ Multi-Strategy AI System
 
@@ -68,7 +72,10 @@ Bot menggunakan strategi **Liquidity Hunt Specialist** yang fokus mencari titik 
 3. **Entry saat Reversal**: Masuk posisi setelah konfirmasi pembalikan arah
 4. **Risk Terkontrol**: SL ketat di bawah swing low/high terdekat
 
-### 4. 🪙 Smart Per-Coin Configuration - **NEW!**
+#### 📚 Strategy Library (7 Strategi Terdokumentasi)
+Bot dilengkapi dengan **7 file strategi** di `src/strategies/` yang mendokumentasikan berbagai pendekatan trading secara detail, mulai dari Swing Daily Trend, Reversal Sniper, hingga Pullback Scalp.
+
+### 4. 🪙 Smart Per-Coin Configuration
 Setiap koin dalam daftar pantau dapat dikustomisasi secara spesifik:
 *   **Specific Keywords**: News filtering yang lebih akurat per aset.
 *   **BTC Correlation Toggle**: Opsi untuk mengikuti atau mengabaikan tren Bitcoin.
@@ -78,36 +85,47 @@ Setiap koin dalam daftar pantau dapat dikustomisasi secara spesifik:
 Sistem prompt AI yang cerdas dan adaptif:
 *   **Toggle-able Market Orders**: Jika `ENABLE_MARKET_ORDERS = False`, AI hanya akan diberikan opsi Limit Order (Liquidity Hunt) untuk meminimalkan slippage dan fee.
 *   **Contextual Hiding**: Jika korelasi BTC rendah, data BTC akan disembunyikan agar AI fokus pada price action independen koin tersebut.
+*   **🔒 Prompt Injection Prevention** *(NEW!)*: Data eksternal dari RSS feeds dibungkus dalam tag `<external_data>` yang aman, dengan instruksi keamanan eksplisit agar AI tidak mengikuti instruksi berbahaya yang mungkin disisipkan dalam berita.
 
-### 6. 📢 Pro-Grade Notifications with ROI - **NEW!**
+### 6. 📢 Pro-Grade Notifications with ROI
 Notifikasi Telegram yang mendetail:
 *   **ROI Calculation**: Menampilkan persentase keuntungan/kerugian berdasarkan modal dan leverage.
 *   **Real-time Updates**: Notifikasi saat order dipasang (Limit), saat terisi (Filled), dan saat menyentuh TP/SL.
+*   **WebSocket-Driven**: Semua notifikasi didorong oleh event WebSocket, bukan polling, untuk kecepatan maksimal.
 
-### 7. 📰 Smart News Filtering System - **NEW!**
+### 7. 📰 Smart News Filtering System
 Sistem filter berita cerdas yang memastikan AI hanya menerima informasi relevan:
 
 **Mekanisme Filtering:**
-*   **Kategori Makro (Prioritas 1)**: Berita tentang Fed, inflasi, regulasi - maksimal 3 berita
-*   **Kategori Koin Spesifik (Prioritas 2)**: Berita langsung tentang koin yang dianalisis - minimal 4 berita
-*   **Kategori BTC Correlation (Prioritas 3)**: Berita Bitcoin untuk non-BTC coins - maksimal 3 berita
+*   **Kategori Makro (Prioritas 1)**: Berita tentang Fed, inflasi, regulasi - maksimal 4 berita
+*   **Kategori Koin Spesifik (Prioritas 2)**: Berita langsung tentang koin yang dianalisis - minimal 6 berita
+*   **Kategori BTC Correlation (Prioritas 3)**: Berita Bitcoin untuk non-BTC coins - maksimal 5 berita
 
 **Keunggulan:**
 *   ✅ Menghindari "noise" dari berita tidak relevan
 *   ✅ Mencegah AI berhalusinasi karena informasi campur aduk
 *   ✅ Keyword customizable per koin di `config.py`
-*   ✅ Sumber berita dari 15+ RSS feeds internasional & Indonesia
+*   ✅ Sumber berita dari 18+ RSS feeds internasional & Indonesia
 
-### 8. 🔄 Intelligent Trailing Stop Loss
-Sistem trailing stop otomatis yang mengunci profit saat market bergerak menguntungkan:
+### 8. 🔄 Intelligent Trailing Stop Loss — *Dual Mode!*
 
-**Cara Kerja:**
-1. Bot membuka posisi dengan SL & TP awal
-2. Saat harga bergerak **80%** menuju TP → Trailing Stop aktif
-3. SL otomatis naik/turun mengikuti harga dengan jarak 0.75%
-4. Minimal profit 0.5% dikunci saat trailing aktif
+Bot menyediakan **dua mode trailing stop** yang dapat dipilih via konfigurasi:
 
-**Ilustrasi (LONG Position):**
+#### Mode A: Native Trailing Stop (Binance API) — *NEW!*
+Trailing stop yang dieksekusi langsung oleh server Binance. Keunggulan:
+*   **Zero Latency**: Stop dimonitor oleh server exchange, bukan bot lokal.
+*   **Auto-Activation**: Dipasang otomatis 10 detik setelah order terisi.
+*   **Callback Rate**: Dapat dikonfigurasi antara 0.1% - 5.0%.
+*   **Crash-Proof**: Tetap aktif meskipun bot mati.
+
+#### Mode B: Software Trailing Stop (Custom)
+Trailing stop custom yang lebih fleksibel, dimonitor via WebSocket:
+*   Aktif saat harga bergerak **80%** menuju TP.
+*   SL otomatis naik/turun mengikuti harga dengan jarak 1.0%.
+*   Minimal profit 0.5% dikunci saat trailing aktif.
+*   Cooldown update 3 detik untuk menghindari spam API.
+
+**Ilustrasi (LONG Position, Software Mode):**
 ```
 Entry: $100 | TP: $110 | SL Awal: $97
 Harga naik ke $108 (80% ke TP) → Trailing Aktif!
@@ -117,61 +135,147 @@ Harga turun ke $108.50 → SL tetap $108.18 (terkunci!)
 Harga turun ke $108.18 → Posisi ditutup dengan profit ~8%
 ```
 
-### 9. 📈 Multi-Timeframe Technical Analysis
+> 💡 **Pilih mode di `config.py`**: Set `USE_NATIVE_TRAILING = True` untuk mode Binance, atau `False` untuk mode Software.
+
+### 9. 📏 Wick Rejection Analysis — *NEW!*
+Sistem deteksi candle rejection menggunakan analisis proporsi body vs wick:
+*   **Otomatis mendeteksi** candle dengan wick besar (> 2x body) sebagai sinyal rejection.
+*   **Configurable Parameters**: Rasio minimum body, multiplier wick, dan zero-body fallback.
+*   **Thread-Safe**: Kalkulasi dilakukan via static function, aman untuk concurrent processing.
+
+### 10. 📐 Market Structure Detection — *NEW!*
+Deteksi struktur market (Higher High, Higher Low, Lower High, Lower Low) secara otomatis:
+*   Menggunakan **scipy.signal.argrelextrema** untuk menemukan swing points.
+*   Deteksi trend berdasarkan pola HH/HL (Bullish) atau LH/LL (Bearish).
+*   Minimum 50 bars data untuk akurasi optimal.
+*   Hasilnya digunakan sebagai filter makro untuk keputusan AI.
+
+### 11. 💰 Dynamic Position Sizing — *NEW!*
+Sistem ukuran posisi yang adaptif:
+*   **Static Mode**: Menggunakan jumlah USDT tetap per trade (default $10).
+*   **Dynamic Mode (Compounding)**: Menggunakan persentase saldo wallet per trade (default 3%).
+*   **Safety Floor**: Minimum order $5 (sesuai aturan Binance).
+*   **Per-Coin Override**: Setiap koin bisa punya `amount` dan `leverage` sendiri.
+
+### 12. 🧠 AI Reasoning Tokens — *NEW!*
+Fitur reasoning yang memungkinkan AI menunjukkan proses berpikirnya:
+*   **Configurable Effort**: 6 level dari `minimal` hingga `xhigh`.
+*   **Optional Display**: Reasoning bisa ditampilkan atau disembunyikan dari response.
+*   **Logging**: Proses reasoning AI bisa dicatat ke log untuk debugging.
+
+### 13. 📈 Multi-Timeframe Technical Analysis
 Arsitektur analisis 3-layer untuk presisi maksimal:
 
 | Layer | Timeframe | Fungsi | Indikator |
 |-------|-----------|--------|------------|
-| **TREND** | 1H | Arah tren besar | EMA 21, ADX |
-| **SETUP** | 30M | Deteksi pola | MACD |
-| **EXECUTION** | 15M | Entry timing | RSI, StochRSI, Bollinger Bands |
+| **TREND** | 4H | Arah tren besar | EMA 50, ADX |
+| **SETUP** | 1H | Deteksi pola | MACD |
+| **EXECUTION** | 15M | Entry timing | RSI, StochRSI, Bollinger Bands, ATR |
 
-### 10. ❄️ Cooldown Anti-FOMO/Revenge Trading
+Dilengkapi dengan:
+*   **Pivot Points** (Classic) untuk level S1/R1
+*   **Wick Rejection** untuk konfirmasi reversal
+*   **Market Structure** (HH/HL/LH/LL) untuk bias makro
+*   **Global Trend Filter** (4H) sebagai filter tertinggi
+
+### 14. ❄️ Cooldown Anti-FOMO/Revenge Trading
 Mekanisme pendinginan otomatis setelah trade selesai:
 *   **Setelah PROFIT**: Jeda 1 jam sebelum re-entry di koin yang sama
 *   **Setelah LOSS**: Jeda 2 jam untuk mencegah revenge trading
 
-### 11. ⏰ Limit Order Expiry System
+### 15. ⏰ Limit Order Expiry System
 Pembersihan otomatis limit order yang tidak terisi:
 *   Order yang pending > 2 jam akan **auto-cancel**
 *   Mencegah order "zombie" yang menggantung
-*   Sinkronisasi real-time dengan exchange
+*   Sinkronisasi real-time dengan exchange via WebSocket
 
-### 12. 🐋 On-Chain Whale Detection
+### 16. 📓 Cancelled & Expired Trade Logging — *NEW!*
+Pencatatan setup trading yang tidak tereksekusi:
+*   **Cancelled Trades**: Order yang di-cancel sebelum terisi.
+*   **Expired Trades**: Limit order yang kedaluwarsa setelah 2 jam.
+*   **Dashboard Visibility**: Ditampilkan di dashboard untuk analisis frekuensi setup.
+*   Tidak mempengaruhi kalkulasi win rate atau PnL.
+
+### 17. 🐋 On-Chain Whale Detection
 Deteksi transaksi whale secara real-time via WebSocket:
 *   Threshold: > $1,000,000 USDT
 *   Pelacakan per-koin (bukan global)
 *   Integrasi dengan Stablecoin Inflow dari DeFiLlama
-*   De-duplication untuk mencegah spam notifikasi
+*   De-duplication window 5 detik untuk mencegah spam notifikasi
 
-### 13. 📚 Order Book Depth Analysis
+### 18. 📚 Order Book Depth Analysis
 Analisis kedalaman order book untuk deteksi buying/selling pressure:
 *   Range analisis: 2% dari current price
 *   Kalkulasi bid/ask volume dalam USDT
 *   Imbalance percentage untuk konfirmasi momentum
 
-### 14. 📊 Real-Time Streamlit Dashboard - **NEW!**
+### 19. 📊 Real-Time Streamlit Dashboard — *Enhanced!*
 Dashboard interaktif berbasis web untuk memantau performa trading secara real-time:
 *   **Equity Curve**: Grafik pertumbuhan modal (floating & closed PnL).
 *   **Win/Loss Distribution**: Pie chart rasio kemenangan.
 *   **PnL Analysis**: Breakdown profit per koin dan per strategi.
 *   **Activity Heatmap**: Visualisasi jam dan hari trading paling aktif.
-*   **Trade History**: Tabel riwayat trade lengkap dengan filter tanggal, simbol, dan strategi.
+*   **Trade History**: Tabel riwayat trade lengkap dengan filter.
+*   **📅 PnL Calendar** *(NEW!)*: Kalender bulanan yang menampilkan PnL harian.
+*   **📉 Drawdown Analysis** *(NEW!)*: Grafik drawdown dari equity peak.
+*   **🔗 Correlation Analysis** *(NEW!)*: Visualisasi korelasi antar data trading (model AI, strategi, dll).
+*   **Share PnL Card**: Terintegrasi langsung dengan detail teknikal per trade.
+*   **🔒 XSS Protection**: Semua data yang dirender di HTML sudah di-sanitasi (escape) untuk mencegah stored XSS.
 
-### 15. 🖼️ Aesthetic PnL Card Generator
+### 20. 🖼️ Aesthetic PnL Card Generator
 Otomatis membuat kartu PnL (Profit & Loss) yang siap dipamerkan:
 *   **Gradient Background**: Tampilan modern dengan warna dinamis (Hijau/Merah) sesuai hasil trade.
 *   **QR Code Integration**: Tautan verifikasi atau referral link yang dapat discan.
 *   **User Branding**: Foto profil dan username kustom yang diambil dari `pnl_config.json`.
 *   **Watermark Support**: Opsi untuk menambahkan logo komunitas atau watermark transparan.
 
-### 16. 📓 Automated Trade Journaling (MongoDB Powered)
+### 21. 📓 Automated Trade Journaling (MongoDB Powered)
 Sistem pencatatan jurnal trading profesional yang kini didukung oleh **MongoDB**:
 *   **Database Storage**: Menyimpan ribuan history trade tanpa lag menggunakan NoSQL Database.
 *   **Data Lengkap**: Mencatat Entry, Exit, PnL, ROI, Fee, dan Durasi Trade.
 *   **AI Rationale**: Menyimpan alasan entry dan prompt yang digunakan AI untuk evaluasi strategi.
 *   **Technical Snapshot**: Menyimpan nilai indikator (RSI, MACD, EMA) saat entry untuk analisis post-trade.
+*   **Config Snapshot**: Menyimpan konfigurasi yang digunakan (ATR Multiplier SL/TP, dll).
 *   **Seamless Integration**: Terhubung langsung ke Dashboard Streamlit via koneksi database real-time.
+*   **Auto-Validation**: MongoDB URI divalidasi otomatis saat startup, termasuk cek format `mongodb://` / `mongodb+srv://`.
+
+---
+
+## 🏗️ Arsitektur & Code Quality — *NEW!*
+
+### Facade Pattern (Executor Module)
+Module executor telah di-refactor menjadi arsitektur **Facade Pattern** untuk pemeliharaan yang lebih mudah:
+
+```
+OrderExecutor (Facade)
+ ├── TradeTracker      → State tracking (posisi aktif, cache)
+ ├── PositionManager   → Sinkronisasi posisi dengan exchange
+ ├── RiskManager       → Kalkulasi risiko & dynamic sizing
+ ├── SafetyManager     → SL/TP, Trailing Stop (Native & Software)
+ ├── OrderManager      → Eksekusi order (Limit/Market)
+ ├── OrderSyncManager  → Pembersihan pending orders
+ └── OrderCallbacks    → WebSocket event handlers
+```
+
+Setiap komponen memiliki **Single Responsibility** dan dapat di-test secara independen, sementara `OrderExecutor` menjaga backward compatibility sebagai facade.
+
+### Orchestrator Pattern (Main Loop)
+File `main.py` telah di-refactor dari satu fungsi monolitik menjadi **orchestrator** yang mendelegasikan ke fungsi-fungsi helper:
+*   `_initialize_exchange()` / `_initialize_modules()` — Setup
+*   `_run_periodic_updates()` — Scheduled tasks
+*   `_check_trade_exclusions()` — Filtering
+*   `_apply_traditional_filters()` — Pre-AI filter
+*   `_prepare_and_execute_trade()` — Execution
+
+### Thread-Safe Static Functions
+Semua kalkulasi teknikal berat di `market_data.py` telah di-extract menjadi **static functions** yang thread-safe:
+*   `_calculate_pivot_points_static()`
+*   `_calculate_market_structure_static()`
+*   `_calculate_wick_rejection_static()`
+*   `_calculate_tech_data_threaded()` — Dijalankan di thread terpisah via `asyncio.to_thread()`
+
+### Named Tuples for Type Safety
+Penggunaan `NamedTuple` (seperti `Candle`) untuk merepresentasikan data OHLCV, menggantikan list/tuple biasa demi kejelasan kode.
 
 ---
 
@@ -409,38 +513,53 @@ sudo systemctl status trading-bot
 
 ```text
 📂 Bot-Trading-Easy-Peasy/
- ├── 📂 src/                     # 🚀 Source Code Utama
- │    ├── 📂 modules/            # Modul Logika Inti
- │    │    ├── 🧠 ai_brain.py           # Otak Utama AI
- │    │    ├── 👁️ pattern_recognizer.py # Vision AI Engine
- │    │    ├── ⚙️ executor.py           # Eksekusi Order & Sync Posisi
- │    │    ├── 📊 market_data.py        # Pengolah Data & Indikator
- │    │    ├── 🗞️ sentiment.py          # Analisis Berita & RSS
- │    │    └── 🐋 onchain.py            # Deteksi Whale & Stablecoin Inflow
- │    ├── 📂 utils/              # Fungsi Pembantu
- │    │    ├── 🧮 calc.py               # Kalkulasi Dual Scenarios & Risk
- │    │    ├── 📝 prompt_builder.py     # Konstruktor Prompt AI Dinamis
- │    │    └── 🛠️ helper.py             # Logger & Tele Utils
- │    ├── ⚙️ config.py                 # PUSAT KONFIGURASI
- │    └── 🚀 main.py                   # Titik Masuk Bot
- ├── 📂 streamlit/               # 📊 Dashboard Analytics
- │    ├── 📂 data/               # Penyimpanan Data CSV & JSON
- │    └── 📊 dashboard.py        # Source Code Dashboard
- ├── 📂 scripts/                 # 🛠️ Script Utilitas
- │    └── 📜 migrate_history.py  # Migrasi Data CSV ke MongoDB
- ├── 📂 assets/                  # 🖼️ Aset Statis
- │    ├── 📂 fonts/              # Font Kustom untuk PnL Card
- │    └── 📂 icons/              # Ikon & Logo Exchange
-
- ├── 📂 tests/                   # 🧪 Automated Testing (25+ test files)
- └── 📦 pyproject.toml           # Manajemen Dependensi Modern
+ ├── 📂 src/                          # 🚀 Source Code Utama
+ │    ├── 📂 modules/                 # Modul Logika Inti
+ │    │    ├── 📂 executor_impl/      # [NEW] Komponen Executor (Facade)
+ │    │    │    ├── 🔄 tracker.py            # Trade State Tracking
+ │    │    │    ├── 📍 positions.py          # Position Management & Sync
+ │    │    │    ├── ⚖️ risk.py               # Risk Calculations & Dynamic Sizing
+ │    │    │    ├── 🛡️ safety.py             # SL/TP & Trailing Stop (Native + Software)
+ │    │    │    ├── 📦 orders.py             # Order Execution (Limit/Market)
+ │    │    │    ├── 🔁 sync.py              # Pending Order Synchronization
+ │    │    │    └── 📡 order_callbacks.py    # WebSocket Order Event Handlers
+ │    │    ├── 🧠 ai_brain.py               # Otak Utama AI (+ Reasoning Tokens)
+ │    │    ├── ⚙️ executor.py               # [REFACTORED] Facade Pattern
+ │    │    ├── 📓 journal.py                # [NEW] Trade Journaling
+ │    │    ├── 🗄️ mongo_manager.py          # [NEW] MongoDB Connection Manager
+ │    │    ├── 👁️ pattern_recognizer.py     # Vision AI Engine
+ │    │    ├── 📊 market_data.py            # [ENHANCED] Data & Indicators + Static Functions
+ │    │    ├── 🗞️ sentiment.py              # Analisis Berita & RSS
+ │    │    └── 🐋 onchain.py               # Deteksi Whale & Stablecoin Inflow
+ │    ├── 📂 strategies/              # [NEW] 📚 Dokumentasi Strategi (7 file)
+ │    │    ├── 📋 liquidity sweep strategy 15m.md
+ │    │    ├── 📋 pullback sniper scalp.md
+ │    │    ├── 📋 Swing_Daily_Trend.md
+ │    │    ├── 📋 Swing_Reversal_Sniper.md
+ │    │    └── ... (dan lainnya)
+ │    ├── 📂 utils/                   # Fungsi Pembantu
+ │    │    ├── 🧮 calc.py                   # Kalkulasi Dual Scenarios & Risk
+ │    │    ├── 📝 prompt_builder.py         # Konstruktor Prompt AI Dinamis
+ │    │    ├── 🖼️ pnl_generator.py          # PnL Card Generator
+ │    │    └── 🛠️ helper.py                 # Logger & Tele Utils
+ │    ├── ⚙️ config.py                      # PUSAT KONFIGURASI (+ Auto-Validation)
+ │    └── 🚀 main.py                        # [REFACTORED] Orchestrator Pattern
+ ├── 📂 streamlit/                    # 📊 Dashboard Analytics Suite
+ │    └── 📊 dashboard.py             # Dashboard (Calendar, Correlation, Drawdown)
+ ├── 📂 scripts/                      # 🛠️ Script Utilitas
+ │    └── 📜 migrate_history.py       # Migrasi Data CSV ke MongoDB
+ ├── 📂 assets/                       # 🖼️ Aset Statis
+ │    ├── 📂 fonts/                   # Font Kustom untuk PnL Card
+ │    └── 📂 icons/                   # Ikon & Logo Exchange
+ ├── 📂 tests/                        # 🧪 Automated Testing (38+ test files)
+ └── 📦 pyproject.toml                # Manajemen Dependensi Modern
 ```
 
 ---
 
 ## 🧪 Automated Testing
 
-Proyek ini dilengkapi dengan **25+ automated test files** untuk memastikan kualitas kode:
+Proyek ini dilengkapi dengan **38+ automated test files** untuk memastikan kualitas kode:
 
 ```bash
 # Menjalankan semua tests
@@ -458,6 +577,28 @@ python -m pytest tests/test_trailing_logic.py
 *   ✅ Profit/Loss Calculation
 *   ✅ Market Data Optimization
 *   ✅ Benchmark Performance Tests
+*   ✅ **Prompt Injection Prevention** *(NEW!)*
+*   ✅ **Market Structure Detection** *(NEW!)*
+*   ✅ **Wick Rejection Analysis** *(NEW!)*
+*   ✅ **Dynamic Position Sizing** *(NEW!)*
+*   ✅ **MongoDB URI Validation** *(NEW!)*
+*   ✅ **AI Brain Decision Making** *(NEW!)*
+*   ✅ **Notification Safety** *(NEW!)*
+*   ✅ **Executor Refactor Verification** *(NEW!)*
+
+---
+
+## 🔒 Keamanan
+
+Bot ini mengimplementasikan beberapa lapisan keamanan:
+
+| Layer | Deskripsi |
+|-------|-----------|
+| **Prompt Injection Prevention** | Data RSS/berita di-wrap dalam tag `<external_data>` dengan instruksi keamanan eksplisit |
+| **XSS Protection** | Semua data di dashboard di-escape menggunakan `html.escape()` sebelum rendering |
+| **Config Validation** | MongoDB URI divalidasi format dan scheme-nya saat startup |
+| **Environment Variables** | Semua credential disimpan di `.env`, tidak pernah hardcoded |
+| **Notification Safety** | Rate limiting dan sanitasi pesan Telegram |
 
 ---
 
