@@ -1,5 +1,74 @@
 
 import config
+import re
+
+def sanitize_prompt_input(text: str, max_length: int = 1000) -> str:
+    """
+    Sanitize external input to prevent prompt injection attacks.
+    
+    This function removes dangerous patterns that could be used to manipulate
+    AI prompts through external data sources (RSS feeds, APIs, etc.).
+    
+    Args:
+        text: Raw input text from external sources
+        max_length: Maximum allowed length for the input
+        
+    Returns:
+        Sanitized text safe for inclusion in AI prompts
+    """
+    if not isinstance(text, str):
+        return str(text) if text else ""
+    
+    # Truncate to max length
+    text = text[:max_length]
+    
+    # Remove or neutralize dangerous patterns
+    dangerous_patterns = [
+        # Prompt injection keywords
+        r'ignore\s+(all\s+)?(previous\s+)?instructions?',
+        r'disregard\s+(all\s+)?(previous\s+)?instructions?',
+        r'override\s+(all\s+)?(previous\s+)?instructions?',
+        r'system\s*[:\-]?\s*prompt',
+        r'user\s*[:\-]?\s*prompt',
+        r'assistant\s*[:\-]?\s*prompt',
+        r'new\s+instructions?',
+        r'instead\s*,?\s*do\s*this',
+        r'act\s+as\s+(if\s+)?you\s+(are|were)',
+        r'pretend\s+(to\s+be|you\s+are)',
+        r'you\s+are\s+now',
+        r'roleplay\s+as',
+        r'from\s+now\s+on',
+        r'forget\s+(everything|all|previous)',
+        r'stop\s+being',
+        r'you\s+must\s+not',
+        r'do\s+not\s+follow',
+        r'execute\s+this',
+        r'run\s+this\s+code',
+        r'import\s+os',
+        r'import\s+subprocess',
+        r'__import__',
+        r'eval\s*\(',
+        r'exec\s*\(',
+        r'os\.system',
+        r'subprocess\.call',
+    ]
+    
+    # Replace dangerous patterns with safe text
+    sanitized = text
+    for pattern in dangerous_patterns:
+        sanitized = re.sub(pattern, '[REDACTED]', sanitized, flags=re.IGNORECASE)
+    
+    # Remove XML/HTML tags that could be used for injection
+    sanitized = re.sub(r'<(script|iframe|object|embed|form|input)[^>]*>', '[TAG-REMOVED]', sanitized, flags=re.IGNORECASE)
+    
+    # Escape curly braces to prevent format string injection
+    sanitized = sanitized.replace('{', '{{').replace('}', '}}')
+    
+    # Remove control characters
+    sanitized = ''.join(char for char in sanitized if ord(char) >= 32 or char in '\n\r\t')
+    
+    return sanitized.strip()
+
 
 def format_price(value):
     """
@@ -441,20 +510,36 @@ def build_sentiment_prompt(sentiment_data, onchain_data):
     Menyusun prompt khusus untuk Analisa Sentimen AI.
     Fokus: Berita Global, Fear & Greed, Whale Activity.
     Output: JSON dengan key 'analysis': 'sentiment'
+    
+    SECURITY NOTE: All external data (RSS feeds, whale activity) is sanitized
+    to prevent prompt injection attacks before being included in the prompt.
     """
     
     # 1. Parsing Data
     fng_value = sentiment_data.get('fng_value', 50)
     fng_text = sentiment_data.get('fng_text', 'Neutral')
     news_headlines = sentiment_data.get('news', [])
-    news_str = "\n".join([f"- {n}" for n in news_headlines]) if news_headlines else "No major news."
+    
+    # Sanitize news headlines (external RSS data)
+    if news_headlines:
+        sanitized_news = [sanitize_prompt_input(str(n), max_length=500) for n in news_headlines]
+        news_str = "\n".join([f"- {n}" for n in sanitized_news])
+    else:
+        news_str = "No major news."
     
     whale_activity = onchain_data.get('whale_activity', [])
-    whale_str = "\n".join([f"- {w}" for w in whale_activity]) if whale_activity else "No significant whale activity detected."
+    
+    # Sanitize whale activity data (external API data)
+    if whale_activity:
+        sanitized_whales = [sanitize_prompt_input(str(w), max_length=500) for w in whale_activity]
+        whale_str = "\n".join([f"- {w}" for w in sanitized_whales])
+    else:
+        whale_str = "No significant whale activity detected."
+    
     inflow_status = onchain_data.get('stablecoin_inflow', 'Neutral')
 
     # 2. Prompt Construction
-    # 2. Prompt Construction
+    # Note: Sanitized data is wrapped in <external_data> tags by the prompt template
     prompt = config.PROMPT_SENTIMENT_ANALYSIS.format(
         fng_value=fng_value,
         fng_text=fng_text,

@@ -7,6 +7,7 @@ import json
 import sys
 import os
 import calendar
+import html
 from datetime import datetime, timedelta
 
 # Robustly add project root to sys.path so 'config' can be imported by src modules
@@ -1200,8 +1201,8 @@ with tab_calendar:
 
                 cols[i].markdown(f"""
                 <div class='day-card {card_class}'>
-                    <div class='day-date'>{day_num}</div>
-                    <div class='day-pnl'>{pnl_text}</div>
+                    <div class='day-date'>{html.escape(str(day_num))}</div>
+                    <div class='day-pnl'>{html.escape(pnl_text)}</div>
                 </div>
                 """, unsafe_allow_html=True)
 

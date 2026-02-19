@@ -111,9 +111,14 @@ def _calculate_market_structure_static(bars, lookback=5):
         logger.error(f"Market Structure Error: {e}")
         return "ERROR"
 
-def _calculate_wick_rejection_static(bars, lookback=5):
+def _calculate_wick_rejection_static(bars, lookback=5, df=None):
     """
     Mendeteksi candle dengan wick besar sebagai tanda rejection.
+    
+    Args:
+        bars: List of OHLCV bars
+        lookback: Number of candles to analyze
+        df: Optional pre-existing DataFrame (to avoid redundant creation)
     """
     try:
         if not bars or len(bars) < lookback:
@@ -129,33 +134,36 @@ def _calculate_wick_rejection_static(bars, lookback=5):
         else:
             candidates = bars[start_idx:end_idx]
 
-        # Vectorized calculation using pandas
+        # Use provided DataFrame or create new one
         # candidates format: [timestamp, open, high, low, close, volume]
-        df = pd.DataFrame(candidates, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+        if df is not None and len(df) >= len(candidates):
+            local_df = df.iloc[start_idx:end_idx].copy()
+        else:
+            local_df = pd.DataFrame(candidates, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         
         # Calculate wicks and body
-        df['body'] = (df['close'] - df['open']).abs()
-        df['upper_wick'] = df['high'] - df[['open', 'close']].max(axis=1)
-        df['lower_wick'] = df[['open', 'close']].min(axis=1) - df['low']
+        local_df['body'] = (local_df['close'] - local_df['open']).abs()
+        local_df['upper_wick'] = local_df['high'] - local_df[['open', 'close']].max(axis=1)
+        local_df['lower_wick'] = local_df[['open', 'close']].min(axis=1) - local_df['low']
         
         # Handle division by zero
-        df['body_ref'] = df['body'].where(df['body'] > 0, (df['high'] - df['low']) * config.WICK_REJECTION_MIN_BODY_RATIO)
-        df['body_ref'] = df['body_ref'].where(df['body_ref'] > 0, config.WICK_REJECTION_MIN_BODY_REF)
+        local_df['body_ref'] = local_df['body'].where(local_df['body'] > 0, (local_df['high'] - local_df['low']) * config.WICK_REJECTION_MIN_BODY_RATIO)
+        local_df['body_ref'] = local_df['body_ref'].where(local_df['body_ref'] > 0, config.WICK_REJECTION_MIN_BODY_REF)
         
         # Logic: Wick must be > 2x Body
-        df['is_bullish'] = df['lower_wick'] > (df['body'] * config.WICK_REJECTION_MULTIPLIER)
-        df['is_bearish'] = df['upper_wick'] > (df['body'] * config.WICK_REJECTION_MULTIPLIER)
+        local_df['is_bullish'] = local_df['lower_wick'] > (local_df['body'] * config.WICK_REJECTION_MULTIPLIER)
+        local_df['is_bearish'] = local_df['upper_wick'] > (local_df['body'] * config.WICK_REJECTION_MULTIPLIER)
         
         # Calculate strength
-        df['strength_bull'] = df['lower_wick'] / df['body_ref']
-        df['strength_bear'] = df['upper_wick'] / df['body_ref']
+        local_df['strength_bull'] = local_df['lower_wick'] / local_df['body_ref']
+        local_df['strength_bear'] = local_df['upper_wick'] / local_df['body_ref']
         
         # Count rejections
-        rejection_count = df['is_bullish'].sum() + df['is_bearish'].sum()
+        rejection_count = local_df['is_bullish'].sum() + local_df['is_bearish'].sum()
         
         # Find max strength for each type
-        max_bull = df.loc[df['is_bullish'], 'strength_bull'].max() if df['is_bullish'].any() else 0.0
-        max_bear = df.loc[df['is_bearish'], 'strength_bear'].max() if df['is_bearish'].any() else 0.0
+        max_bull = local_df.loc[local_df['is_bullish'], 'strength_bull'].max() if local_df['is_bullish'].any() else 0.0
+        max_bear = local_df.loc[local_df['is_bearish'], 'strength_bear'].max() if local_df['is_bearish'].any() else 0.0
         
         # Determine final rejection type (strongest wins)
         if max_bull > max_bear and max_bull > 0:
@@ -382,7 +390,7 @@ def _calculate_tech_data_threaded(bars_exec, bars_trend, symbol):
         # 6. Calculate external analyses
         pivots = _calculate_pivot_points_static(bars_trend)
         structure = _calculate_market_structure_static(bars_trend)
-        wick_rejection = _calculate_wick_rejection_static(bars_exec)
+        wick_rejection = _calculate_wick_rejection_static(bars_exec, df=df)
         global_trend = _calculate_global_trend(bars_trend, symbol)
 
         # 7. Assemble final result
