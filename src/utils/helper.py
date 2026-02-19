@@ -94,28 +94,20 @@ async def kirim_tele(pesan: str, alert: bool = False, channel: str = 'default') 
                 # Sesuai request user: "beda untuk dikirimnya". Jika kosong, lebih aman tetap kirim (fallback) atau log error.
                 # Mari kita gunakan fallback ke default agar info tidak hilang, tapi beri log warning.
         
-        def send_request():
-            data = {
-                'chat_id': chat_id, 
-                'text': f"{prefix}{pesan}", 
-                'parse_mode': 'HTML'
-            }
-            # Message Thread ID hanya support di default channel biasanya, atau jika user set var khusus (belum ada).
-            # Asumsi: Sentimen channel mungkin topik terpisah atau grup terpisah. 
-            # Jika user set unique Token/ChatID, kemungkinan besar itu channel/grup berbeda.
-            # Jadi kita hanya pakai message_thread_id untuk default channel jika ada.
-            
-            if channel == 'default' and config.TELEGRAM_MESSAGE_THREAD_ID:
-                data['message_thread_id'] = config.TELEGRAM_MESSAGE_THREAD_ID
-            elif channel == 'sentiment' and config.TELEGRAM_MESSAGE_THREAD_ID_SENTIMENT:
-                data['message_thread_id'] = config.TELEGRAM_MESSAGE_THREAD_ID_SENTIMENT
-                
-            return requests.post(
-                f"https://api.telegram.org/bot{bot_token}/sendMessage",
-                data=data
-            )
+        data = {
+            'chat_id': chat_id, 
+            'text': f"{prefix}{pesan}", 
+            'parse_mode': 'HTML'
+        }
         
-        response = await asyncio.to_thread(send_request)
+        # Message Thread ID logic
+        if channel == 'default' and config.TELEGRAM_MESSAGE_THREAD_ID:
+            data['message_thread_id'] = config.TELEGRAM_MESSAGE_THREAD_ID
+        elif channel == 'sentiment' and config.TELEGRAM_MESSAGE_THREAD_ID_SENTIMENT:
+            data['message_thread_id'] = config.TELEGRAM_MESSAGE_THREAD_ID_SENTIMENT
+            
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        response = await asyncio.to_thread(requests.post, url, data=data, timeout=10)
         if response.status_code != 200:
             error_details = response.text
             logger.error(f"❌ Telegram Send Failed ({channel}) Status {response.status_code}: {error_details}")

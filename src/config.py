@@ -161,6 +161,9 @@ WICK_REJECTION_MIN_BODY_RATIO = 0.01       # Fallback: 1% of candle range when b
 WICK_REJECTION_MIN_BODY_REF = 0.00000001   # Minimum body_ref to prevent division by zero
 WICK_REJECTION_MULTIPLIER = 2.0             # Wick must be > 2x Body for valid rejection
 
+# Market Structure Analysis
+MIN_BARS_MARKET_STRUCTURE = 50             # Minimum bars required for market structure calculation
+
 # ------------------------------------------------------------------------------
 # 4.4 GROUP: BITCOIN KING EFFECT (Korelasi)
 # ------------------------------------------------------------------------------

@@ -63,7 +63,7 @@ def _calculate_market_structure_static(bars, lookback=5):
     Menggunakan scipy.signal.argrelextrema.
     """
     try:
-        if len(bars) < 50: return "INSUFFICIENT_DATA"
+        if len(bars) < config.MIN_BARS_MARKET_STRUCTURE: return "INSUFFICIENT_DATA"
 
         df = pd.DataFrame(bars, columns=['timestamp','open','high','low','close','volume'])
 
