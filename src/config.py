@@ -235,6 +235,7 @@ CMC_API_KEY = os.getenv("CMC_API_KEY")
 CONCURRENCY_LIMIT = 20           # Max thread worker
 LOOP_SLEEP_DELAY = 1             # Sleep main loop (detik)
 ERROR_SLEEP_DELAY = 5            # Sleep on error (detik)
+SAFETY_MONITOR_INTERVAL = 60     # Sleep interval safety monitor loop (detik)
 API_REQUEST_TIMEOUT = 10         # Timeout request (detik)
 API_RECV_WINDOW = 10000          # RecvWindow Binance (ms)
 LOOP_SKIP_DELAY = 2              # Delay skip coin

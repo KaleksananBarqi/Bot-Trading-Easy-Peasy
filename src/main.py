@@ -50,28 +50,91 @@ async def activate_native_trailing_delayed(symbol, side, qty):
 pattern_recognizer = None
 journal = None
 
-async def safety_monitor_loop():
+
+async def run_sentiment_analysis():
+    """
+    Run sentiment analysis using AI.
+    Extracted from main() as a module-level helper function.
+    """
+    global sentiment, onchain, ai_brain
+    
+    if not config.ENABLE_SENTIMENT_ANALYSIS:
+        return
+
+    try:
+        # Prepare Prompt
+        s_data = sentiment.get_latest()
+        o_data = onchain.get_latest()
+        prompt = build_sentiment_prompt(s_data, o_data)
+        
+        # Ask AI
+        logger.info(f"📝 SENTIMENT AI PROMPT:\n{prompt}")
+        result = await ai_brain.analyze_sentiment(prompt)
+        
+        if result:
+            # Save Analysis to Cache
+            sentiment.save_analysis(result)
+
+            # Kirim ke Telegram Channel Sentiment
+            mood = result.get('overall_sentiment', 'UNKNOWN')
+            score = result.get('sentiment_score', 0)
+            phase = result.get('market_phase', '-')
+            smart_money = result.get('smart_money_activity', '-')
+            retail_mood = result.get('retail_sentiment', '-')
+            
+            summary = result.get('summary', '-')
+            drivers = result.get('key_drivers', [])
+            risk = result.get('risk_assessment', 'N/A')
+            drivers_str = "\n".join([f"• {d}" for d in drivers])
+            
+            icon = "😐"
+            if score > 60: icon = "🚀"
+            elif score < 40: icon = "🐻"
+            
+            msg = (
+                f"📢 <b>PASAR SAAT INI {mood} {icon}</b>\n"
+                f"Score: {score}/100\n\n"
+                f"🌀 <b>Phase:</b> {phase}\n"
+                f"🐋 <b>Whales:</b> {smart_money}\n"
+                f"👥 <b>Retail:</b> {retail_mood}\n\n"
+                f"📝 <b>Ringkasan:</b>\n{summary}\n\n"
+                f"🔑 <b>Faktor Utama:</b>\n{drivers_str}\n\n"
+                f"⚠️ <b>Risk Assessment:</b>\n{risk}\n\n"
+                f"<i>Analisa ini digenerate otomatis oleh AI ({config.AI_SENTIMENT_MODEL})</i>"
+            )
+            
+            logger.info(f"📤 SENTIMENT TELEGRAM MESSAGE:\n{msg}")
+            await kirim_tele(msg, channel='sentiment')
+            logger.info("✅ Sentiment Report Sent.")
+    except Exception as e:
+        logger.error(f"❌ Sentiment Loop Error: {e}")
+
+
+async def safety_monitor_loop(executor: OrderExecutor) -> None:
     """
     Background Task untuk memantau posisi terbuka.
     - Cek Pending Orders (cleanup)
     - Re-verify Tracker consistency
     - (Trailing Stop sekarang via WebSocket push, bukan polling di sini)
+
+    Args:
+        executor: Instance OrderExecutor untuk operasi trading
     """
     logger.info("🛡️ Safety Monitor Started")
     while True:
         try:
             # 1. Sync & Cleanup Pending Orders
             await executor.sync_pending_orders()
-            
+
             # 2. Sync Posisi vs Tracker (Housekeeping)
             # Pastikan jika ada posisi manual/baru yang belum masuk tracker, kita amankan.
             count = await executor.sync_positions()
-            
+
             for base_sym, pos in executor.position_cache.items():
                 symbol = pos['symbol']
                 tracker = executor.safety_orders_tracker.get(symbol, {})
                 status = tracker.get('status', 'NONE')
-                
+
                 if status in ['NONE', 'PENDING', 'WAITING_ENTRY']:
                     logger.info(f"🛡️ Found Unsecured Position: {symbol}. Installing Safety...")
                     success = await executor.install_safety_orders(symbol, pos)
@@ -85,12 +148,8 @@ async def safety_monitor_loop():
                         await executor.save_tracker()
 
             # Sleep agak lama karena load utama sudah di WebSocket
-            await asyncio.sleep(60) 
-            
-        except Exception as e:
-            logger.error(f"Error Safety Loop: {e}")
-            await asyncio.sleep(60)
-            
+            await asyncio.sleep(config.SAFETY_MONITOR_INTERVAL)
+
         except Exception as e:
             logger.error(f"Safety Loop Error: {e}")
             await asyncio.sleep(config.ERROR_SLEEP_DELAY)
@@ -149,59 +208,6 @@ async def main():
     # 3. PRELOAD DATA
     await market_data.initialize_data()
     await sentiment.update_all() # Initial Fetch Headline & F&G
-    
-    # [NEW] Helper for Sentiment Analysis (Declared here to capture scope)
-    async def run_sentiment_analysis():
-        if not config.ENABLE_SENTIMENT_ANALYSIS:
-            return
-
-        try:
-            # Prepare Prompt
-            s_data = sentiment.get_latest()
-            o_data = onchain.get_latest()
-            prompt = build_sentiment_prompt(s_data, o_data)
-            
-            # Ask AI
-            logger.info(f"📝 SENTIMENT AI PROMPT:\n{prompt}")
-            result = await ai_brain.analyze_sentiment(prompt)
-            
-            if result:
-                # Save Analysis to Cache
-                sentiment.save_analysis(result)
-
-                # Kirim ke Telegram Channel Sentiment
-                mood = result.get('overall_sentiment', 'UNKNOWN')
-                score = result.get('sentiment_score', 0)
-                phase = result.get('market_phase', '-')
-                smart_money = result.get('smart_money_activity', '-')
-                retail_mood = result.get('retail_sentiment', '-')
-                
-                summary = result.get('summary', '-')
-                drivers = result.get('key_drivers', [])
-                risk = result.get('risk_assessment', 'N/A')
-                drivers_str = "\n".join([f"• {d}" for d in drivers])
-                
-                icon = "😐"
-                if score > 60: icon = "🚀"
-                elif score < 40: icon = "🐻"
-                
-                msg = (
-                    f"📢 <b>PASAR SAAT INI {mood} {icon}</b>\n"
-                    f"Score: {score}/100\n\n"
-                    f"🌀 <b>Phase:</b> {phase}\n"
-                    f"🐋 <b>Whales:</b> {smart_money}\n"
-                    f"👥 <b>Retail:</b> {retail_mood}\n\n"
-                    f"📝 <b>Ringkasan:</b>\n{summary}\n\n"
-                    f"🔑 <b>Faktor Utama:</b>\n{drivers_str}\n\n"
-                    f"⚠️ <b>Risk Assessment:</b>\n{risk}\n\n"
-                    f"<i>Analisa ini digenerate otomatis oleh AI ({config.AI_SENTIMENT_MODEL})</i>"
-                )
-                
-                logger.info(f"📤 SENTIMENT TELEGRAM MESSAGE:\n{msg}")
-                await kirim_tele(msg, channel='sentiment')
-                logger.info("✅ Sentiment Report Sent.")
-        except Exception as e:
-            logger.error(f"❌ Sentiment Loop Error: {e}")
 
     # [NEW] Initial AI Analysis (Blocking)
     logger.info("🧠 Performing Initial AI Sentiment Analysis...")
@@ -496,7 +502,7 @@ async def main():
             await executor.sync_positions()
 
     asyncio.create_task(market_data.start_stream(account_update_cb, order_update_cb, whale_handler))
-    asyncio.create_task(safety_monitor_loop())
+    asyncio.create_task(safety_monitor_loop(executor))
 
     logger.info("🚀 MAIN LOOP RUNNING...")
 
