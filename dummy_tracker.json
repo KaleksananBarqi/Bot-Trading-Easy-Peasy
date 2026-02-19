@@ -1,0 +1,11 @@
+{
+  "BTC/USDT": {
+    "entry_price": 50000,
+    "side": "LONG",
+    "status": "SECURED",
+    "trailing_active": true,
+    "trailing_high": 61000,
+    "trailing_low": null,
+    "trailing_sl": 60390.0
+  }
+}

@@ -52,30 +52,8 @@ def executor():
         exc.safety_orders_tracker = {} 
         return exc
 
-def test_calculate_tp_progress_long(executor):
-    symbol = "BTC/USDT"
-    executor.safety_orders_tracker[symbol] = {
-        "status": "SECURED",
-        "entry_price": 50000,
-        "tp_price": 60000, 
-        "side": "LONG"
-    }
-    
-    assert executor.calculate_tp_progress(symbol, 50000) == 0.0
-    assert executor.calculate_tp_progress(symbol, 55000) == 0.5
-    assert executor.calculate_tp_progress(symbol, 58000) == 0.8
-
-def test_calculate_tp_progress_short(executor):
-    symbol = "BTC/USDT"
-    executor.safety_orders_tracker[symbol] = {
-        "status": "SECURED",
-        "entry_price": 50000,
-        "tp_price": 40000, 
-        "side": "SHORT"
-    }
-    
-    assert executor.calculate_tp_progress(symbol, 42000) == 0.8
-    assert executor.calculate_tp_progress(symbol, 51000) < 0
+# NOTE: test_calculate_tp_progress_long / _short removed
+# — fungsi calculate_tp_progress tidak pernah didefinisikan (dead reference).
 
 def test_activate_trailing_mode_long(executor):
     symbol = "BTC/USDT"
@@ -142,8 +120,8 @@ def test_throttling_logic(executor):
         "trailing_sl": 57420
     }
     
-    # Mock internal API call to verify throttling
-    executor._amend_sl_order = AsyncMock()
+    # Mock internal API call on SafetyManager to verify throttling
+    executor.safety._amend_sl_order = AsyncMock()
     
     with patch('time.time') as mock_time:
         # Time 100: First Call -> Should Proceed
@@ -151,11 +129,11 @@ def test_throttling_logic(executor):
         mock_time.return_value = 100
         asyncio.run(executor.check_trailing_on_price(symbol, 60000))
 
-        executor._amend_sl_order.assert_called()
+        executor.safety._amend_sl_order.assert_called()
         assert executor._trailing_last_update[symbol] == 100
         assert executor.safety_orders_tracker[symbol]['trailing_high'] == 60000
         
-        executor._amend_sl_order.reset_mock()
+        executor.safety._amend_sl_order.reset_mock()
         
         # Time 101: Second Call (diff 1s < 3s)
         # Price 61000. New High 61000. New SL 60390.
@@ -164,7 +142,7 @@ def test_throttling_logic(executor):
         mock_time.return_value = 101
         asyncio.run(executor.check_trailing_on_price(symbol, 61000))
         
-        executor._amend_sl_order.assert_not_called() # Throttled!
+        executor.safety._amend_sl_order.assert_not_called() # Throttled!
         assert executor.safety_orders_tracker[symbol]['trailing_high'] == 61000 # Updated!
         assert executor._trailing_last_update[symbol] == 100 # Last update unchanged
 
@@ -175,6 +153,6 @@ def test_throttling_logic(executor):
         mock_time.return_value = 104
         asyncio.run(executor.check_trailing_on_price(symbol, 60500))
 
-        executor._amend_sl_order.assert_called()
+        executor.safety._amend_sl_order.assert_called()
         assert executor._trailing_last_update[symbol] == 104
         assert executor.safety_orders_tracker[symbol]['trailing_sl'] == 61000 * (1 - config.TRAILING_CALLBACK_RATE)
