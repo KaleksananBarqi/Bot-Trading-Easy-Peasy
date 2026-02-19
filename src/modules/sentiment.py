@@ -50,48 +50,63 @@ class SentimentAnalyzer:
         """Ambil hasil analisa AI yang tersimpan."""
         return self.analyzed_result
 
-    def fetch_fng(self):
-        """Fetch Fear & Greed Index from CoinMarketCap"""
+    async def fetch_fng(self, session: aiohttp.ClientSession = None):
+        """Fetch Fear & Greed Index from CoinMarketCap (Async)"""
+        if not config.CMC_API_KEY:
+            logger.warning("⚠️ CMC_API_KEY not found. Using default neutral sentiment.")
+            return
+
+        headers = {
+            'X-CMC_PRO_API_KEY': config.CMC_API_KEY,
+            'Accept': 'application/json'
+        }
+        params = {}
+        
+        own_session = session is None
+        
         try:
-            headers = {
-                'X-CMC_PRO_API_KEY': config.CMC_API_KEY,
-                'Accept': 'application/json'
-            }
-            params = {}
+            if own_session:
+                session = aiohttp.ClientSession()
             
-            if not config.CMC_API_KEY:
-                logger.warning("⚠️ CMC_API_KEY not found. Using default neutral sentiment.")
-                return
+            timeout = aiohttp.ClientTimeout(total=config.API_REQUEST_TIMEOUT)
+            
+            async with session.get(
+                self.fng_url, 
+                headers=headers, 
+                params=params, 
+                timeout=timeout
+            ) as resp:
+                data = await resp.json()
+                
+                if 'status' in data and int(data['status']['error_code']) == 0 and 'data' in data:
+                    if isinstance(data['data'], list) and len(data['data']) > 0:
+                        item = data['data'][0]
+                    elif isinstance(data['data'], dict):
+                        item = data['data']
+                    else:
+                        logger.warning(f"⚠️ CMC API Unexpected Data Format: {data['data']}")
+                        return
 
-            resp = requests.get(self.fng_url, headers=headers, params=params, timeout=config.API_REQUEST_TIMEOUT)
-            data = resp.json()
-            
-            if 'status' in data and int(data['status']['error_code']) == 0 and 'data' in data:
-                if isinstance(data['data'], list) and len(data['data']) > 0:
-                    item = data['data'][0]
-                elif isinstance(data['data'], dict):
-                    item = data['data']
+                    self.last_fng = {
+                        "value": int(item['value']),
+                        "classification": item['value_classification']
+                    }
+                    logger.info(f"🧠 Sentiment F&G (CMC): {self.last_fng['value']} ({self.last_fng['classification']})")
                 else:
-                    logger.warning(f"⚠️ CMC API Unexpected Data Format: {data['data']}")
-                    return
+                    error_msg = data.get('status', {}).get('error_message')
+                    logger.warning(f"⚠️ CMC API Error: {error_msg if error_msg else data}")
 
-                self.last_fng = {
-                    "value": int(item['value']),
-                    "classification": item['value_classification']
-                }
-                logger.info(f"🧠 Sentiment F&G (CMC): {self.last_fng['value']} ({self.last_fng['classification']})")
-            else:
-                error_msg = data.get('status', {}).get('error_message')
-                logger.warning(f"⚠️ CMC API Error: {error_msg if error_msg else data}")
-
-        except requests.RequestException as e:
+        except aiohttp.ClientError as e:
             logger.warning(f"⚠️ Network error fetching F&G: {type(e).__name__}: {e}")
-        except json.JSONDecodeError as e:
+        except aiohttp.ContentTypeError as e:
             logger.warning(f"⚠️ Invalid JSON response from CMC F&G API: {e}")
         except (KeyError, TypeError, ValueError) as e:
             logger.warning(f"⚠️ Data parsing error in F&G response: {type(e).__name__}: {e}")
         except Exception as e:
             logger.warning(f"⚠️ Unexpected error fetching F&G: {type(e).__name__}: {e}")
+        finally:
+            if own_session and session:
+                await session.close()
 
     async def _fetch_single_rss(self, session: aiohttp.ClientSession, url: str, max_per_source: int, max_age_hours: int) -> list:
         """Fetch single RSS feed secara async."""
@@ -311,6 +326,6 @@ class SentimentAnalyzer:
     async def update_all(self):
         """Update semua data sentiment secara concurrent."""
         await asyncio.gather(
-            asyncio.to_thread(self.fetch_fng),  # FnG tetap sync, di-offload ke thread
+            self.fetch_fng(),  # FnG now async with aiohttp
             self.fetch_news()  # RSS sudah async
         )
