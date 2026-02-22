@@ -562,6 +562,13 @@ if not df.empty:
     all_strategies = ['All'] + list(df['strategy_tag'].unique())
     selected_strategy = st.sidebar.selectbox("🧠 Strategy", all_strategies)
 
+    # Exit Type Filter
+    if 'exit_type' in df.columns:
+        all_exit_types = ['All'] + sorted([x for x in df['exit_type'].dropna().unique() if x != 'UNKNOWN'])
+        selected_exit_type = st.sidebar.selectbox("🔄 Exit Type", all_exit_types)
+    else:
+        selected_exit_type = 'All'
+
     # Apply Filters
     df_filtered = df.copy()
     
@@ -576,6 +583,8 @@ if not df.empty:
         df_filtered = df_filtered[df_filtered['symbol'] == selected_symbol]
     if selected_strategy != 'All':
         df_filtered = df_filtered[df_filtered['strategy_tag'] == selected_strategy]
+    if selected_exit_type != 'All' and 'exit_type' in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered['exit_type'] == selected_exit_type]
 else:
     st.sidebar.warning("No Data Available")
     df_filtered = pd.DataFrame()
@@ -912,8 +921,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-tab_symbol, tab_strat, tab_model, tab_correlation, tab_daily, tab_calendar, tab_drawdown, tab_dist = st.tabs([
-    "🪙 Symbol", "🧠 Strategy", "🤖 Model", "🔍 Correlation", "📅 Daily PnL", "🗓️ Calendar", "📉 Drawdown", "📊 Distribution"
+tab_symbol, tab_strat, tab_model, tab_exit, tab_correlation, tab_daily, tab_calendar, tab_drawdown, tab_dist = st.tabs([
+    "🪙 Symbol", "🧠 Strategy", "🤖 Model", "🔄 Exit Type", "🔍 Correlation", "📅 Daily PnL", "🗓️ Calendar", "📉 Drawdown", "📊 Distribution"
 ])
 
 with tab_symbol:
@@ -988,6 +997,79 @@ with tab_model:
         st.plotly_chart(fig_model, use_container_width=True)
     else:
         st.info("Data AI Model belum tersedia.")
+
+with tab_exit:
+    st.markdown("#### 🔄 Analisis Exit Type & Trailing Stop")
+
+    if 'exit_type' in df_filtered.columns:
+        # Ensure exit_type has values
+        df_exit = df_filtered.copy()
+        df_exit['exit_type'] = df_exit['exit_type'].fillna('UNKNOWN')
+
+        col_exit1, col_exit2 = st.columns(2)
+
+        with col_exit1:
+            # Pie Chart: Exit Type Distribution
+            exit_counts = df_exit['exit_type'].value_counts()
+            exit_color_map = {
+                'STOP_LOSS': '#ef4444', 'TAKE_PROFIT': '#10b981',
+                'TRAILING_STOP': '#8b5cf6', 'MANUAL': '#f59e0b',
+                'LIMIT': '#3b82f6', 'UNKNOWN': '#64748b'
+            }
+            fig_exit_pie = go.Figure(data=[go.Pie(
+                labels=exit_counts.index,
+                values=exit_counts.values,
+                marker=dict(
+                    colors=[exit_color_map.get(e, '#64748b') for e in exit_counts.index],
+                    line=dict(color='#0a0e17', width=2)
+                ),
+                textfont=dict(color='#f1f5f9', size=12),
+                hole=0.55,
+                hovertemplate='<b>%{label}</b><br>Count: %{value}<br>%{percent}<extra></extra>',
+            )])
+            fig_exit_pie.update_layout(**get_plotly_layout(height=380, title="Exit Type Distribution"))
+            st.plotly_chart(fig_exit_pie, use_container_width=True)
+
+        with col_exit2:
+            # Bar Chart: PnL by Exit Type
+            pnl_by_exit = df_exit.groupby('exit_type')['pnl_usdt'].sum().reset_index()
+            pnl_by_exit = pnl_by_exit.sort_values(by='pnl_usdt', ascending=True)
+            bar_colors_exit = ['#10b981' if v >= 0 else '#ef4444' for v in pnl_by_exit['pnl_usdt']]
+
+            fig_exit_bar = go.Figure(data=[go.Bar(
+                x=pnl_by_exit['pnl_usdt'], y=pnl_by_exit['exit_type'],
+                orientation='h',
+                marker=dict(color=bar_colors_exit, line=dict(width=0)),
+                hovertemplate='<b>%{y}</b><br>PnL: $%{x:.2f}<extra></extra>',
+            )])
+            fig_exit_bar.update_layout(**get_plotly_layout(height=380, title="Net PnL by Exit Type"))
+            st.plotly_chart(fig_exit_bar, use_container_width=True)
+
+        # Trailing vs Non-Trailing KPI
+        if 'trailing_was_active' in df_exit.columns:
+            trail_df = df_exit[df_exit['trailing_was_active'] == True]
+            no_trail_df = df_exit[df_exit['trailing_was_active'] != True]
+
+            # Filter hanya trade yang completed
+            trail_completed = trail_df[trail_df['result'].isin(['WIN', 'LOSS'])]
+            no_trail_completed = no_trail_df[no_trail_df['result'].isin(['WIN', 'LOSS'])]
+
+            trail_wr = (len(trail_completed[trail_completed['result'] == 'WIN']) / len(trail_completed) * 100) if len(trail_completed) > 0 else 0
+            no_trail_wr = (len(no_trail_completed[no_trail_completed['result'] == 'WIN']) / len(no_trail_completed) * 100) if len(no_trail_completed) > 0 else 0
+
+            trail_avg_pnl = trail_completed['pnl_usdt'].mean() if not trail_completed.empty else 0
+            no_trail_avg_pnl = no_trail_completed['pnl_usdt'].mean() if not no_trail_completed.empty else 0
+
+            st.markdown("---")
+            st.markdown("##### 🔄 Trailing vs Non-Trailing")
+
+            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+            kpi1.metric("Trailing Trades", f"{len(trail_completed)}")
+            kpi2.metric("Trailing Win Rate", f"{trail_wr:.1f}%")
+            kpi3.metric("Avg PnL (Trailing)", f"${trail_avg_pnl:.2f}")
+            kpi4.metric("Avg PnL (Non-Trail)", f"${no_trail_avg_pnl:.2f}")
+    else:
+        st.info("Data exit type belum tersedia. Jalankan bot untuk mulai merekam data exit type.")
 
 with tab_correlation:
     st.markdown("#### 🔗 Analisis Korelasi & Faktor Penentu Win Rate")
@@ -1295,8 +1377,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-display_cols = ['timestamp', 'symbol', 'side', 'type', 'entry_price', 'exit_price', 'pnl_usdt', 'roi_percent', 'strategy_tag', 'prompt', 'reason', 'setup_at', 'filled_at', 'technical_data', 'config_snapshot']
-for col in ['setup_at', 'filled_at', 'technical_data', 'config_snapshot']:
+display_cols = ['timestamp', 'symbol', 'side', 'type', 'exit_type', 'entry_price', 'exit_price', 'pnl_usdt', 'roi_percent', 'strategy_tag', 'prompt', 'reason', 'setup_at', 'filled_at', 'technical_data', 'config_snapshot']
+for col in ['setup_at', 'filled_at', 'technical_data', 'config_snapshot', 'exit_type']:
     if col not in df_filtered.columns:
         df_filtered[col] = None
 
@@ -1342,6 +1424,7 @@ st.dataframe(
         "symbol": st.column_config.Column("Symbol"),
         "side": st.column_config.Column("Side"),
         "type": st.column_config.Column("Type"),
+        "exit_type": st.column_config.Column("Exit Type"),
         "entry_price": st.column_config.NumberColumn("Entry Price", format="$%.4f"),
         "exit_price": st.column_config.NumberColumn("Exit Price", format="$%.4f"),
         "prompt": st.column_config.TextColumn("AI Prompt", width="medium"),
@@ -1486,6 +1569,20 @@ if not completed_df.empty:
                     st.json(tech_info)
             else:
                 st.info("Data teknikal tidak tersedia untuk trade ini.")
+
+            # Trailing Stop Info
+            trailing_active = trade_row.get('trailing_was_active', False)
+            if trailing_active:
+                st.markdown("---")
+                st.markdown("**🔄 Trailing Stop Info**")
+                tr1, tr2 = st.columns(2)
+                tr1.metric("Trailing SL Final", f"${float(trade_row.get('trailing_sl_final', 0)):,.4f}")
+                tr1.metric("SL Initial", f"${float(trade_row.get('sl_price_initial', 0)):,.4f}")
+                tr2.metric("Price High", f"${float(trade_row.get('trailing_high', 0)):,.4f}")
+                tr2.metric("Price Low", f"${float(trade_row.get('trailing_low', 0)):,.4f}")
+                act_price = float(trade_row.get('activation_price', 0))
+                if act_price > 0:
+                    st.metric("Activation Price", f"${act_price:,.4f}")
 
         with col_cfg:
             st.markdown("""

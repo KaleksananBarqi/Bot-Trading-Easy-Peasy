@@ -181,6 +181,24 @@ class OrderUpdateHandler:
         # Get Order Type from Tracker (Entry Type), not Closing Order Type
         entry_order_type = tracker.get('order_type', 'MARKET')
 
+        # --- EXIT TYPE DETECTION ---
+        exit_type_map = {
+            'STOP_MARKET': 'STOP_LOSS',
+            'TAKE_PROFIT_MARKET': 'TAKE_PROFIT',
+            'TRAILING_STOP_MARKET': 'TRAILING_STOP',
+            'MARKET': 'MANUAL',
+            'LIMIT': 'LIMIT',
+        }
+        exit_type = exit_type_map.get(order_type, order_type)
+
+        # --- TRAILING METADATA (captured before tracker cleanup) ---
+        trailing_was_active = tracker.get('trailing_active', False)
+        trailing_sl_final = tracker.get('trailing_sl', 0)
+        trailing_high = tracker.get('trailing_high', 0)
+        trailing_low = tracker.get('trailing_low', 0)
+        activation_price = tracker.get('activation_price', 0)
+        sl_price_initial = tracker.get('sl_price_initial', 0)
+
         trade_data = {
             'symbol': symbol,
             'side': tracker.get('side', 'LONG' if order_info['S'] == 'SELL' else 'SHORT'),
@@ -197,7 +215,14 @@ class OrderUpdateHandler:
             'setup_at': setup_at_str,
             'filled_at': filled_at_str,
             'technical_data': tech_snapshot,
-            'config_snapshot': cfg_snapshot
+            'config_snapshot': cfg_snapshot,
+            'exit_type': exit_type,
+            'trailing_was_active': trailing_was_active,
+            'trailing_sl_final': trailing_sl_final,
+            'trailing_high': trailing_high,
+            'trailing_low': trailing_low,
+            'activation_price': activation_price,
+            'sl_price_initial': sl_price_initial,
         }
 
         if self.journal:

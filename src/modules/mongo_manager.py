@@ -77,6 +77,9 @@ class MongoManager:
             # Index on strategy_tag (for strategy performance analysis)
             self.trades_collection.create_index([("strategy_tag", ASCENDING)])
             
+            # Index on exit_type (for exit type analysis)
+            self.trades_collection.create_index([("exit_type", ASCENDING)])
+            
             logger.info("✅ MongoDB Indexes Verified")
         except Exception as e:
             logger.warning(f"⚠️ Failed to create indexes: {e}")
@@ -101,14 +104,18 @@ class MongoManager:
         'entry_price', 'exit_price', 'size_usdt',
         'pnl_usdt', 'pnl_percent', 'roi_percent',
         'fee', 'strategy_tag', 'result',
-        'prompt', 'reason', 'setup_at', 'filled_at'
+        'prompt', 'reason', 'setup_at', 'filled_at',
+        'exit_type', 'trailing_was_active',
+        'trailing_sl_final', 'trailing_high', 'trailing_low',
+        'activation_price', 'sl_price_initial'
     })
 
     ALLOWED_SORT_FIELDS = frozenset({
         'timestamp', 'symbol', 'side', 'type',
         'entry_price', 'exit_price', 'size_usdt',
         'pnl_usdt', 'pnl_percent', 'roi_percent',
-        'fee', 'strategy_tag', 'result'
+        'fee', 'strategy_tag', 'result',
+        'exit_type'
     })
 
     MONGO_OPERATORS = frozenset({

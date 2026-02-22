@@ -88,7 +88,14 @@ class TradeJournal:
                 'setup_at': data.get('setup_at', ''),
                 'filled_at': data.get('filled_at', ''),
                 'technical_data': tech_json,
-                'config_snapshot': config_json
+                'config_snapshot': config_json,
+                'exit_type': data.get('exit_type', 'UNKNOWN'),
+                'trailing_was_active': bool(data.get('trailing_was_active', False)),
+                'trailing_sl_final': float(data.get('trailing_sl_final', 0)),
+                'trailing_high': float(data.get('trailing_high', 0)),
+                'trailing_low': float(data.get('trailing_low', 0)),
+                'activation_price': float(data.get('activation_price', 0)),
+                'sl_price_initial': float(data.get('sl_price_initial', 0)),
             }
 
             # 3. Insert to MongoDB
@@ -120,7 +127,10 @@ class TradeJournal:
                     'fee', 'strategy_tag', 'result',
                     'prompt', 'reason',
                     'setup_at', 'filled_at',
-                    'technical_data', 'config_snapshot'
+                    'technical_data', 'config_snapshot',
+                    'exit_type', 'trailing_was_active',
+                    'trailing_sl_final', 'trailing_high', 'trailing_low',
+                    'activation_price', 'sl_price_initial'
                 ])
             
             # Convert to DataFrame
