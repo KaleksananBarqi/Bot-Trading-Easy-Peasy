@@ -1,0 +1,8 @@
+{
+  "BTC/USDT": {
+    "native_trailing_id": "trailing_003",
+    "side": "LONG",
+    "status": "SECURED_NATIVE",
+    "trailing_active": true
+  }
+}
