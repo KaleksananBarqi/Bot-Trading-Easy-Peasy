@@ -295,9 +295,13 @@ class SafetyManager:
             side_api = 'sell' if side == 'LONG' else 'buy'
             
             params = {
-                'callbackRate': rate_percent,
-                'reduceOnly': True,
-                'workingType': 'MARK_PRICE'
+                'symbol': symbol.replace('/', ''),
+                'side': side_api.upper(),
+                'type': 'TRAILING_STOP_MARKET',
+                'quantity': str(quantity),
+                'callbackRate': str(rate_percent),
+                'workingType': 'MARK_PRICE',
+                'reduceOnly': 'true'
             }
 
             activation_log = ""
@@ -307,21 +311,19 @@ class SafetyManager:
 
             logger.info(f"📤 Sending NATIVE Trailing Stop: {symbol} | Rate: {rate_percent}%{activation_log}")
             
-            order = await self.exchange.create_order(
-                symbol=symbol,
-                type='TRAILING_STOP_MARKET',
-                side=side_api,
-                amount=quantity,
-                price=None,
-                params=params
-            )
+            # BYPASS CCXT BUG: Use raw endpoint to prevent CCXT from routing it to `algoOrder` endpoint
+            # which silently ignores `activationPrice` for trailing stops.
+            order = await self.exchange.fapiPrivatePostOrder(params)
             
-            logger.info(f"✅ NATIVE Trailing Stop Active: {symbol} (ID: {order['id']})")
+            # Raw binance response returns 'orderId' instead of 'id'
+            order_id_str = str(order['orderId'])
+            
+            logger.info(f"✅ NATIVE Trailing Stop Active: {symbol} (ID: {order_id_str})")
             
             if self.tracker.exists(symbol):
                 update_data = {
                     "status": "SECURED_NATIVE",
-                    "native_trailing_id": str(order['id']),
+                    "native_trailing_id": order_id_str,
                     "trailing_active": True
                 }
                 if activation_price is not None:
