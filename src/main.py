@@ -32,10 +32,10 @@ onchain = None
 ai_brain = None
 executor = None
 
-async def activate_native_trailing_delayed(symbol, side, qty):
+async def activate_native_trailing_delayed(symbol, side, qty, entry_price=None, tp_price=None):
     """
     Activate native trailing stop after a delay.
-    Extracted from main() as a module-level helper function.
+    Menghitung activation_price = 80% jarak dari entry menuju TP.
     """
     logger.info(f"⏳ Waiting {config.TRAILING_ACTIVATION_DELAY}s to activate Native Trailing for {symbol}...")
     await asyncio.sleep(config.TRAILING_ACTIVATION_DELAY)
@@ -44,11 +44,27 @@ async def activate_native_trailing_delayed(symbol, side, qty):
         logger.warning(f"⚠️ Position {symbol} closed before Native Trailing activation.")
         return
 
+    # Hitung activation price (80% menuju TP)
+    activation_price = None
+    if entry_price is not None and tp_price is not None and tp_price > 0:
+        distance = abs(tp_price - entry_price)
+        if side in ('BUY', 'LONG'):
+            activation_price = entry_price + (distance * config.TRAILING_ACTIVATION_THRESHOLD)
+        else:  # SELL / SHORT
+            activation_price = entry_price - (distance * config.TRAILING_ACTIVATION_THRESHOLD)
+        logger.info(f"🎯 Activation Price: {activation_price:.4f} (80% of {entry_price:.4f} → {tp_price:.4f})")
+
     success = await executor.install_native_trailing_stop(
-        symbol, side, qty, config.TRAILING_CALLBACK_RATE
+        symbol, side, qty, config.TRAILING_CALLBACK_RATE, activation_price
     )
     if success:
-       await kirim_tele(f"🔄 <b>NATIVE TRAILING ACTIVE</b>\n{symbol}\nCallback: {config.TRAILING_CALLBACK_RATE*100}%")
+        act_str = f"\nActivation: {activation_price:.4f}" if activation_price else ""
+        await kirim_tele(
+            f"🔄 <b>NATIVE TRAILING ACTIVE</b>\n"
+            f"{symbol}\n"
+            f"Callback: {config.TRAILING_CALLBACK_RATE*100}%"
+            f"{act_str}"
+        )
 
 pattern_recognizer = None
 journal = None

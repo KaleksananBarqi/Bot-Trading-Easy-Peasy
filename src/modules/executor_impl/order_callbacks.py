@@ -232,6 +232,7 @@ class OrderUpdateHandler:
         tp_str = "-"
         sl_str = "-"
         rr_str = "-"
+        tp_price_float = 0  # Untuk dikirim ke trailing delayed
 
         if atr_val > 0:
             dist_sl = atr_val * config.TRAP_SAFETY_SL
@@ -246,6 +247,7 @@ class OrderUpdateHandler:
 
             tp_str = f"{tp_p:.4f}"
             sl_str = f"{sl_p:.4f}"
+            tp_price_float = tp_p
 
             rr = dist_tp / dist_sl if dist_sl > 0 else 0
             rr_str = f"1:{rr:.2f}"
@@ -256,7 +258,7 @@ class OrderUpdateHandler:
             trailing_note = f"\n⏳ <b>Native Trailing:</b> Activating in {config.TRAILING_ACTIVATION_DELAY}s..."
             # Import here to avoid circular dependency
             from src.main import activate_native_trailing_delayed
-            asyncio.create_task(activate_native_trailing_delayed(sym, side_filled, qty_filled))
+            asyncio.create_task(activate_native_trailing_delayed(sym, side_filled, qty_filled, price_filled, tp_price_float))
 
         msg = (
             f"✅ <b>LIMIT ENTRY FILLED</b>\n"

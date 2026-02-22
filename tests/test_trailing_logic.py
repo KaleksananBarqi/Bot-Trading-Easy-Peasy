@@ -31,6 +31,10 @@ config.DEFAULT_TP_PERCENT = 0.025
 config.LIMIT_ORDER_EXPIRY_SECONDS = 3600
 config.DEFAULT_MARGIN_TYPE = 'isolated'
 config.TRAILING_SL_UPDATE_COOLDOWN = 3
+config.NATIVE_TRAILING_MIN_RATE = 0.1
+config.NATIVE_TRAILING_MAX_RATE = 5.0
+config.TRAILING_ACTIVATION_DELAY = 60
+config.USE_NATIVE_TRAILING = True
 
 # 4. Import Module Under Test
 from src.modules.executor import OrderExecutor
@@ -156,3 +160,101 @@ def test_throttling_logic(executor):
         executor.safety._amend_sl_order.assert_called()
         assert executor._trailing_last_update[symbol] == 104
         assert executor.safety_orders_tracker[symbol]['trailing_sl'] == 61000 * (1 - config.TRAILING_CALLBACK_RATE)
+
+
+# =====================================================
+# --- NATIVE TRAILING STOP WITH ACTIVATION PRICE ---
+# =====================================================
+
+def test_native_trailing_activation_price_long(executor):
+    """Verifikasi activationPrice dikirim ke API untuk posisi LONG (80% menuju TP)"""
+    symbol = "BTC/USDT"
+    entry = 67777.78
+    tp = 68294.76
+    qty = 0.029
+    callback_rate = config.TRAILING_CALLBACK_RATE  # 0.01
+
+    # Setup tracker
+    executor.safety_orders_tracker[symbol] = {
+        "status": "SECURED",
+        "entry_price": entry,
+        "tp_price": tp,
+        "side": "LONG",
+        "tp_order_id": "tp_123"
+    }
+
+    # Mock exchange create_order
+    executor.exchange.create_order = AsyncMock(return_value={'id': 'trailing_001'})
+
+    # Hitung expected activation price: entry + (distance * 0.80)
+    distance = abs(tp - entry)
+    expected_activation = entry + (distance * 0.80)  # 68191.364
+
+    asyncio.run(executor.install_native_trailing_stop(
+        symbol, 'LONG', qty, callback_rate, activation_price=expected_activation
+    ))
+
+    # Verifikasi API dipanggil dengan activationPrice & callbackRate sesuai config
+    call_args = executor.exchange.create_order.call_args
+    params = call_args.kwargs.get('params') or call_args[1].get('params')
+    assert 'activationPrice' in params
+    expected_rate = round(config.TRAILING_CALLBACK_RATE * 100, 1)
+    assert params['callbackRate'] == expected_rate, f"Expected {expected_rate}%, got {params['callbackRate']}%"
+
+
+def test_native_trailing_activation_price_short(executor):
+    """Verifikasi activationPrice dikirim ke API untuk posisi SHORT"""
+    symbol = "ETH/USDT"
+    entry = 3500.00
+    tp = 3400.00
+    qty = 2.5
+    callback_rate = config.TRAILING_CALLBACK_RATE
+
+    executor.safety_orders_tracker[symbol] = {
+        "status": "SECURED",
+        "entry_price": entry,
+        "tp_price": tp,
+        "side": "SHORT"
+    }
+
+    executor.exchange.create_order = AsyncMock(return_value={'id': 'trailing_002'})
+
+    # Hitung expected: entry - (distance * 0.80)
+    distance = abs(entry - tp)
+    expected_activation = entry - (distance * 0.80)  # 3420.00
+
+    asyncio.run(executor.install_native_trailing_stop(
+        symbol, 'SHORT', qty, callback_rate, activation_price=expected_activation
+    ))
+
+    # Verifikasi side_api = 'buy' untuk SHORT & callbackRate sesuai config
+    call_args = executor.exchange.create_order.call_args
+    assert call_args.kwargs.get('side') == 'buy'
+    params = call_args.kwargs.get('params') or call_args[1].get('params')
+    assert 'activationPrice' in params
+    expected_rate = round(config.TRAILING_CALLBACK_RATE * 100, 1)
+    assert params['callbackRate'] == expected_rate, f"Expected {expected_rate}%, got {params['callbackRate']}%"
+
+
+def test_native_trailing_without_activation_price(executor):
+    """Backward compatibility: tanpa activation_price, activationPrice TIDAK dikirim"""
+    symbol = "BTC/USDT"
+    qty = 0.029
+    callback_rate = config.TRAILING_CALLBACK_RATE
+
+    executor.safety_orders_tracker[symbol] = {
+        "status": "SECURED",
+        "side": "LONG"
+    }
+
+    executor.exchange.create_order = AsyncMock(return_value={'id': 'trailing_003'})
+
+    asyncio.run(executor.install_native_trailing_stop(
+        symbol, 'LONG', qty, callback_rate
+    ))
+
+    call_args = executor.exchange.create_order.call_args
+    params = call_args.kwargs.get('params') or call_args[1].get('params')
+    assert 'activationPrice' not in params
+    expected_rate = round(config.TRAILING_CALLBACK_RATE * 100, 1)
+    assert params['callbackRate'] == expected_rate, f"Expected {expected_rate}%, got {params['callbackRate']}%"

@@ -284,7 +284,7 @@ class SafetyManager:
             logger.error(f"❌ Failed to Amend SL {symbol}: {e}")
 
     # --- NATIVE TRAILING ---
-    async def install_native_trailing_stop(self, symbol, side, quantity, callback_rate):
+    async def install_native_trailing_stop(self, symbol, side, quantity, callback_rate, activation_price=None):
         try:
             rate_percent = round(callback_rate * 100, 1)
             if rate_percent < config.NATIVE_TRAILING_MIN_RATE:
@@ -294,13 +294,18 @@ class SafetyManager:
 
             side_api = 'sell' if side == 'LONG' else 'buy'
             
-            logger.info(f"📤 Sending NATIVE Trailing Stop: {symbol} | Rate: {rate_percent}%")
-            
             params = {
                 'callbackRate': rate_percent,
                 'reduceOnly': True,
                 'workingType': 'MARK_PRICE'
             }
+
+            activation_log = ""
+            if activation_price is not None:
+                params['activationPrice'] = self.exchange.price_to_precision(symbol, activation_price)
+                activation_log = f" | Activation: {activation_price:.4f}"
+
+            logger.info(f"📤 Sending NATIVE Trailing Stop: {symbol} | Rate: {rate_percent}%{activation_log}")
             
             order = await self.exchange.create_order(
                 symbol=symbol,
@@ -314,11 +319,14 @@ class SafetyManager:
             logger.info(f"✅ NATIVE Trailing Stop Active: {symbol} (ID: {order['id']})")
             
             if self.tracker.exists(symbol):
-                self.tracker.update(symbol, {
+                update_data = {
                     "status": "SECURED_NATIVE",
                     "native_trailing_id": str(order['id']),
                     "trailing_active": True
-                })
+                }
+                if activation_price is not None:
+                    update_data["activation_price"] = activation_price
+                self.tracker.update(symbol, update_data)
                 await self.tracker.save()
                 
             return True
@@ -327,3 +335,4 @@ class SafetyManager:
             logger.error(f"❌ Failed to install Native Trailing: {e}")
             await kirim_tele(f"⚠️ <b>NATIVE TRAILING ERROR</b>\n{symbol}: {e}")
             return False
+

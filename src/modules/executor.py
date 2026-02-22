@@ -115,8 +115,8 @@ class OrderExecutor:
     async def _amend_sl_order(self, symbol, new_sl, side):
         return await self.safety._amend_sl_order(symbol, new_sl, side)
 
-    async def install_native_trailing_stop(self, symbol, side, quantity, callback_rate):
-        return await self.safety.install_native_trailing_stop(symbol, side, quantity, callback_rate)
+    async def install_native_trailing_stop(self, symbol, side, quantity, callback_rate, activation_price=None):
+        return await self.safety.install_native_trailing_stop(symbol, side, quantity, callback_rate, activation_price)
 
     # --- SYNC METHODS ---
     async def sync_pending_orders(self):
