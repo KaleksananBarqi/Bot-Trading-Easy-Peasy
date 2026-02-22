@@ -32,15 +32,23 @@ onchain = None
 ai_brain = None
 executor = None
 
-async def activate_native_trailing_delayed(symbol, side, qty, entry_price=None, tp_price=None):
+async def activate_native_trailing_delayed(executor_instance, symbol, side, qty, entry_price=None, tp_price=None):
     """
     Activate native trailing stop after a delay.
     Menghitung activation_price = 80% jarak dari entry menuju TP.
+
+    Args:
+        executor_instance: Instance OrderExecutor yang sudah valid (di-inject, bukan global).
+        symbol: Trading pair symbol (e.g. 'BTC/USDT')
+        side: 'BUY' atau 'SELL'
+        qty: Quantity posisi
+        entry_price: Harga entry (opsional, untuk hitung activation price)
+        tp_price: Harga TP (opsional, untuk hitung activation price)
     """
     logger.info(f"⏳ Waiting {config.TRAILING_ACTIVATION_DELAY}s to activate Native Trailing for {symbol}...")
     await asyncio.sleep(config.TRAILING_ACTIVATION_DELAY)
     
-    if not executor.has_active_or_pending_trade(symbol):
+    if not executor_instance.has_active_or_pending_trade(symbol):
         logger.warning(f"⚠️ Position {symbol} closed before Native Trailing activation.")
         return
 
@@ -54,16 +62,28 @@ async def activate_native_trailing_delayed(symbol, side, qty, entry_price=None, 
             activation_price = entry_price - (distance * config.TRAILING_ACTIVATION_THRESHOLD)
         logger.info(f"🎯 Activation Price: {activation_price:.4f} (80% of {entry_price:.4f} → {tp_price:.4f})")
 
-    success = await executor.install_native_trailing_stop(
+    success = await executor_instance.install_native_trailing_stop(
         symbol, side, qty, config.TRAILING_CALLBACK_RATE, activation_price
     )
     if success:
         act_str = f"\nActivation: {activation_price:.4f}" if activation_price else ""
+        cb_percent = config.TRAILING_CALLBACK_RATE * 100
         await kirim_tele(
             f"🔄 <b>NATIVE TRAILING ACTIVE</b>\n"
-            f"{symbol}\n"
-            f"Callback: {config.TRAILING_CALLBACK_RATE*100}%"
+            f"✨ <b>{symbol}</b>\n"
+            f"📍 Side: {side}\n"
+            f"📏 Qty: {qty}\n"
+            f"📈 Entry: {entry_price:.4f}\n"
+            f"🎯 TP: {tp_price:.4f}\n"
+            f"⚡ Callback: {cb_percent}%"
             f"{act_str}"
+        )
+    else:
+        await kirim_tele(
+            f"❌ <b>TRAILING STOP GAGAL</b>\n"
+            f"✨ <b>{symbol}</b>\n"
+            f"Gagal memasang Native Trailing Stop.\n"
+            f"Cek log untuk detail error."
         )
 
 pattern_recognizer = None

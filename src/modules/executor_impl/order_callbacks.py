@@ -283,7 +283,7 @@ class OrderUpdateHandler:
             trailing_note = f"\n⏳ <b>Native Trailing:</b> Activating in {config.TRAILING_ACTIVATION_DELAY}s..."
             # Import here to avoid circular dependency
             from src.main import activate_native_trailing_delayed
-            asyncio.create_task(activate_native_trailing_delayed(sym, side_filled, qty_filled, price_filled, tp_price_float))
+            asyncio.create_task(activate_native_trailing_delayed(self.executor, sym, side_filled, qty_filled, price_filled, tp_price_float))
 
         msg = (
             f"✅ <b>LIMIT ENTRY FILLED</b>\n"
