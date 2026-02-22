@@ -15,7 +15,7 @@
   ![AI Brain](https://img.shields.io/badge/Brain-Configurable%20AI-blueviolet?style=for-the-badge)
   ![Vision AI](https://img.shields.io/badge/Vision-Configurable%20AI-ff69b4?style=for-the-badge)
   ![Architecture](https://img.shields.io/badge/Architecture-Facade%20%2B%20Orchestrator-informational?style=for-the-badge)
-  ![Tests](https://img.shields.io/badge/Tests-38%2B%20Files-brightgreen?style=for-the-badge)
+  ![Tests](https://img.shields.io/badge/Tests-39%2B%20Files-brightgreen?style=for-the-badge)
   ![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
   ![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial-5D6D7E?style=for-the-badge)
 </div>
@@ -114,14 +114,15 @@ Bot menyediakan **dua mode trailing stop** yang dapat dipilih via konfigurasi:
 #### Mode A: Native Trailing Stop (Binance API) — *NEW!*
 Trailing stop yang dieksekusi langsung oleh server Binance. Keunggulan:
 *   **Zero Latency**: Stop dimonitor oleh server exchange, bukan bot lokal.
-*   **Auto-Activation**: Dipasang otomatis 10 detik setelah order terisi.
+*   **Auto-Activation**: Dipasang otomatis 60 detik setelah order terisi.
+*   **Activation Price**: Otomatis dihitung di 80% jarak dari entry menuju TP, agar trailing tidak aktif terlalu dini.
 *   **Callback Rate**: Dapat dikonfigurasi antara 0.1% - 5.0%.
 *   **Crash-Proof**: Tetap aktif meskipun bot mati.
 
 #### Mode B: Software Trailing Stop (Custom)
 Trailing stop custom yang lebih fleksibel, dimonitor via WebSocket:
 *   Aktif saat harga bergerak **80%** menuju TP.
-*   SL otomatis naik/turun mengikuti harga dengan jarak 1.0%.
+*   SL otomatis naik/turun mengikuti harga dengan jarak 0.1%.
 *   Minimal profit 0.5% dikunci saat trailing aktif.
 *   Cooldown update 3 detik untuk menghindari spam API.
 
@@ -129,10 +130,10 @@ Trailing stop custom yang lebih fleksibel, dimonitor via WebSocket:
 ```
 Entry: $100 | TP: $110 | SL Awal: $97
 Harga naik ke $108 (80% ke TP) → Trailing Aktif!
-- SL baru: $107.19 (0.75% di bawah harga tertinggi)
-Harga naik ke $109 → SL naik ke $108.18
-Harga turun ke $108.50 → SL tetap $108.18 (terkunci!)
-Harga turun ke $108.18 → Posisi ditutup dengan profit ~8%
+- SL baru: $107.89 (0.1% di bawah harga tertinggi)
+Harga naik ke $109 → SL naik ke $108.89
+Harga turun ke $108.95 → SL tetap $108.89 (terkunci!)
+Harga turun ke $108.89 → Posisi ditutup dengan profit ~8.9%
 ```
 
 > 💡 **Pilih mode di `config.py`**: Set `USE_NATIVE_TRAILING = True` untuk mode Binance, atau `False` untuk mode Software.
@@ -159,7 +160,7 @@ Sistem ukuran posisi yang adaptif:
 
 ### 12. 🧠 AI Reasoning Tokens — *NEW!*
 Fitur reasoning yang memungkinkan AI menunjukkan proses berpikirnya:
-*   **Configurable Effort**: 6 level dari `minimal` hingga `xhigh`.
+*   **Configurable Effort**: 6 level: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`.
 *   **Optional Display**: Reasoning bisa ditampilkan atau disembunyikan dari response.
 *   **Logging**: Proses reasoning AI bisa dicatat ke log untuk debugging.
 
@@ -219,6 +220,10 @@ Dashboard interaktif berbasis web untuk memantau performa trading secara real-ti
 *   **📅 PnL Calendar** *(NEW!)*: Kalender bulanan yang menampilkan PnL harian.
 *   **📉 Drawdown Analysis** *(NEW!)*: Grafik drawdown dari equity peak.
 *   **🔗 Correlation Analysis** *(NEW!)*: Visualisasi korelasi antar data trading (model AI, strategi, dll).
+*   **🔄 Exit Type Analysis** *(NEW!)*: Distribusi exit type (TP/SL/Trailing), PnL per exit type, dan KPI perbandingan trailing vs non-trailing.
+*   **🤖 Model Performance** *(NEW!)*: Analisis performa per model AI yang digunakan.
+*   **📊 Distribution Analysis** *(NEW!)*: Visualisasi distribusi statistik hasil trading.
+*   **🔍 Exit Type Filter** *(NEW!)*: Filter sidebar tambahan untuk memfilter berdasarkan jenis exit.
 *   **Share PnL Card**: Terintegrasi langsung dengan detail teknikal per trade.
 *   **🔒 XSS Protection**: Semua data yang dirender di HTML sudah di-sanitasi (escape) untuk mencegah stored XSS.
 
@@ -236,6 +241,7 @@ Sistem pencatatan jurnal trading profesional yang kini didukung oleh **MongoDB**
 *   **AI Rationale**: Menyimpan alasan entry dan prompt yang digunakan AI untuk evaluasi strategi.
 *   **Technical Snapshot**: Menyimpan nilai indikator (RSI, MACD, EMA) saat entry untuk analisis post-trade.
 *   **Config Snapshot**: Menyimpan konfigurasi yang digunakan (ATR Multiplier SL/TP, dll).
+*   **Trailing Stop Data** *(NEW!)*: Menyimpan data trailing lengkap per trade — `exit_type`, `trailing_was_active`, `trailing_sl_final`, `trailing_high/low`, `activation_price`, dan `sl_price_initial`.
 *   **Seamless Integration**: Terhubung langsung ke Dashboard Streamlit via koneksi database real-time.
 *   **Auto-Validation**: MongoDB URI divalidasi otomatis saat startup, termasuk cek format `mongodb://` / `mongodb+srv://`.
 
@@ -547,11 +553,13 @@ sudo systemctl status trading-bot
  ├── 📂 streamlit/                    # 📊 Dashboard Analytics Suite
  │    └── 📊 dashboard.py             # Dashboard (Calendar, Correlation, Drawdown)
  ├── 📂 scripts/                      # 🛠️ Script Utilitas
- │    └── 📜 migrate_history.py       # Migrasi Data CSV ke MongoDB
+ │    ├── 📜 migrate_history.py       # Migrasi Data CSV ke MongoDB
+ │    ├── 📜 migrate_exit_type.py     # [NEW] Backfill Exit Type pada Trade Historis
+ │    └── 📜 test_trailing_live.py    # [NEW] Test Trailing Stop Secara Live
  ├── 📂 assets/                       # 🖼️ Aset Statis
  │    ├── 📂 fonts/                   # Font Kustom untuk PnL Card
  │    └── 📂 icons/                   # Ikon & Logo Exchange
- ├── 📂 tests/                        # 🧪 Automated Testing (38+ test files)
+ ├── 📂 tests/                        # 🧪 Automated Testing (39+ test files)
  └── 📦 pyproject.toml                # Manajemen Dependensi Modern
 ```
 
@@ -559,7 +567,7 @@ sudo systemctl status trading-bot
 
 ## 🧪 Automated Testing
 
-Proyek ini dilengkapi dengan **38+ automated test files** untuk memastikan kualitas kode:
+Proyek ini dilengkapi dengan **39+ automated test files** untuk memastikan kualitas kode:
 
 ```bash
 # Menjalankan semua tests
@@ -585,6 +593,7 @@ python -m pytest tests/test_trailing_logic.py
 *   ✅ **AI Brain Decision Making** *(NEW!)*
 *   ✅ **Notification Safety** *(NEW!)*
 *   ✅ **Executor Refactor Verification** *(NEW!)*
+*   ✅ **Trailing Journal Integration** *(NEW!)*
 
 ---
 
