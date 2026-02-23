@@ -45,3 +45,4 @@ src/safety_tracker.json
 .DS_Store
 safety_tracker.json
 dummy_tracker.json
+commit_msg.txt
