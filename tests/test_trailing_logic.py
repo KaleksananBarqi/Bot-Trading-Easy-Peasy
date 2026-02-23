@@ -45,6 +45,7 @@ def executor():
     exchange.price_to_precision = MagicMock(side_effect=lambda s, p: f"{float(p):.4f}")
     exchange.create_order = AsyncMock()
     exchange.fapiPrivatePostOrder = AsyncMock()
+    exchange.fapiPrivatePostAlgoOrder = AsyncMock()
     exchange.fapiPrivateDeleteAllOpenOrders = AsyncMock()
     exchange.fetch_open_orders = AsyncMock(return_value=[])
     exchange.cancel_order = AsyncMock()
@@ -184,8 +185,8 @@ def test_native_trailing_activation_price_long(executor):
         "tp_order_id": "tp_123"
     }
 
-    # Mock exchange fapiPrivatePostOrder explicitly
-    executor.exchange.fapiPrivatePostOrder = AsyncMock(return_value={'orderId': 'trailing_001'})
+    # Mock exchange fapiPrivatePostAlgoOrder explicitly
+    executor.exchange.fapiPrivatePostAlgoOrder = AsyncMock(return_value={'clientAlgoId': 'trailing_001'})
 
     # Hitung expected activation price: entry + (distance * 0.80)
     distance = abs(tp - entry)
@@ -196,7 +197,7 @@ def test_native_trailing_activation_price_long(executor):
     ))
 
     # Verifikasi API dipanggil dengan activationPrice & callbackRate sesuai config
-    call_args = executor.exchange.fapiPrivatePostOrder.call_args
+    call_args = executor.exchange.fapiPrivatePostAlgoOrder.call_args
     params = call_args.kwargs.get('params') or call_args[0][0]
     assert 'activationPrice' in params
     expected_rate = round(config.TRAILING_CALLBACK_RATE * 100, 1)
@@ -218,7 +219,7 @@ def test_native_trailing_activation_price_short(executor):
         "side": "SHORT"
     }
 
-    executor.exchange.fapiPrivatePostOrder = AsyncMock(return_value={'orderId': 'trailing_002'})
+    executor.exchange.fapiPrivatePostAlgoOrder = AsyncMock(return_value={'clientAlgoId': 'trailing_002'})
 
     # Hitung expected: entry - (distance * 0.80)
     distance = abs(entry - tp)
@@ -229,7 +230,7 @@ def test_native_trailing_activation_price_short(executor):
     ))
 
     # Verifikasi side_api = 'buy' untuk SHORT & callbackRate sesuai config
-    call_args = executor.exchange.fapiPrivatePostOrder.call_args
+    call_args = executor.exchange.fapiPrivatePostAlgoOrder.call_args
     params = call_args.kwargs.get('params') or call_args[0][0]
     assert params.get('side') == 'BUY'
     assert 'activationPrice' in params
@@ -248,13 +249,13 @@ def test_native_trailing_without_activation_price(executor):
         "side": "LONG"
     }
 
-    executor.exchange.fapiPrivatePostOrder = AsyncMock(return_value={'orderId': 'trailing_003'})
+    executor.exchange.fapiPrivatePostAlgoOrder = AsyncMock(return_value={'clientAlgoId': 'trailing_003'})
 
     asyncio.run(executor.install_native_trailing_stop(
         symbol, 'LONG', qty, callback_rate
     ))
 
-    call_args = executor.exchange.fapiPrivatePostOrder.call_args
+    call_args = executor.exchange.fapiPrivatePostAlgoOrder.call_args
     params = call_args.kwargs.get('params') or call_args[0][0]
     assert 'activationPrice' not in params
     expected_rate = round(config.TRAILING_CALLBACK_RATE * 100, 1)

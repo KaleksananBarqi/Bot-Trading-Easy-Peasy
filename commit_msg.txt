@@ -1,6 +1,0 @@
-🚀 Fix Native Trailing Stop Activation Price Ignored
-
-* 🎯 **What:** Bypass pembungkusan `create_order` CCXT dan mengeksekusi request mentah (raw payload) ke `fapiPrivatePostOrder` Binance dalam modul `SafetyManager.install_native_trailing_stop`. Test logic diperbarui.
-* 💡 **Why:** Terdapat bug sistematis pada CCXT di mana parameter `callbackRate` secara sepihak dialihkan ke endpoint `algoOrder` milik Binance, yang menyebabkan argumen `activationPrice` otomatis di-drop alhasil Trailing Stop langsung terekskusi di harga pasar.
-* ✅ **Verification:** Passed `pytest tests/test_trailing_logic.py -v` dan terverifikasi di Binance Testnet.
-* ✨ **Result:** `activationPrice` mematuhi kalkulasi asli bot (80% TP) layaknya algoritma semula tanpa memicu Trailing Market secara instan.

@@ -313,10 +313,11 @@ class SafetyManager:
             
             # BYPASS CCXT BUG: Use raw endpoint to prevent CCXT from routing it to `algoOrder` endpoint
             # which silently ignores `activationPrice` for trailing stops.
-            order = await self.exchange.fapiPrivatePostOrder(params)
+            # UPDATE: Binance now requires algorithmic orders (trailing stop) to go to the `algoOrder` endpoint explicitly.
+            order = await self.exchange.fapiPrivatePostAlgoOrder(params)
             
-            # Raw binance response returns 'orderId' instead of 'id'
-            order_id_str = str(order['orderId'])
+            # Raw binance response returns 'clientAlgoId' or 'algoId' for algo orders
+            order_id_str = str(order.get('clientAlgoId') or order.get('algoId') or order.get('orderId'))
             
             logger.info(f"✅ NATIVE Trailing Stop Active: {symbol} (ID: {order_id_str})")
             
