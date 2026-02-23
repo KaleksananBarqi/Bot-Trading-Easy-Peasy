@@ -188,22 +188,16 @@ def parse_timeframe_to_seconds(tf_str: str) -> int:
 # CONFIG HELPERS
 # ==========================================
 
-# Initialize Coin Config Map for O(1) access
-# This maps symbol -> coin config ensuring O(1) lookup speed.
-# We iterate to preserve the first occurrence behavior if duplicates exist.
-_COIN_CONFIG_MAP = {}
-for coin in config.DAFTAR_KOIN:
-    if coin['symbol'] not in _COIN_CONFIG_MAP:
-        _COIN_CONFIG_MAP[coin['symbol']] = coin
-
 def get_coin_config(symbol: str) -> dict | None:
     """
-    Cari konfigurasi koin dari config.DAFTAR_KOIN.
+    Cari konfigurasi koin dari config.DAFTAR_KOIN secara langsung
+    (tanpa cache map) agar selalu mendapatkan data terbaru.
     Return None jika tidak ditemukan.
     """
-    return _COIN_CONFIG_MAP.get(symbol)
-
-
+    for coin in config.DAFTAR_KOIN:
+        if coin.get('symbol') == symbol:
+            return coin
+    return None
 def get_coin_leverage(symbol: str) -> int:
     """
     Ambil leverage untuk symbol tertentu.

@@ -35,10 +35,29 @@ class MongoManager:
         self.collection_name = config.MONGO_COLLECTION_NAME
         self.client = None
         self.db = None
-        self.trades_collection = None
+        self.settings_collection = None
         
         self.connect()
         self._initialized = True
+        
+        # Initialize default settings if empty
+        self._init_default_settings()
+
+    def _init_default_settings(self):
+        """Seed initial settings from config.py if not exists in DB"""
+        if self.settings_collection is not None:
+            doc = self.settings_collection.find_one({"_id": "global"})
+            if not doc:
+                try:
+                    default_settings = {
+                        "_id": "global",
+                        "DAFTAR_KOIN": config.DAFTAR_KOIN,
+                        "PAKAI_DEMO": getattr(config, 'PAKAI_DEMO', True)
+                    }
+                    self.settings_collection.insert_one(default_settings)
+                    logger.info("✅ Default bot settings seeded to MongoDB")
+                except Exception as e:
+                    logger.error(f"❌ Failed to seed default settings: {e}")
 
     def connect(self):
         """Establishes connection to MongoDB."""
@@ -51,6 +70,7 @@ class MongoManager:
             
             self.db = self.client[self.db_name]
             self.trades_collection = self.db[self.collection_name]
+            self.settings_collection = self.db['bot_settings']
             
             # Ensure indexes
             self._setup_indexes()
@@ -189,3 +209,84 @@ class MongoManager:
         except Exception as e:
             logger.error(f"❌ Error counting trades: {e}")
             return 0
+
+    # ==========================================
+    # BOT SETTINGS MANAGEMENT (REMOTE CONTROL)
+    # ==========================================
+    
+    def get_bot_settings(self) -> dict:
+        """Get the global bot settings document."""
+        if self.db is None and not self.connect():
+            # Fallback to config if DB is down
+            return {"DAFTAR_KOIN": config.DAFTAR_KOIN, "PAKAI_DEMO": getattr(config, 'PAKAI_DEMO', True)}
+        
+        try:
+            doc = self.settings_collection.find_one({"_id": "global"})
+            if doc:
+                return doc
+        except Exception as e:
+            logger.error(f"❌ Error fetching bot settings: {e}")
+            
+        return {"DAFTAR_KOIN": config.DAFTAR_KOIN, "PAKAI_DEMO": getattr(config, 'PAKAI_DEMO', True)}
+
+    def update_bot_settings(self, updates: dict) -> bool:
+        """Update specific fields in the global bot settings."""
+        if self.db is None and not self.connect():
+            return False
+            
+        try:
+            # Use $set to only update the provided fields
+            result = self.settings_collection.update_one(
+                {"_id": "global"},
+                {"$set": updates},
+                upsert=True
+            )
+            return True
+        except Exception as e:
+            logger.error(f"❌ Error updating bot settings: {e}")
+            return False
+
+    def get_daftar_koin(self) -> list:
+        """Helper to get the current list of coins from settings."""
+        settings = self.get_bot_settings()
+        return settings.get("DAFTAR_KOIN", [])
+
+    def add_koin(self, koin_data: dict) -> bool:
+        """Add or update a coin in DAFTAR_KOIN."""
+        current_koin = self.get_daftar_koin()
+        symbol = koin_data.get("symbol")
+        
+        if not symbol:
+            return False
+            
+        # Check if already exists; if yes, replace it
+        updated = False
+        for i, coin in enumerate(current_koin):
+            if coin.get("symbol") == symbol:
+                current_koin[i] = koin_data
+                updated = True
+                break
+                
+        if not updated:
+            current_koin.append(koin_data)
+            
+        return self.update_bot_settings({"DAFTAR_KOIN": current_koin})
+
+    def remove_koin(self, symbol: str) -> bool:
+        """Remove a coin from DAFTAR_KOIN."""
+        current_koin = self.get_daftar_koin()
+        new_koin = [c for c in current_koin if c.get("symbol") != symbol]
+        
+        if len(new_koin) == len(current_koin):
+            return False # Coin not found
+            
+        return self.update_bot_settings({"DAFTAR_KOIN": new_koin})
+
+    def get_is_demo(self) -> bool:
+        """Helper to get current PAKAI_DEMO mode."""
+        settings = self.get_bot_settings()
+        return settings.get("PAKAI_DEMO", getattr(config, 'PAKAI_DEMO', True))
+
+    def set_is_demo(self, is_demo: bool) -> bool:
+        """Helper to set PAKAI_DEMO mode."""
+        return self.update_bot_settings({"PAKAI_DEMO": is_demo})

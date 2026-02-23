@@ -536,3 +536,22 @@ def _validate_mongo_uri():
 
 # Jalankan validasi saat modul di-import
 _validate_mongo_uri()
+
+# ==============================================================================
+# DYNAMIC CONFIG LOADER (Untuk Remote Control via Telegram)
+# ==============================================================================
+def load_dynamic_config():
+    """
+    Mengambil setting dinamis dari MongoDB dan menimpanya ke variabel lokal.
+    (Hanya DAFTAR_KOIN dan PAKAI_DEMO)
+    """
+    try:
+        from src.modules.mongo_manager import MongoManager
+        mongo = MongoManager()
+        settings = mongo.get_bot_settings()
+        
+        global DAFTAR_KOIN, PAKAI_DEMO
+        DAFTAR_KOIN = settings.get("DAFTAR_KOIN", DAFTAR_KOIN)
+        PAKAI_DEMO = settings.get("PAKAI_DEMO", PAKAI_DEMO)
+    except Exception as e:
+        print(f"⚠️ Failed to load dynamic config from MongoDB: {e}")
