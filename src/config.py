@@ -204,7 +204,7 @@ ORDER_SLTP_RETRY_DELAY = 2       # Jeda retry (detik)
 # 6. ⚙️ PENGATURAN SISTEM INFRASTRUKTUR (JARANG DIUBAH)
 # ==============================================================================
 # Environment Selection
-PAKAI_DEMO = True               # False = Real Money, True = Testnet
+PAKAI_DEMO = False               # False = Real Money, True = Testnet
 
 # Identitas File
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

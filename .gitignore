@@ -44,3 +44,4 @@ src/safety_tracker.json
 # macOS
 .DS_Store
 safety_tracker.json
+src/..env.swp
