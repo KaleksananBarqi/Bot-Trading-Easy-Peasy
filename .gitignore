@@ -45,3 +45,4 @@ src/safety_tracker.json
 .DS_Store
 safety_tracker.json
 src/..env.swp
+dummy_tracker.json
